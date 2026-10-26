@@ -3,6 +3,8 @@ import reference from './genre-reference.json';
 type Genre=keyof typeof reference;
 type Choice={id:string;keyword:string;title?:string};
 const genres=Object.keys(reference) as Genre[];
+// Each main story is staged in a fixed city.
+const cityMap:Record<Genre,number[]>={'정통 무협':[2,0,1],'정통 판타지':[0,2,1],'현대 게이트·헌터':[0,0,2]};
 const hash=(s:string)=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
 const rank=<T>(xs:T[],seed:number)=>xs.map((v,i)=>({v,s:hash(`${seed}:${i}`)})).sort((a,b)=>a.s-b.s).map(x=>x.v);
 const nameOf=(line:string)=>line.split(':')[0].trim();
@@ -77,11 +79,11 @@ function varied(items:string[],seed:number,count:number,main:string,city:Record<
  if(out.length<count)throw Error(`조건을 충족하는 재료 부족: ${out.length}/${count}`);
  return out;
 }
-export function buildReferencePrompt(input:{genre:string;gameName:string;gameDescription:string;choices:Choice[];goalMode?:string}){
+export function buildReferencePrompt(input:{genre:string;gameName:string;gameDescription:string;choices:Choice[];goalMode?:string;mainName?:string;startName?:string}){
  const genre=genres.find(k=>input.genre.includes(k));if(!genre)throw Error('지원하지 않는 장르입니다.');
- const src=reference[genre];const seed=hash([genre,input.gameName,input.gameDescription,...input.choices.map(c=>c.keyword)].join('|'));
- const main=src.mains[seed%src.mains.length];const mainIndex=src.mains.indexOf(main);
- const cityMap:Record<Genre,number[]>={'정통 무협':[2,0,1],'정통 판타지':[0,2,1],'현대 게이트·헌터':[0,0,2]};
+ const src=reference[genre];const seed=hash([genre,input.gameName,input.gameDescription,input.mainName||'',input.startName||'',...input.choices.map(c=>c.keyword)].join('|'));
+ // The creator's picks win; the seed only fills in what was not chosen.
+ const main=src.mains.find(m=>m.name===input.mainName)||src.mains[seed%src.mains.length];const mainIndex=src.mains.indexOf(main);
  const city=src.cities[cityMap[genre][mainIndex]];const loc=locationMap(city.locations);
  const requiredNames=(main.text.match(/^필수 NPC:\s*(.+)$/m)?.[1]||'').split(',').map(x=>x.trim());
  const requiredFactions=(main.text.match(/^필요 세력:\s*(.+)$/m)?.[1]||'').split(',').map(x=>x.trim());
@@ -106,7 +108,7 @@ export function buildReferencePrompt(input:{genre:string;gameName:string;gameDes
  // Never fabricate a filler NPC. A smaller cast is preferable to an inconsistent character.
  const npcs=picked.slice(0,10).map(p=>p.replace(/\s*\(전용:[^)]*\)/g,''));
  const starts=rank(src.starts,seed+19);
- const rawStart=starts[0];const startIdentity=startName(rawStart);
+ const rawStart=src.starts.find(s=>startName(s)===input.startName)||starts[0];const startIdentity=startName(rawStart);
  const identity:Record<string,string>={};
  if(genre==='정통 무협'){
   if(startIdentity==='문파 제자')identity.token='사문 신패';
@@ -151,4 +153,20 @@ export function buildReferencePrompt(input:{genre:string;gameName:string;gameDes
  const check={fixed:prompt.includes(fixed),mainActs:[1,2,3,4].every(i=>prompt.includes(`${i}막`)),requiredNpcs:requiredNames.every(n=>npcs.some(p=>personName(p)===n)),requiredFactions:requiredFactions.every(n=>selectedNames.includes(n)),factionCoverage:selectedNames.every(n=>actualFactions.includes(n)),npcFactionConsistency:actualFactions.every(n=>selectedNames.includes(n!)),count:{npcs:npcs.length,quests:quests.length,events:events.length,opportunities:opportunities.length},length:prompt.length};
  if(Object.entries(check).some(([k,v])=>typeof v==='boolean'&&!v))throw Error('연결성 검증 실패: '+JSON.stringify(check));
  return {prompt,genre,seed,selectedMain:main.name,city:city.name,check,expectedNpcCount:npcs.length,contentOutline:{factions,locations:city.locations,npcs,main:[main.name],quests,events,opportunities}};
+}
+// Player-facing summaries for the direction picker: which story, which start, which goal.
+export function referenceOptions(genreLabel:string){
+ const genre=genres.find(k=>genreLabel.includes(k));if(!genre)throw Error('지원하지 않는 장르입니다.');
+ const src=reference[genre];
+ // Identity slots are decided at build time, so summaries use a generic word for them.
+ const generic:Record<string,string>={clan:'명문 세가',token:'신분 증표',clanWeapon:'검'};
+ const plain=(text:string,loc:Record<string,string>)=>text.replace(/\{([a-zA-Z]+)\}/g,(_,key:string)=>loc[key]||generic[key]||'').replace(/\[GM\]\s*/g,'').replace(/\s*\('[^']*'\)/g,'').trim();
+ // Start places depend on the story's city, so each story carries its own start summaries.
+ const mains=src.mains.map((main,i)=>{
+  const city=src.cities[cityMap[genre][i]];const loc=locationMap(city.locations);
+  const line=(prefix:string)=>plain(main.text.split('\n').find(l=>l.startsWith(prefix))?.slice(prefix.length)||'',loc);
+  const starts=src.starts.map(s=>{const first=s.split('\n')[0];return {name:startName(s),summary:plain(first.slice(first.indexOf(':')+1),loc)};});
+  return {name:main.name,city:city.name,hook:line('시작 계기:'),goal:line('최종 목표(최종 목표형):'),progressSteps:line('최종 목표(진행도형):').split('→').map(x=>x.trim()).filter(Boolean),starts};
+ });
+ return {genre,mains};
 }

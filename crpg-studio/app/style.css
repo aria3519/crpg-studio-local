@@ -447,3 +447,263 @@
 .imageBoard.playWorldMap .playLocationHalo{z-index:4;width:60px;height:60px;background:rgba(56,189,248,.12);border:2px solid rgba(125,211,252,.85);box-shadow:0 0 0 4px rgba(14,165,233,.15),0 0 16px rgba(56,189,248,.5)}
 @keyframes playerMarkerFloat{0%,100%{transform:translate(-50%,-86%)}50%{transform:translate(-50%,-92%)}}
 @media(prefers-reduced-motion:reduce){.imageBoard.playWorldMap .playCharacterSprite{animation:none}}
+
+/* Play screen: player & minimap | scene & choices | text log */
+.playGrid.playGridThree{grid-template-columns:minmax(270px,.85fr) minmax(0,1.35fr) minmax(280px,.95fr);gap:18px;align-items:start}
+.playInfoPanel,.playScenePanel{background:white;border:1px solid #ececf0;border-radius:14px;padding:18px;min-width:0}
+.playInfoPanel .characterPanel{margin-top:0}
+.playScenePanel{display:flex;flex-direction:column;gap:12px}
+.playGridThree .playLogPanel{padding:18px;min-height:0;position:sticky;top:92px;max-height:calc(100vh - 110px)}
+.playGridThree .playLogPanel .chatLog.storyLog{flex:1 1 auto;max-height:none;min-height:0}
+.miniMapPanel{margin-top:14px;border:1px solid #e2e6ee;border-radius:12px;padding:12px;background:#fff}
+.miniMapHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:13px}
+.miniMapHeading strong{display:flex;align-items:center;gap:6px}
+.miniMapHeading strong svg{color:#f26861}
+.miniMapHeading span{font-size:11px;color:#8b94a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.miniMap{position:relative;border-radius:9px;overflow:hidden;background:#f4f2f0;user-select:none}
+.miniMap>img:first-child{display:block;width:100%;height:auto;pointer-events:none}
+.miniMapPin{position:absolute;z-index:3;transform:translate(-50%,-50%);border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.miniMapPin i{display:block;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px #0007}
+.miniMapPin span{max-width:88px;padding:1px 5px;border-radius:4px;background:rgba(30,25,20,.82);color:#fff6de;font-size:10px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.miniMapPin.far{cursor:not-allowed}
+.miniMapPin.far i{background:#9aa1ab;opacity:.75}
+.miniMapPin.far span{display:none}
+.miniMapPin.near i{background:#f26861;box-shadow:0 0 0 4px rgba(242,104,97,.28),0 1px 4px #0007}
+.miniMapPin.near:hover i,.miniMapPin.near:focus-visible i{transform:scale(1.3)}
+.miniMapPin.near:focus-visible{outline:none}
+.miniMapPin.exit.near i{background:#7c5cff;box-shadow:0 0 0 4px rgba(124,92,255,.28),0 1px 4px #0007}
+.miniMapPin.current{cursor:default;z-index:4}
+.miniMapPin.current i{background:#22c55e;width:14px;height:14px}
+.miniMapPin.current span{background:#14532d;border:1px solid #fde68a}
+.miniMapPin[aria-disabled="true"].near{cursor:wait}
+.miniMapPlayer{position:absolute;z-index:5;width:34px;height:40px;object-fit:contain;transform:translate(-50%,-95%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));pointer-events:none}
+.miniMapHint{margin:8px 0 0;font-size:11px;color:#8b94a3}
+.sceneStage{position:relative;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#1f2430}
+.sceneBackground{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.sceneFallback{background:linear-gradient(160deg,#3a3f4f,#1f2430)}
+.sceneLocation{position:absolute;top:12px;left:12px;z-index:2;display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:6px 11px;border-radius:20px;background:rgba(20,22,30,.72);color:#fff;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sceneNpcs{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,3%,28px);padding:0 4%;height:78%;pointer-events:none}
+.sceneNpc{margin:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;flex:0 1 30%}
+.sceneNpc img{max-height:calc(100% - 26px);max-width:100%;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.55))}
+.sceneNpcSilhouette{width:min(120px,100%);aspect-ratio:3/4;display:grid;place-items:center;border-radius:14px 14px 0 0;background:rgba(20,22,30,.55);color:rgba(255,255,255,.75)}
+.sceneNpc figcaption{margin:4px 0 8px;padding:3px 10px;border-radius:12px;background:rgba(20,22,30,.78);color:#fff;font-size:12px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sceneBusy{position:absolute;right:12px;top:12px;z-index:3;padding:6px 11px;border-radius:20px;background:rgba(255,255,255,.9);color:#5b6473;font-size:12px;font-style:italic}
+.playScenePanel .gmChoices{margin-top:0;padding-top:4px;border-top:0}
+.gmChoiceButton.gmChoiceWild{border-style:dashed;border-color:#c9b8f5;background:#faf8ff}
+.gmChoiceButton.gmChoiceWild .gmChoiceNumber{background:#ede7ff;color:#6d4fd8}
+.gmChoiceTag{flex-shrink:0;font-style:normal;font-size:10px;font-weight:700;color:#6d4fd8;background:#ede7ff;border-radius:10px;padding:3px 7px}
+.sceneInteract{align-self:flex-start}
+.pinBackgroundPreview{display:block;width:100%;max-height:180px;object-fit:cover;border-radius:9px;margin-top:10px;border:1px solid #e4e6ea}
+.pinBackgroundRemove{margin-top:8px}
+@media(max-width:1100px){.playGrid.playGridThree{grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr)}.playGridThree .playLogPanel{grid-column:1/-1;position:static;max-height:none}.playGridThree .playLogPanel .chatLog.storyLog{max-height:480px}}
+@media(max-width:800px){.playGrid.playGridThree{grid-template-columns:1fr}.playScenePanel{order:-1}.sceneStage{aspect-ratio:4/3}}
+@media(max-width:520px){.playInfoPanel,.playScenePanel,.playGridThree .playLogPanel{padding:12px}.sceneNpc{flex-basis:40%}}
+.gmChoiceCustom{display:flex;align-items:center;gap:10px;border:1px dashed #d5dae2;border-radius:10px;padding:8px 8px 8px 12px;background:#fafbfc}
+.gmChoiceCustom .gmChoiceNumber{background:#eef1f5;color:#6b7686}
+.gmChoiceCustom input{flex:1;min-width:0;border:1px solid #e4e6ea;border-radius:8px;padding:9px 11px;font-size:13px;background:#fff}
+.gmChoiceCustom .btn{padding:9px 12px}
+/* NPC encounter, talk mode, combat mode */
+.encounterPanel{border:1px solid #e5e9ef;border-radius:12px;padding:14px;background:#fff}
+.encounterPanel p{margin:0 0 12px;font-size:14px;color:#3b4658}
+.encounterActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.encounterAction{display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 8px;border-radius:12px;border:1px solid #e5e9ef;background:#fff;color:#3b4658;font-size:14px;cursor:pointer;transition:background .15s,border-color .15s}
+.encounterTalk:hover:not(:disabled){background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+.encounterFight:hover:not(:disabled){background:#fff1f1;border-color:#f2a7a7;color:#c53340}
+.encounterIgnore:hover:not(:disabled){background:#f4f6f9;border-color:#cfd5de}
+.encounterTalk svg{color:#3b82f6}.encounterFight svg{color:#e0525d}.encounterIgnore svg{color:#8b94a3}
+.talkPanel,.combatPanel{border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.talkPanel{border:1px solid #bfdbfe;background:#f8fbff}
+.combatPanel{border:1px solid #f3c1c4;background:#fff8f8}
+.talkHeader,.combatHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px}
+.talkHeader strong,.combatHeader strong{display:flex;align-items:center;gap:7px}
+.talkHeader svg{color:#3b82f6}.combatHeader svg{color:#e0525d}
+.combatHeader span{font-size:12px;font-weight:700;color:#c53340;background:#ffe4e6;border-radius:12px;padding:4px 9px}
+.talkHeader .btn{padding:7px 11px}
+.modeNarration{margin:0;padding:12px 14px;border-radius:10px;background:#fff;border:1px solid #e5e9ef;font-size:13px;line-height:1.8;color:#303743;white-space:pre-wrap;max-height:180px;overflow-y:auto}
+.talkBubble{border-color:#bfdbfe;border-radius:4px 12px 12px 12px}
+.modeWaiting{margin:0;font-size:13px;color:#87909e;font-style:italic}
+.talkSuggestions{display:flex;flex-direction:column;gap:6px}
+.talkSuggestions button{text-align:left;border:1px solid #dbe7f7;background:#fff;border-radius:10px;padding:9px 12px;font-size:13px;color:#2c4a75;cursor:pointer}
+.talkSuggestions button:hover{background:#eff6ff;border-color:#93c5fd}
+.talkInput{display:flex;gap:8px}
+.talkInput input{flex:1;min-width:0;border:1px solid #cfe0f5;border-radius:9px;padding:10px 12px;font-size:13px;background:#fff}
+.combatBars{display:flex;flex-direction:column;gap:8px}
+.combatBar{display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:9px;font-size:12px}
+.combatBar span{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combatBar b{text-align:right;font-variant-numeric:tabular-nums}
+.combatBar div{height:12px;border-radius:20px;background:#eceff3;overflow:hidden}
+.combatBar i{display:block;height:100%;border-radius:20px;transition:width .4s}
+.combatEnemy i{background:linear-gradient(90deg,#8b5cf6,#6d28d9)}
+.combatSelf i{background:linear-gradient(90deg,#ed6875,#cc4057)}
+.combatActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.combatAction{display:flex;flex-direction:column;align-items:center;gap:3px;padding:11px 6px;border-radius:10px;border:1px solid #f0d2d4;background:#fff;color:#3b4658;cursor:pointer}
+.combatAction svg{color:#e0525d}
+.combatAction strong{font-size:13px}
+.combatAction small{font-size:10px;color:#8b94a3;text-align:center}
+.combatAction:hover:not(:disabled){background:#fff1f1;border-color:#f2a7a7}
+.combatFlee svg{color:#8b94a3}
+.combatItems{display:flex;flex-wrap:wrap;gap:7px}
+@media(max-width:520px){.encounterActions,.combatActions{grid-template-columns:repeat(2,minmax(0,1fr))}.combatBar{grid-template-columns:56px 1fr 56px}}
+/* Chat-style conversation */
+.talkThread{display:flex;flex-direction:column;gap:10px;max-height:340px;min-height:160px;overflow-y:auto;padding:4px 2px;scroll-behavior:smooth}
+.talkRow{display:flex;gap:8px;align-items:flex-end;max-width:100%}
+.talkMe{justify-content:flex-end}
+.talkAvatar{flex-shrink:0;width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#dbeafe;color:#1d4ed8;font-size:14px;font-weight:800}
+.talkAvatar img{width:100%;height:100%;object-fit:cover;object-position:top}
+.talkBody{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:78%}
+.talkName{font-size:11px;font-weight:700;color:#475569}
+.talkName em{font-weight:400;font-style:italic;color:#8b94a3}
+.talkBubbleBox{padding:9px 13px;font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.talkNpc .talkBubbleBox{background:#fff;border:1px solid #dbe7f7;border-radius:4px 16px 16px 16px;color:#1f2937}
+.talkMe .talkBubbleBox{max-width:78%;background:#3b82f6;color:#fff;border-radius:16px 4px 16px 16px}
+.talkTyping{display:flex;gap:4px;align-items:center;padding:12px 14px}
+.talkTyping i{width:7px;height:7px;border-radius:50%;background:#94a3b8;animation:talkTyping 1.2s infinite ease-in-out}
+.talkTyping i:nth-child(2){animation-delay:.15s}.talkTyping i:nth-child(3){animation-delay:.3s}
+@keyframes talkTyping{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+@media(prefers-reduced-motion:reduce){.talkTyping i{animation:none}}
+.talkSuggestions{flex-direction:row;flex-wrap:wrap}
+.talkSuggestions button{border-radius:18px;padding:7px 13px}
+.talkRecord{margin:10px 0;border:1px solid #dbe7f7;border-radius:10px;background:#f8fbff;font-size:12px;color:#2c4a75}
+.talkRecord summary{display:flex;align-items:center;gap:6px;padding:9px 12px;cursor:pointer;font-weight:700;list-style:none}
+.talkRecord summary::-webkit-details-marker{display:none}
+.talkRecord summary::after{content:'펼치기';margin-left:auto;font-weight:400;color:#8b94a3}
+.talkRecord[open] summary::after{content:'접기'}
+.talkLive{display:flex;align-items:center;gap:6px;padding:9px 12px;font-weight:700}
+.talkThreadLog{max-height:none;min-height:0;padding:4px 10px 12px}
+.talkThreadLog .talkBubbleBox{font-size:13px}
+/* Auto battle */
+.combatBar b{position:relative}
+.combatHit{position:absolute;right:0;top:-16px;font-style:normal;font-size:13px;font-weight:800;color:#e0525d;animation:combatHit .9s ease-out forwards;pointer-events:none}
+@keyframes combatHit{0%{opacity:0;transform:translateY(6px)}20%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-10px)}}
+@media(prefers-reduced-motion:reduce){.combatHit{animation:none}}
+.combatAuto{margin:0;font-size:12px;color:#8b6b6e;text-align:center}
+.battleResultBackdrop{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(15,18,26,.55)}
+.battleResultModal{width:min(380px,100%);background:#fff;border-radius:18px;padding:26px 22px 22px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;gap:10px}
+.battleResultIcon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center}
+.battleResultModal.win .battleResultIcon{background:#fef3c7;color:#b45309}
+.battleResultModal.lose .battleResultIcon{background:#f1f5f9;color:#64748b}
+.battleResultModal h2{margin:0;font-size:26px}
+.battleResultModal.win h2{color:#b45309}
+.battleResultModal.lose h2{color:#475569}
+.battleResultModal p{margin:0;font-size:14px;color:#4b5563}
+.battleResultStats{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:4px 0 6px}
+.battleResultStats span{font-size:12px;color:#6b7280;background:#f6f7f9;border-radius:8px;padding:6px 9px}
+.battleResultStats b{color:#1f2937;margin-left:3px}
+.battleResultModal .btn{min-width:140px}
+.battleRecord{border-color:#f3c1c4;background:#fff8f8;color:#8f2f37}
+.battleLive{margin:10px 0;border:1px solid #f3c1c4;border-radius:10px;padding:9px 12px}
+.battleRecordTitle{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-bottom:6px}
+.battleLines{list-style:none;margin:0;padding:0 0 4px;display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:1.55}
+.battleRecord summary+.battleLines{padding:0 12px 10px}
+.battleLines li{padding:4px 8px;border-radius:6px;background:#fff;color:#4b5563}
+.battleLines li.dealt{color:#1d4ed8}
+.battleLines li.taken{color:#c53340}
+.battleLines li.miss{color:#8b94a3}
+.battleLines li.start{font-weight:700;color:#374151}
+.battleLines li.win{font-weight:800;color:#b45309;background:#fef3c7}
+.battleLines li.lose{font-weight:800;color:#475569;background:#f1f5f9}
+.talkSuggestions button{display:inline-flex;align-items:center;gap:7px}
+.talkSuggestions .gmChoiceNumber{width:20px;height:20px;font-size:11px;background:#dbeafe;color:#1d4ed8}
+.miniMapPin.current{pointer-events:none}
+.gmChoicesHeading .gmReroll{display:inline-flex;align-items:center;gap:5px;margin-left:auto;border:1px solid #e5e9ef;background:#fff;border-radius:16px;padding:5px 10px;font-size:11px;font-weight:700;color:#5b6473;cursor:pointer}
+.gmChoicesHeading .gmReroll:hover{background:#f4f6f9;border-color:#cfd5de}
+.gmChoicesHeading span+.gmReroll{margin-left:8px}
+.gmChoicesHeading:has(.gmReroll) span{margin-left:auto}
+/* Visual-novel style talk: spotlight, idle breathing, gesture motions, typewriter */
+.sceneNpc{transition:opacity .35s,filter .35s,transform .35s}
+.sceneNpcBody{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
+.sceneNpcBody img{max-height:100%;max-width:100%}
+.sceneTalking .sceneNpcFocus{flex-basis:44%;z-index:2;transform:scale(1.08);transform-origin:50% 100%}
+.sceneTalking .sceneNpcFocus img{animation:npcBreathe 3.2s ease-in-out infinite;transform-origin:50% 100%}
+.sceneTalking .sceneNpcDim{opacity:.9;filter:grayscale(.45) brightness(.78);transform:scale(.9);transform-origin:50% 100%}
+.sceneNpcListening img{filter:brightness(.92) drop-shadow(0 6px 12px rgba(0,0,0,.55))}
+@keyframes npcBreathe{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(-2px) scaleY(1.008)}}
+.npcTalk{animation:npcTalk .55s ease-out}
+.npcJump{animation:npcJump .5s cubic-bezier(.3,1.6,.5,1)}
+.npcShake{animation:npcShake .5s ease-in-out}
+.npcHeadShake{animation:npcHeadShake .7s ease-in-out}
+.npcNod{animation:npcNod .75s ease-in-out}
+.npcStepBack{animation:npcStepBack .9s ease-in-out}
+.npcLeanIn{animation:npcLeanIn .9s ease-in-out}
+.npcSway{animation:npcSway 1.1s ease-in-out}
+.npcTilt{animation:npcTilt .9s ease-in-out}
+@keyframes npcTalk{0%,100%{transform:translateY(0)}35%{transform:translateY(-7px)}65%{transform:translateY(-2px)}}
+@keyframes npcJump{0%,100%{transform:translateY(0)}40%{transform:translateY(-24px)}70%{transform:translateY(3px)}}
+@keyframes npcShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@keyframes npcHeadShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-3deg)}45%{transform:rotate(3deg)}70%{transform:rotate(-2deg)}}
+@keyframes npcNod{0%,100%{transform:translateY(0)}25%{transform:translateY(7px)}50%{transform:translateY(0)}75%{transform:translateY(5px)}}
+@keyframes npcStepBack{0%,100%{transform:scale(1) translateY(0)}40%,60%{transform:scale(.93) translateY(5px)}}
+@keyframes npcLeanIn{0%,100%{transform:scale(1)}40%,60%{transform:scale(1.07) translateY(-4px)}}
+@keyframes npcSway{0%,100%{transform:rotate(0)}25%{transform:rotate(2deg)}75%{transform:rotate(-2deg)}}
+@keyframes npcTilt{0%,100%{transform:rotate(0)}35%,65%{transform:rotate(-4deg)}}
+.typeCaret{display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-2px;background:#64748b;animation:typeCaret .8s steps(1) infinite}
+@keyframes typeCaret{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.sceneNpc{transition:none}.sceneTalking .sceneNpcFocus img,.sceneNpcBody,.typeCaret{animation:none!important}}
+/* Player in talk mode: stands on the left; whoever spoke last is lit */
+.sceneTalking .scenePlayer{flex-basis:34%;transform-origin:50% 100%}
+.sceneTalking .scenePlayer:not(.scenePlayerSpeaking){filter:brightness(.82)}
+.sceneTalking .scenePlayerSpeaking{z-index:3}
+.sceneTalking:has(.scenePlayerSpeaking) .sceneNpcFocus img{filter:brightness(.86)}
+.scenePlayer img{filter:drop-shadow(0 6px 12px rgba(0,0,0,.55))}
+/* Battle mode: darkened stage, red vignette, fighters facing off */
+.sceneBattleMode{animation:battleEnter .5s ease-out}
+.sceneBattleMode .sceneBackground{filter:brightness(.5) saturate(1.25);transform:scale(1.07);transition:filter .5s,transform .8s}
+.sceneBattleMode::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 42%,rgba(140,0,0,.5) 100%)}
+@keyframes battleEnter{0%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}100%{transform:none}}
+.battleStage{position:absolute;inset:0;z-index:2;display:flex;justify-content:space-between;align-items:flex-end;padding:0 5% 2%}
+.battle-wuxia{--slash:#7dd3fc}.battle-fantasy{--slash:#fcd34d}.battle-modern{--slash:#c084fc}
+.battleSide{position:relative;width:40%;height:86%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.battleBody,.battleReact{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
+.battleBody img,.battleReact img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.6))}
+.battleHp{width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:4px 8px;border-radius:8px;background:rgba(10,12,18,.62);color:#fff;font-size:11px;font-weight:700}
+.battleHp span{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.battleHp div{height:8px;border-radius:8px;background:rgba(255,255,255,.18);overflow:hidden}
+.battleHp i{display:block;height:100%;border-radius:8px;transition:width .4s}
+.battlePlayer .battleHp i{background:linear-gradient(90deg,#f87171,#dc2626)}
+.battleEnemy .battleHp i{background:linear-gradient(90deg,#a78bfa,#6d28d9)}
+.battleHp b{font-variant-numeric:tabular-nums}
+/* one exchange ≈1.1s: my dash and strike, then the foe's counter */
+.battleLungeRight{animation:battleLungeRight .5s ease-in-out}
+.battleLungeLeft{animation:battleLungeLeft .5s ease-in-out}
+.battleCounter{animation-delay:.55s;animation-fill-mode:both}
+@keyframes battleLungeRight{0%{transform:translateX(0)}30%,50%{transform:translateX(62%) scale(1.04)}100%{transform:translateX(0)}}
+@keyframes battleLungeLeft{0%{transform:translateX(0)}30%,50%{transform:translateX(-62%) scale(1.04)}100%{transform:translateX(0)}}
+.battleEarly{animation-delay:.15s!important;animation-fill-mode:both}
+.battleLate{animation-delay:.7s!important;animation-fill-mode:both}
+.battleEnemy{--knock:16px}.battlePlayer{--knock:-16px}
+.battleHit{animation:battleHit .45s ease-out}
+.battleCrit{animation:battleCrit .6s ease-out}
+.battleDodge{animation:battleDodge .45s ease-out}
+.battleDown{animation:battleDown .9s ease-in forwards}
+@keyframes battleHit{0%{transform:none;filter:none}15%{transform:translateX(var(--knock));filter:brightness(2.6) saturate(.3)}100%{transform:none;filter:none}}
+@keyframes battleCrit{0%{transform:none;filter:none}15%{transform:translateX(calc(var(--knock)*2)) rotate(calc(var(--knock)/4*1deg));filter:brightness(3) sepia(1) hue-rotate(-30deg)}100%{transform:none;filter:none}}
+@keyframes battleDodge{0%,100%{transform:none}35%{transform:translate(calc(var(--knock)*1.4),-10px);opacity:.75}}
+@keyframes battleDown{to{opacity:.25;transform:translateY(24px) rotate(calc(var(--knock)/2*1deg));filter:grayscale(1)}}
+.battleSlash{position:absolute;top:34%;left:5%;width:90%;height:5px;border-radius:5px;background:linear-gradient(90deg,transparent,var(--slash),#fff,var(--slash),transparent);box-shadow:0 0 14px var(--slash);opacity:0;transform:rotate(-28deg) scaleX(0);animation:battleSlash .35s ease-out;pointer-events:none;z-index:3}
+.battleSlashBack{transform:rotate(28deg) scaleX(0);animation-name:battleSlashBack}
+@keyframes battleSlash{0%{opacity:1;transform:rotate(-28deg) scaleX(0)}55%{opacity:1;transform:rotate(-28deg) scaleX(1)}100%{opacity:0;transform:rotate(-28deg) scaleX(1)}}
+@keyframes battleSlashBack{0%{opacity:1;transform:rotate(28deg) scaleX(0)}55%{opacity:1;transform:rotate(28deg) scaleX(1)}100%{opacity:0;transform:rotate(28deg) scaleX(1)}}
+.battlePop{position:absolute;top:24%;left:50%;z-index:4;font-size:26px;font-weight:900;color:#fff;-webkit-text-stroke:1px #b91c1c;text-shadow:0 2px 6px #000;white-space:nowrap;opacity:0;transform:translateX(-50%);animation:battlePop .9s ease-out;pointer-events:none}
+.battlePop.crit{font-size:36px;color:#fde047;-webkit-text-stroke:1px #b45309}
+.battlePop.miss{font-size:18px;color:#e2e8f0;-webkit-text-stroke:0}
+@keyframes battlePop{0%{opacity:0;transform:translate(-50%,10px) scale(.6)}20%{opacity:1;transform:translate(-50%,0) scale(1.15)}100%{opacity:0;transform:translate(-50%,-32px) scale(1)}}
+.battleVs{position:absolute;top:42%;left:50%;z-index:5;font-size:clamp(22px,4vw,36px);font-weight:900;letter-spacing:2px;color:#fff;white-space:nowrap;text-shadow:0 0 18px rgba(239,68,68,.95),0 3px 8px #000;opacity:0;animation:battleVs 1.5s ease-out;pointer-events:none}
+@keyframes battleVs{0%{opacity:0;transform:translate(-90%,-50%) scale(1.4)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}75%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(-10%,-50%)}}
+.battleFlash{position:absolute;inset:0;z-index:6;pointer-events:none;background:#fecaca;opacity:0;animation:battleFlash .5s ease-out}
+@keyframes battleFlash{0%{opacity:.85}100%{opacity:0}}
+/* studio: player portrait */
+.playerPortraitRow{display:flex;gap:14px;align-items:center;margin-top:10px}
+.playerPortraitPreview{width:110px;aspect-ratio:3/4;flex-shrink:0;border-radius:10px;background:linear-gradient(160deg,#eef2f7,#dfe5ee);display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.playerPortraitPreview img{max-width:100%;max-height:100%;object-fit:contain}
+.playerPortraitActions{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.playerPortraitActions .uploadBox{margin-top:0;cursor:pointer}
+@media(max-width:520px){.battleSide{width:44%}.battleHp span{max-width:44px}}
+@media(prefers-reduced-motion:reduce){.sceneBattleMode,.battleLungeRight,.battleLungeLeft,.battleHit,.battleCrit,.battleDodge,.battleSlash,.battleVs,.battleFlash{animation:none!important}.battlePop{animation:none;opacity:1}.battleDown{animation:none;opacity:.25}}
+/* keep fighters inside their column so the health bars stay visible */
+.battleBody{align-items:stretch}
+.battleReact{height:100%}
+.battleHp{position:relative;z-index:4}
+.sceneBattleMode .sceneLocation{display:none}
+/* Narration inside a conversation reads like stage directions, not speech */
+.talkScene{margin:2px 8%;padding:6px 10px;text-align:center;font-size:12.5px;line-height:1.7;font-style:italic;color:#64748b;border-top:1px dashed #d6e2f1;border-bottom:1px dashed #d6e2f1;white-space:pre-wrap;overflow-wrap:anywhere}
+.talkThreadLog .talkScene{margin:2px 0;font-size:12px}

@@ -1,5 +1,5 @@
 import {NextResponse} from 'next/server';
-import {readFile} from 'node:fs/promises';
+import {serveAsset} from '../../_lib/serve-asset';
 import path from 'node:path';
 export const runtime='nodejs';
 const names:Record<string,Set<string>>={
@@ -11,5 +11,5 @@ export async function GET(request:Request,{params}:{params:Promise<{name:string}
  const {name}=await params;
  const genre=new URL(request.url).searchParams.get('genre')||'wuxia';
  if(!names[genre]?.has(name))return new NextResponse('Not found',{status:404});
- try{const bytes=await readFile(path.join(process.cwd(),'public','_default_npcs',genre,`${name}_기본.png`));return new NextResponse(bytes,{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}})}catch{return new NextResponse('Not found',{status:404})}
+ return serveAsset(request,path.join(process.cwd(),'public','_default_npcs',genre,`${name}_기본.png`),'image/png');
 }

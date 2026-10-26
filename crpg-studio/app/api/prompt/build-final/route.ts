@@ -14,10 +14,10 @@ async function review(prompt:string,context:unknown):Promise<Review>{
 }
 export async function POST(request:Request){
  try{
-  const body=await request.json();const choices=Array.isArray(body.choices)?body.choices:[];const ids=['foundation','system','npc','story','goal'];
-  if(choices.length!==5||ids.some(id=>!choices.some((c:{id?:string;keyword?:string})=>c.id===id&&typeof c.keyword==='string'&&c.keyword.trim())))return NextResponse.json({error:'다섯 가지 선택이 필요합니다.'},{status:400});
+  const body=await request.json();const mainName=String(body.mainName||'').trim();const startName=String(body.startName||'').trim();
+  if(!mainName||!startName)return NextResponse.json({error:'이야기와 주인공 시작 방향을 모두 선택해 주세요.'},{status:400});
   if(!process.env.OPENAI_API_KEY)return NextResponse.json({error:'정합성 우선 모드에는 OPENAI_API_KEY가 필요합니다. AI 검증 없이 통과 처리하지 않습니다.',qualityReview:{passed:false,issues:[{code:'NO_KEY',severity:'critical',detail:'API 키 없음'}]}},{status:503});
-  const result=buildReferencePrompt({genre:String(body.genre||''),gameName:String(body.gameName||'').slice(0,100),gameDescription:String(body.gameDescription||'').slice(0,500),choices,goalMode:String(body.goalMode||'single')});
+  const result=buildReferencePrompt({genre:String(body.genre||''),gameName:String(body.gameName||'').slice(0,100),gameDescription:String(body.gameDescription||'').slice(0,500),choices:[],mainName,startName,goalMode:String(body.goalMode||'single')});
   const baseline=result.prompt;let prompt=baseline;const context={genre:result.genre,city:result.city,main:result.selectedMain,selectedFactions:result.contentOutline.factions,selectedNPCs:result.contentOutline.npcs};
   let first=await review(prompt,context);let applied=0;let finalReview=first;
   if(!first.passed&&first.patches.length){const changed=applySafePatches(prompt,first.patches);if(changed.applied){prompt=changed.prompt;applied=changed.applied;finalReview=await review(prompt,context);}}

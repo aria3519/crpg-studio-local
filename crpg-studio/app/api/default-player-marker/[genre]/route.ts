@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
-import { readFile } from 'node:fs/promises';
+import { serveAsset } from '../../_lib/serve-asset';
 import path from 'node:path';
 export const runtime = 'nodejs';
-export async function GET(_request: Request, { params }: { params: Promise<{genre:string}> }) {
+export async function GET(request: Request, { params }: { params: Promise<{genre:string}> }) {
   const { genre } = await params;
   if (!['wuxia','fantasy','modern'].includes(genre)) return new NextResponse('Not found', {status:404});
-  try {
-    const bytes = await readFile(path.join(process.cwd(),'public','_default_player_markers',genre+'.gif'));
-    return new NextResponse(bytes,{headers:{'Content-Type':'image/gif','Cache-Control':'public, max-age=86400'}});
-  } catch { return new NextResponse('Not found',{status:404}); }
+  return serveAsset(request, path.join(process.cwd(),'public','_default_player_markers',genre+'.gif'), 'image/gif');
 }
