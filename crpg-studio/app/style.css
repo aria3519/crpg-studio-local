@@ -342,7 +342,8 @@
 .storyLog .prologueInlineImage figcaption{align-self:center}
 
 /* v48: Relationship tab and editor */
-.relationshipList{display:flex;flex-direction:column;gap:10px}.relationshipPerson{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e9e9ee;border-radius:12px;background:#fff}.relationshipPhoto{width:66px;height:82px;flex:0 0 66px;border-radius:9px;background:#f1f1f5;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#8b8b98}.relationshipPhoto img{width:100%;height:100%;object-fit:cover}.relationshipDetails{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}.relationshipDetails strong{font-size:14px}.relationshipDetails small,.relationshipDetails span{font-size:12px;color:#777}.relationshipDetails b{color:#ea6065}.relationshipGauge{height:6px;background:#f4e6e8;border-radius:99px;overflow:hidden}.relationshipGauge i{display:block;height:100%;background:#ef6a77;border-radius:99px}.relationshipEditor{margin:16px 0;padding:14px;border:1px solid #e7e7ed;border-radius:12px}.relationshipEditRow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}.relationshipEditRow>input{flex:2 1 120px;min-width:80px}.relationshipEditRow>select{flex:1 1 100px;min-width:90px}.relationshipEditRow label{display:flex;align-items:center;gap:5px;font-size:12px}.relationshipEditRow label input{width:65px}.characterTabs{flex-wrap:wrap}
+.relationshipList{display:flex;flex-direction:column;gap:10px}.relationshipPerson{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e9e9ee;border-radius:12px;background:#fff}.relationshipPhoto{width:66px;height:82px;flex:0 0 66px;border-radius:9px;background:#f1f1f5;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#8b8b98}.relationshipPhoto img{width:100%;height:100%;object-fit:cover}.relationshipDetails{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}.relationshipDetails strong{font-size:14px}.relationshipDetails small,.relationshipDetails span{font-size:12px;color:#777}.relationshipDetails b{color:#ea6065}.relationshipGauge{position:relative;height:6px;background:#eeeef3;border-radius:99px;overflow:hidden}.relationshipGauge::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:#c9c9d3}.relationshipGauge i{position:absolute;top:0;height:100%;background:#ef6a77}.relationshipGauge i.neg{background:#5b6b8c}
+.relationshipDetails span.attitude-hostile,.relationshipDetails span.attitude-hostile b{color:#b4232c}.relationshipDetails span.attitude-cold b{color:#5b6b8c}.relationshipDetails span.attitude-trust b{color:#d9365a}.relationshipEditor{margin:16px 0;padding:14px;border:1px solid #e7e7ed;border-radius:12px}.relationshipEditRow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}.relationshipEditRow>input{flex:2 1 120px;min-width:80px}.relationshipEditRow>select{flex:1 1 100px;min-width:90px}.relationshipEditRow label{display:flex;align-items:center;gap:5px;font-size:12px}.relationshipEditRow label input{width:65px}.characterTabs{flex-wrap:wrap}
 
 /* v50: relation rows without a registered image remain text-only. */
 .relationshipPerson:not(:has(.relationshipPhoto)) .relationshipDetails{width:100%}
@@ -481,7 +482,24 @@
 .sceneStage{position:relative;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#1f2430}
 .sceneBackground{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .sceneFallback{background:linear-gradient(160deg,#3a3f4f,#1f2430)}
-.sceneLocation{position:absolute;top:12px;left:12px;z-index:2;display:flex;align-items:center;gap:6px;max-width:calc(100% - 24px);padding:6px 11px;border-radius:20px;background:rgba(20,22,30,.72);color:#fff;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sceneLocation{position:absolute;top:12px;left:12px;z-index:7;display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:4px 4px 4px 11px;border:1px solid rgba(255,255,255,.22);border-radius:20px;background:rgba(20,22,30,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:background .15s,border-color .15s}
+.sceneLocation>svg{flex:0 0 auto;color:#fca5a1}
+.sceneLocation>span{overflow:hidden;text-overflow:ellipsis}
+/* The trailing chip is the affordance: it reads as the clickable part of the location pill. */
+.sceneLocation>b{display:flex;align-items:center;gap:4px;flex:0 0 auto;padding:4px 10px;border-radius:14px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);font-size:11px;transition:background .15s}
+.sceneLocation:hover:not(:disabled){background:rgba(20,22,30,.82);border-color:rgba(255,255,255,.4)}
+.sceneLocation:hover:not(:disabled)>b{background:#f26861;border-color:#f26861}
+.sceneLocation:active:not(:disabled)>b{transform:scale(.96)}
+.sceneLocation:focus-visible{outline:2px solid #fca5a1;outline-offset:2px}
+.sceneLocation.open>b{background:#f26861;border-color:#f26861}
+.sceneLocation:disabled{cursor:default}.sceneLocation:disabled>b{display:none}
+/* The stage takes the map image ratio while open (set inline once the image loads), so the map fills it and pin percentages land on the art. */
+.stageMap{position:absolute;inset:0;z-index:6;background:#1f2430}
+.stageMap>.miniMap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;container-type:size;background:none;border-radius:0;overflow:hidden}
+.stageMapFrame{position:relative}
+.stageMapFrame>img:first-child{display:block;width:auto;height:auto;max-width:100cqw;max-height:100cqh;pointer-events:none}
+.sceneMapFitted .stageMapFrame>img:first-child{width:100cqw;height:100cqh}
+.stageMapHint{position:absolute;left:50%;bottom:10px;z-index:7;transform:translateX(-50%);margin:0;padding:4px 11px;border-radius:14px;background:rgba(20,22,30,.62);color:#e5e7eb;font-size:11px;white-space:nowrap;pointer-events:none}
 .sceneNpcs{position:absolute;left:0;right:0;bottom:0;z-index:2;display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,3%,28px);padding:0 4%;height:78%;pointer-events:none}
 .sceneNpc{margin:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;flex:0 1 30%}
 .sceneNpc img{max-height:calc(100% - 26px);max-width:100%;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.55))}
@@ -612,7 +630,8 @@
 /* Visual-novel style talk: spotlight, idle breathing, gesture motions, typewriter */
 .sceneNpc{transition:opacity .35s,filter .35s,transform .35s}
 .sceneNpcBody{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
-.sceneNpcBody img{max-height:100%;max-width:100%}
+/* Sprites size by height so every image ratio stands at the same scale; wide art may overflow its slot sideways and is letterboxed (bottom-anchored) past 140%. */
+.sceneNpcBody img{height:100%;width:auto;max-height:none;max-width:140%;object-fit:contain;object-position:50% 100%}
 .sceneTalking .sceneNpcFocus{flex-basis:44%;z-index:2;transform:scale(1.08);transform-origin:50% 100%}
 .sceneTalking .sceneNpcFocus img{animation:npcBreathe 3.2s ease-in-out infinite;transform-origin:50% 100%}
 .sceneTalking .sceneNpcDim{opacity:.9;filter:grayscale(.45) brightness(.78);transform:scale(.9);transform-origin:50% 100%}
@@ -707,3 +726,112 @@
 /* Narration inside a conversation reads like stage directions, not speech */
 .talkScene{margin:2px 8%;padding:6px 10px;text-align:center;font-size:12.5px;line-height:1.7;font-style:italic;color:#64748b;border-top:1px dashed #d6e2f1;border-bottom:1px dashed #d6e2f1;white-space:pre-wrap;overflow-wrap:anywhere}
 .talkThreadLog .talkScene{margin:2px 0;font-size:12px}
+/* Quest log: one card per quest plus empty slots, so the 3-quest cap reads like a quest journal. */
+.questLog{margin:0 0 12px;display:flex;flex-direction:column;gap:6px}
+.questLogHeading{display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.questLogHeading strong{display:flex;align-items:center;gap:6px;color:#7a4b12}
+.questLogHeading strong svg{color:#c27a1a}
+.questLogHeading span{font-size:11px;font-weight:700;color:#a07a45;padding:1px 8px;border-radius:10px;background:#fbf1df}
+.questCard{position:relative;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:8px;row-gap:2px;align-items:start;padding:9px 11px;border:1px solid #ecd9b5;border-left:4px solid #d4952b;border-radius:9px;background:linear-gradient(#fffaf0,#fdf3e1);box-shadow:0 1px 2px rgba(122,75,18,.08)}
+.questCard p{margin:0;grid-column:2;font-size:12.5px;font-weight:600;line-height:1.5;color:#3b2a14;overflow-wrap:anywhere}
+.questCard small{grid-column:2;font-size:10.5px;color:#a07a45}
+.questBadge{grid-row:1/3;align-self:center;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#d4952b;color:#fff;font-size:10.5px;font-weight:800;white-space:nowrap}
+.questEmpty{display:block;padding:8px 11px;border:1px dashed #e3d3b5;border-left:1px dashed #e3d3b5;background:none;box-shadow:none;color:#c3ad88;font-size:11.5px;text-align:center}
+/* Party invites from the relationship list; the join bar is hidden, only the answer is shown. */
+.partyButton{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:4px 10px;border:1px solid #c7d7f0;border-radius:7px;background:#f3f7fd;color:#2f5aa0;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.partyButton:hover:not(:disabled){background:#2f5aa0;border-color:#2f5aa0;color:#fff}
+.partyButton:disabled{opacity:.5;cursor:not-allowed}
+.partyButton.partyLeave{border-color:#e5e7eb;background:#fff;color:#6b7280}
+.partyButton.partyLeave:hover{background:#6b7280;border-color:#6b7280;color:#fff}
+.partyBadge{margin-left:6px;padding:0 6px;border-radius:5px;background:#2f5aa0;color:#fff;font-size:10.5px;font-style:normal;font-weight:700}
+.characterReputation{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin-top:4px;padding:5px 12px;border:1px solid #ecd9b5;border-radius:9px;background:#fdf3e1;color:#7a4b12;font-size:14px;font-weight:700}.characterReputation svg{color:#c27a1a}.characterReputation b{font-size:17px;color:#b4690e}.characterReputation.infamy{border-color:#e2c4c6;background:#fbeef0;color:#7f1d2a}.characterReputation.infamy svg,.characterReputation.infamy b{color:#b4232c}
+.battleAllies{margin-bottom:4px;padding:2px 8px;border-radius:6px;background:rgba(47,90,160,.75);color:#fff;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.questCard{padding-right:34px}
+.questDrop{position:absolute;top:50%;right:7px;transform:translateY(-50%);display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:#b89a6a;cursor:pointer}
+.questDrop:hover,.questDrop:focus-visible{background:#f3dcc0;color:#8a4a12}
+/* Party invite answer, styled after the battle result dialog. */
+.partyResultFace{width:84px;height:84px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#eef2f9;color:#64748b;border:3px solid #cbd5e1}
+.partyResultFace img{width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+.partyResult.accepted .partyResultFace{border-color:#2f5aa0;box-shadow:0 0 0 5px rgba(47,90,160,.15)}
+.partyResult.accepted h2{color:#2f5aa0}
+.partyResult.declined .partyResultFace img{filter:grayscale(.7)}
+.partyResult.declined h2{color:#475569}
+.questCard small b{color:#7a4b12;font-weight:700}
+/* The invite dialog first shows the NPC weighing the offer, then pops the verdict. */
+.partyResult.thinking .partyResultFace{animation:partyPonder 1.1s ease-in-out infinite}
+.partyResult.thinking h2{color:#64748b;font-size:22px}
+.partyDots{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}
+.partyDots i{width:6px;height:6px;border-radius:50%;background:#94a3b8;animation:partyDot 1.2s ease-in-out infinite}
+.partyDots i:nth-child(2){animation-delay:.2s}.partyDots i:nth-child(3){animation-delay:.4s}
+.partyResult:not(.thinking) .partyResultFace{animation:partyReveal .45s cubic-bezier(.2,1.6,.4,1)}
+.partyVerdict{animation:partyReveal .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes partyPonder{0%,100%{transform:rotate(0)}30%{transform:rotate(-4deg)}70%{transform:rotate(4deg)}}
+@keyframes partyDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+@keyframes partyReveal{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.partyResult .partyResultFace,.partyDots i,.partyVerdict{animation:none}}
+.partyChance{width:100%;display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.partyChance span{font-size:13px;color:#475569}.partyChance b{font-size:20px;color:#2f5aa0;margin-left:4px}
+.partyChanceTrack{height:8px;border-radius:99px;background:#e2e8f0;overflow:hidden}
+.partyChanceTrack i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#93b4e6,#2f5aa0);animation:partyChanceFill .6s ease-out}
+@keyframes partyChanceFill{from{width:0}}
+.characterReputation em{font-style:normal;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:6px;background:#c27a1a;color:#fff}
+.characterReputation.infamy em{background:#b4232c}
+/* Big reputation swings (300+) get a centered fanfare that fades out by itself. */
+.repBurst{position:fixed;left:50%;top:38%;z-index:45;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:20px 34px;border-radius:18px;background:linear-gradient(#fffaf0,#fbe7c4);border:2px solid #e3b65f;box-shadow:0 18px 50px rgba(122,75,18,.35);color:#7a4b12;cursor:pointer;animation:repBurst 3.2s ease-out forwards}
+.repBurst svg{color:#c27a1a}
+.repBurst strong{font-size:16px}
+.repBurst b{font-size:40px;line-height:1.1;color:#b4690e;text-shadow:0 2px 0 #fff}
+.repBurst span{font-size:13px;font-weight:700}
+.repBurst.infamy{background:linear-gradient(#fff5f5,#f6d5d8);border-color:#d98a92;color:#7f1d2a}.repBurst.infamy svg,.repBurst.infamy b{color:#b4232c}
+@keyframes repBurst{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}20%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%)}}
+@media (prefers-reduced-motion:reduce){.repBurst{animation:none}}
+.characterLevel{display:flex;align-items:center;gap:7px;margin-top:3px}
+.characterLevel b{font-size:13px;color:#5b3fb8;white-space:nowrap}
+.characterXpTrack{flex:1;min-width:50px;height:6px;border-radius:99px;background:#ece8fb;overflow:hidden}
+.characterXpTrack i{display:block;height:100%;background:linear-gradient(90deg,#a78bfa,#6d4fd6)}
+.characterLevel small{font-size:10.5px;color:#8b7fc0;white-space:nowrap}
+.repBurst.levelBurst{background:linear-gradient(#f8f5ff,#e6ddff);border-color:#a78bfa;color:#4c2fa8}.repBurst.levelBurst svg,.repBurst.levelBurst b{color:#6d4fd6}
+/* Joined companions: a badge replaces the invite button. */
+.partyJoinedRow{display:flex;align-items:center;gap:8px;margin-top:4px}
+.partyJoined{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:7px;background:#2f5aa0;color:#fff;font-size:11.5px;font-weight:700}
+.partyLeaveLink{border:0;background:none;padding:0;color:#9ca3af;font:inherit;font-size:11px;text-decoration:underline;cursor:pointer}
+.partyLeaveLink:hover{color:#6b7280}
+/* Companions fight beside the player in the battle stage. */
+.battleAllyRow{position:absolute;left:-6%;bottom:4%;z-index:2;display:flex;flex-direction:column;gap:6px}
+.battleAlly{margin:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.battleAlly img,.battleAlly>svg{width:54px;height:66px;object-fit:cover;object-position:50% 12%;border-radius:10px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+.battleAlly figcaption{max-width:64px;padding:0 2px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.8);font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.battleAllyHit img{animation:allyStrike .55s ease-out .25s}
+@keyframes allyStrike{0%{transform:translateX(0)}40%{transform:translateX(26px) scale(1.08)}100%{transform:translateX(0)}}
+@media(max-width:520px){.battleAlly img,.battleAlly>svg{width:40px;height:50px}}
+@media (prefers-reduced-motion:reduce){.battleAllyHit img{animation:none}}
+.relationshipDetails .partyJoined{color:#fff;font-size:11.5px}
+.npcLevelTag{margin-left:6px;padding:0 6px;border-radius:5px;background:#ece8fb;color:#5b3fb8;font-size:10.5px;font-style:normal;font-weight:800;vertical-align:middle}
+.battleMonster{color:#ef4444;background:radial-gradient(circle,rgba(127,29,29,.55),rgba(0,0,0,0) 70%);filter:drop-shadow(0 0 10px rgba(239,68,68,.6))}
+/* Monster art sits where an NPC portrait would; the skull shows only until (or unless) the image loads. */
+.battleMonsterArt{position:relative;height:100%;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.battleMonsterArt img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.6))}
+.battleMonsterArt.hasArt .battleMonster{display:none}
+/* Game over after a lethal defeat. */
+.deathPanel{display:flex;flex-direction:column;align-items:center;gap:8px;margin:12px 0;padding:22px 16px;border:1px solid #3f1d22;border-radius:14px;background:linear-gradient(#2a1316,#160a0c);color:#f3d4d7;text-align:center}
+.deathPanel svg{color:#ef4444}
+.deathPanel strong{font-size:24px;letter-spacing:.2em;color:#fca5a5}
+.deathPanel p{margin:0 0 6px;font-size:13px;color:#d6b3b7}
+/* Monster / hostile NPC: fight or run, with the escape odds on the button. */
+.threatPanel{border-color:#f2c4c7;background:#fff8f8}
+.threatPanel p{display:flex;align-items:center;gap:6px}.threatPanel p svg{color:#dc2626;flex:0 0 auto}
+.encounterFlee svg{color:#16a34a}
+.encounterFlee:hover:not(:disabled){background:#f0fdf4;border-color:#86efac;color:#15803d}
+.encounterAction small{font-size:11.5px;font-weight:700;color:#6b7280}
+.characterExp{margin-top:2px}
+.characterExp .characterVitalTrack{background:#e9e4fb}
+.characterExp .characterVitalTrack i{background:linear-gradient(90deg,#a78bfa,#6d4fd6);transition:width .4s}
+/* Monster art often comes with a painted backdrop: fade its edges so it melts into the battle scene instead of reading as a card. */
+.battleMonsterArt img{-webkit-mask-image:radial-gradient(ellipse 62% 58% at 50% 52%,#000 62%,transparent 100%);mask-image:radial-gradient(ellipse 62% 58% at 50% 52%,#000 62%,transparent 100%)}
+/* A threat (monster or hostile NPC) stands on the scene stage, tinted red, until the player fights or flees. */
+.sceneThreat{position:absolute;left:50%;bottom:0;z-index:3;transform:translateX(-50%);height:88%;width:min(60%,420px);margin:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;animation:threatIn .45s ease-out}
+.sceneThreat .battleMonsterArt{flex:1;min-height:0}
+.sceneThreat img{filter:drop-shadow(0 0 18px rgba(220,38,38,.55)) drop-shadow(0 8px 14px rgba(0,0,0,.6))}
+.sceneThreat figcaption{margin-bottom:8px;padding:2px 10px;border-radius:6px;background:rgba(127,29,29,.85);color:#fff;font-size:12px;font-weight:700}
+@keyframes threatIn{from{opacity:0;transform:translate(-50%,12px) scale(.96)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){.sceneThreat{animation:none}}

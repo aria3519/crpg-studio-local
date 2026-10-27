@@ -2,7 +2,10 @@
 
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, Check, ChevronRight, Dices, Download, FolderOpen, Image as ImageIcon, Map as MapIcon, MapPin as MapPinIcon, EyeOff, Footprints, MessageCircle, Package, Plus, Play, RotateCcw, ScrollText, Send, Shield, Swords, Zap, Settings2, Sparkles, Trash2, Upload, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, ChevronRight, Dices, Download, FolderOpen, Image as ImageIcon, Map as MapIcon, MapPin as MapPinIcon, EyeOff, Footprints, MessageCircle, Package, Plus, Play, RotateCcw, ScrollText, Send, Shield, Swords, Zap, Settings2, Sparkles, Trash2, Upload, Users, X, Award , Skull } from 'lucide-react';
+import { mainPrologue } from './_lib/prologues';
+import { foesOf, findFoe, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, type Foe } from './_lib/monsters';
+import { POWER_TIERS, MAX_POWER, MAX_LEVEL, levelBonus, gainXp, xpToNext, xpForTier, levelForTier, companionStats } from './_lib/progression';
 
 /** Extract explicitly granted starting items without rewriting their authored wording. */
 type RuleItem = { name: string; detail: string; source: string };
@@ -63,7 +66,7 @@ function defaultMapGenre(game: Game): string {
 // Each entry is [label, x%, y%]; markers remain fully editable by the creator.
 const DEFAULT_MAP_PLACES: Record<string, [string,number,number][][]> = {
   wuxia: [
-    [["천마신교",19.1398781920205,4.582530762237253],["곤륜파",13.181109713957282,17.739904701643024],["공동파",25,27],["점창파",16.018618966622014,72.06710636568118],["사천당가",23.67989204375135,60.8196747237942],["청성파",30.0642854809152,51.69440752265163],["아미파",16.586123674753132,48.298952966187365],["용문석굴",42,72],["폐사찰",59.29061840043657,71.85489847033357],["낙양",53.47372967140384,42.56913319757005],["진하 표국",66.24251654573152,51.90662966587729],["하오문",72.05940527476426,42.78134821685669],["소림사",59.00686842770282,26.016311825639026],["화산파",44.25183174423887,25.591881787065745],["종남파",38.43493348987891,34.92937113143397],["하북팽가",54.18310936590183,7.553548156189229],["북망산 고분",76.31567391642497,4.794745781523893],["제갈세가",81.28131272725645,24.53080669063255],["남궁세가",81,42],["장강수로채",83,65]],
+    [["천마신교",19.1398781920205,4.582530762237253],["곤륜파",13.181109713957282,17.739904701643024],["공동파",25,27],["점창파",16.018618966622014,72.06710636568118],["사천당가",23.67989204375135,60.8196747237942],["청성파",30.0642854809152,51.69440752265163],["아미파",16.586123674753132,48.298952966187365],["용문석굴",42,72],["폐사찰",59.29061840043657,71.85489847033357],["성도",30,60],["항주",75,72],["낙양",53.47372967140384,42.56913319757005],["진하 표국",66.24251654573152,51.90662966587729],["하오문",72.05940527476426,42.78134821685669],["소림사",59.00686842770282,26.016311825639026],["화산파",44.25183174423887,25.591881787065745],["종남파",38.43493348987891,34.92937113143397],["하북팽가",54.18310936590183,7.553548156189229],["북망산 고분",76.31567391642497,4.794745781523893],["제갈세가",81.28131272725645,24.53080669063255],["남궁세가",81,42],["장강수로채",83,65]],
     [["낙양 황성",49,24],["교류시장",44,50],["하오문",65,51],["대리시",71,34],["귀족 거주구",31,36],["상인 거리",33,60],["장강수로채",65,72],["천련대",16,64],["백마사",24,14],["낙양 동문",88,49],["대운하 나루터",84,78],["화청원",22,81],["태학",78,17],["천문대",60,8]],
     [["공동파",19,28],["화산파",46,15],["소림사",75,20],["종남파",48,49],["제갈세가",14,66],["하북팽가",76,75],["구파일대 회맹대",42,77],["공동산 정상",23,13],["연화대",58,26],["대웅보전",84,16]],
     [["천마신교",25,20],["흑염곡",44,30],["혈석관",49,16],["서역 관문",57,8],["사막 오아시스",13,28],["청해진",48,54],["아미파",71,22],["청성파",87,32],["사천당가",65,58],["점창파",83,73],["은남",55,85],["감숙관",31,62]],
@@ -195,7 +198,7 @@ const DEFAULT_PROLOGUES: Record<string,{title:string;text:string}> = {
 성문 안쪽, 짐수레가 멈춰 선 거리 너머에서 급한 종소리가 울렸다. 누군가 도움을 청하고 있었다. 아직 사건의 진상은 드러나지 않았다. 낙양에서 펼쳐질 이야기는 이제부터 시작된다.`},
  fantasy:{title:'사레타, 파도 아래 잠든 비밀',text:`푸른 바다가 햇빛을 반사하는 사레타 항구. 거대한 범선들이 선창을 메우고, 뱃사람과 상인, 모험가들이 좁은 부두를 오간다. 소금기 섞인 바람에는 향신료와 젖은 밧줄 냄새가 뒤섞여 있다. 먼 나라에서 온 화물과 소문이 모이는 이곳에서는 하루에도 수십 가지 의뢰가 생겨난다.
 
-최근 항구에서는 이상한 이야기가 돌고 있다. 먼바다에서 침몰한 배와 그 안에 실려 있었다는 정체불명의 석관. 누군가는 저주받은 유물이라 말하고, 누군가는 왕국의 역사를 뒤바꿀 물건이라 속삭인다. 상인들은 입을 다물고, 선원들은 밤바다로 나가는 일을 꺼린다.
+최근 항구에서는 이상한 이야기가 돌고 있다. 잔잔한 바다에서 상회의 배 한 척이 이유도 없이 가라앉았다는 것이다. 상인들은 입을 다물고, 선원들은 밤바다로 나가는 일을 꺼린다.
 
 오늘도 모험가 길드 사레타 지부의 게시판에는 새 의뢰서가 붙었다. 파도 소리 너머로 종이 울리고, 항구에서는 또 한 척의 배가 출항을 준비한다. 무엇을 믿고 어디서부터 조사할지는 아직 정해지지 않았다.`},
  modern:{title:'신해시 구도심, 균열의 밤',text:`해가 저문 신해시 구도심. 낡은 상가와 오래된 주택 사이로 가로등이 켜지고, 골목에는 저녁 장사를 마치는 사람들의 발소리가 이어진다. 언덕 아래로는 익숙한 간판과 전깃줄이 얽혀 있고, 강 건너 중앙구의 초고층 빌딩들은 눈부신 빛을 뿜어낸다.
@@ -205,15 +208,33 @@ const DEFAULT_PROLOGUES: Record<string,{title:string;text:string}> = {
 그때 골목 끝에서 짧은 경보음이 울린다. 폐쇄된 건물 담장 너머로 희미한 푸른빛이 번졌다 사라진다. 평범한 저녁이 끝나고, 신해시 구도심의 새로운 사건이 시작되려 하고 있다.`}
 };
 const defaultPrologueImage=(g:Game)=>`/api/default-prologue/${defaultMapGenre(g)}`;
-const prologueText=(g:Game)=>DEFAULT_PROLOGUES[defaultMapGenre(g)].text;
+// The opening follows the game's chosen main story; the genre default is only for games made before main stories existed.
+const prologueText=(g:Game)=>mainPrologue(g.wizardMain)?.text || DEFAULT_PROLOGUES[defaultMapGenre(g)].text;
 // The opening is fixed to the genre default; per-game edits are no longer offered.
-const prologueTitle=(g:Game)=>DEFAULT_PROLOGUES[defaultMapGenre(g)].title;
-const prologueImage=(g:Game)=>defaultPrologueImage(g);
+const prologueTitle=(g:Game)=>mainPrologue(g.wizardMain)?.title || DEFAULT_PROLOGUES[defaultMapGenre(g)].title;
+// A story set in another city opens on that city's background when one ships with the genre.
+const prologueImage=(g:Game)=>{ const city=mainPrologue(g.wizardMain)?.city; const file=city?DEFAULT_PLACE_BACKGROUNDS[defaultMapGenre(g)]?.[city]:undefined; return file&&city!=='사레타'?`/api/default-background/${defaultMapGenre(g)}/${file}`:defaultPrologueImage(g); };
+// Built-in place backgrounds (public/_default_backgrounds/<genre>/<file>.png), matched by pin name.
+// wuxia/modern folders are ready; add entries here once their images are in.
+const DEFAULT_PLACE_BACKGROUNDS: Record<string, Record<string,string>> = {
+  fantasy: {'사레타':'saretta','레븐홀트':'ravenholt','아스테라':'astera','검은 문 관리지':'black-gate','금지된 상회 본거지':'forbidden-guild','마탑 본부':'mage-tower','태양교단 총본산':'sun-temple','심연의 사도 성역':'abyss-sanctum','옛 왕조 지하 묘지':'old-catacombs','그림우드':'grimwood','회색 탑 폐허':'grey-tower-ruins','은염 숲':'silverleaf-forest','철망치 씨족 본거지':'ironhammer-hold','해신의 섬':'sea-god-isle','그림자 숲의 거점':'shadow-outpost','변경백가 영지':'margrave-estate'},
+  wuxia: {},
+  modern: {}
+};
+// The pin's own upload wins; otherwise the genre's built-in art for that place, else the prologue image.
+function placeBackground(g: Game, pin?: MapPin): string {
+  if (pin?.background) return pin.background;
+  const genre = defaultMapGenre(g);
+  const file = pin && DEFAULT_PLACE_BACKGROUNDS[genre]?.[pin.name.trim()];
+  return file ? `/api/default-background/${genre}/${file}` : prologueImage(g);
+}
 type Game = { npcPortraits?:NpcPortrait[]; npcStyle?:string; finalGoalMode?: 'single' | 'progress'; finalGoalSteps?: string[]; prologue?: string; prologueTitle?:string; prologueImage?:string; profileDone?: boolean; promptDone?: boolean; mapDone?: boolean; assetsDone?: boolean; settingsDone?: boolean; wizardType?: string; wizardWorld?: string; wizardStage?: number; wizardMain?: string; wizardStart?: string; wizardBasePrompt?: string; playerMarker?: string; playerPortrait?: string; customPromptSections?: CustomPromptSection[]; removedPromptSections?: string[]; promptDrafts?: PromptDrafts; compressedPrompt?: string; characterConfig?: CharacterConfig; showHpBar?: boolean; showEquipment?: boolean; showDice?: boolean; startingEquipment?: string; maps?: BoardMap[]; startMapId?: string; startPinId?: string; registrationDescription?: string; genre?: string; gameType?: string; cooperation?: string; progression?: string; playTime?: string; hashtags?: string[]; audience?: string; playMode?: 'single' | 'multi'; minPlayers?: number; maxPlayers?: number; imageRows?: ImageRow[]; imageColumns?: ImageColumn[]; imageCells?: ImageCell[]; prompt?: string; mapImage?: string; assets?: Asset[]; id: string; name: string; description: string; world: string; rules: string; gm: string; hp: number; size: number; created: number; cover?: string };
-type CombatState = { npc: string; enemyHp: number; enemyMaxHp: number; enemyDc: number; enemyDamage: number; round: number; itemUse?: string; lastDealt?: number; lastTaken?: number; last?: { dealt: number; critDealt: boolean; taken: number | null; critTaken: boolean }; totalDealt?: number; totalTaken?: number; result?: 'win' | 'lose' };
+type CombatState = { lethal?: boolean; monster?: boolean; foeDesc?: string; power?: number; npc: string; enemyHp: number; enemyMaxHp: number; enemyDc: number; enemyDamage: number; round: number; itemUse?: string; lastDealt?: number; lastTaken?: number; last?: { allies?: string[]; dealt: number; critDealt: boolean; taken: number | null; critTaken: boolean }; totalDealt?: number; totalTaken?: number; result?: 'win' | 'lose' };
 type DiceCheck = { ability: string; label: string; dc: number; reason: string; action: string };
 type DiceResult = { ability: string; label: string; dc: number; die: number; modifier: number; total: number; success: boolean; critical: string };
-type Session = { completedGoalSteps?: number[]; currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
+// memory: rolling long-term summary of log[0..upTo); the GM sees it plus the unsummarized recent entries.
+type StoryMemory = { summary: string; upTo: number };
+type Session = { training?: Record<string, number>; threat?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];completedGoalSteps?: number[]; currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
 type View = 'library' | 'edit' | 'play';
 type Tab = 'prompt' | 'map' | 'assets' | 'settings' | 'register';
 const initial: Game = { finalGoalMode:'single',finalGoalSteps:[],characterConfig: defaultCharacterConfig(), showHpBar: true, showEquipment: true, showDice: true, startingEquipment: '낡은 검, 가죽 갑옷, 회복 물약', playMode: 'single', minPlayers: 2, maxPlayers: 4, id: 'sample', name: '잊혀진 던전', description: '고대 유적을 탐험하는 판타지 TRPG', world: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.', rules: 'D20 판정. 10 이상 보통 성공, 15 이상 어려운 성공. 같은 맵 안에서는 장소를 자유롭게 선택하고 다른 맵으로는 포탈을 통해 이동한다. 전투 및 아이템 사용은 추후 규칙 모듈로 확장.', gm: '몰입감 있는 한국어 판타지 TRPG GM. 플레이어의 행동을 임의로 확정하지 말고 결과를 설명한다.', hp: 100, size: 7, created: 0, prompt: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.\nD20 판정을 사용한다.\nGM은 플레이어의 행동을 임의로 확정하지 않는다.', assets: [], imageRows: [], imageColumns: [], imageCells: [], mapImage: '', registrationDescription: '', genre: 'RPG / 탐험', gameType: 'RPG / 탐험', cooperation: '협동', progression: '턴제', playTime: '장기 캠페인', hashtags: [], audience: '전체 이용가' };
@@ -275,6 +296,90 @@ async function deleteProjectRecord(key: string): Promise<void> {
 }
 
 const PROMPT_LIMIT = 7000;
+// Long-term memory: the GM always gets the newest MEMORY_KEEP_RECENT..30 log entries verbatim;
+// older ones are summarized MEMORY_BATCH at a time.
+const MEMORY_KEEP_RECENT = 12;
+const MEMORY_BATCH = 12;
+// Unsummarized entries, at least the last 12 and at most the last 30.
+// A talk closes itself when the GM wraps it up, or at the latest after TALK_LIMIT player lines.
+const TALK_LIMIT = 6;
+const talkTurns = (s: Session) => { const i = s.talkNpc ? s.log.lastIndexOf(`시스템: ${s.talkNpc}와(과) 대화를 시작했습니다.`) : -1; return i < 0 ? 0 : s.log.slice(i + 1).filter(e => parseTalk(e)?.speaker === 'me').length; };
+// Lines from the whole log that involve one NPC, so they remember earlier meetings, promises and deeds beyond the recent window.
+const npcHistory = (s: Session, name: string) => name ? s.log.filter(e => e.includes(name)).slice(-15).map(e => historyLine(e).slice(0, 300)) : [];
+const recentHistory = (s: Session) => s.log.slice(Math.max(s.log.length - 30, Math.min(s.memory?.upTo || 0, s.log.length - 12)));
+// Current goals work like a quest log of up to MAX_QUESTS; saves from before the log carry a single currentGoal.
+const MAX_QUESTS = 3;
+const questsOf = (s: Session): string[] => s.quests ?? (s.currentGoal?.trim() ? [s.currentGoal.trim()] : []);
+// A goal is never rewritten into a longer version of itself: closing a goal and re-adding the same goal with more text is undone, so new work becomes its own entry.
+const QUEST_LENGTH = 80;
+const sameQuest = (a: string, b: string) => { const x = a.replace(/\s+/g, ''), y = b.replace(/\s+/g, ''); if (x.includes(y) || y.includes(x)) return true; let i = 0; while (i < x.length && x[i] === y[i]) i++; return i >= Math.min(15, Math.ceil(Math.min(x.length, y.length) * 0.5)); };
+// Finishing a quest pays out without waiting on the GM: reputation, plus goodwill from whoever asked for it.
+const QUEST_REPUTATION = 150, QUEST_AFFECTION = 10;
+const applyQuests = (quests: string[], data: { addQuests?: unknown; completedQuests?: unknown; failedQuests?: unknown }, givers: Record<string, string> = {}) => {
+  const strings = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').map(x => x.trim()).filter(Boolean) : [];
+  // A new quest may arrive as plain text or as {text, giver}.
+  const incoming = (Array.isArray(data.addQuests) ? data.addQuests : []).map((x: unknown) => typeof x === 'string' ? { text: x.trim(), giver: '' } : x && typeof x === 'object' ? { text: String((x as { text?: unknown }).text || '').trim(), giver: String((x as { giver?: unknown }).giver || '').trim().slice(0, 30) } : { text: '', giver: '' }).filter(q => q.text).map(q => ({ ...q, text: q.text.slice(0, QUEST_LENGTH) }));
+  const proposed = incoming.map(q => q.text);
+  const closing = (v: unknown) => strings(v).filter(q => quests.includes(q) && !proposed.some(a => sameQuest(a, q)));
+  const done = closing(data.completedQuests);
+  const failed = closing(data.failedQuests).filter(q => !done.includes(q));
+  const kept = quests.filter(q => !done.includes(q) && !failed.includes(q));
+  const added = proposed.filter((q, i, a) => !kept.some(k => sameQuest(k, q)) && ![...done, ...failed].some(d => sameQuest(d, q)) && a.findIndex(o => sameQuest(o, q)) === i).slice(0, Math.max(0, MAX_QUESTS - kept.length));
+  const nextGivers: Record<string, string> = {};
+  for (const q of kept) if (givers[q]) nextGivers[q] = givers[q];
+  for (const q of added) { const giver = incoming.find(x => x.text === q)?.giver; if (giver) nextGivers[q] = giver; }
+  return { quests: [...kept, ...added], done, failed, added, givers: nextGivers, doneGivers: done.map(q => givers[q] || '') };
+};
+// Affection runs -100..100; the tier is what the GM must act out, not just mention.
+const AFFECTION_MIN = -100, AFFECTION_MAX = 100, AFFECTION_STEP = 25;
+const clampAffection = (v: number) => Math.max(AFFECTION_MIN, Math.min(AFFECTION_MAX, Math.round(v)));
+const attitudeTier = (a: number) => a <= -60 ? { label: '적대', tone: 'hostile', act: '적극적으로 해친다: 도움·거래 거절, 위협, 방해, 거짓 정보, 경비나 동료를 부르거나 기회가 오면 공격·함정' }
+  : a <= -20 ? { label: '반감', tone: 'cold', act: '경계하고 비협조적이다: 퉁명한 짧은 대답, 정보 숨김이나 거짓말, 웃돈·담보 요구, 부탁은 대가 없이 거절, 뒤에서 험담' }
+  : a < 20 ? { label: '중립', tone: 'neutral', act: '이해관계대로만 움직인다: 정가 거래, 공짜 도움 없음, 비밀은 숨김' }
+  : a < 60 ? { label: '호의', tone: 'warm', act: '먼저 돕는다: 할인·작은 선물, 소문과 단서를 자진해서 알려 줌, 사소한 부탁은 들어줌' }
+  : { label: '신뢰', tone: 'trust', act: '편에 선다: 위험을 감수하고 돕기, 숨기던 비밀이나 개인 사정 일부 털어놓기, 위기에 먼저 나서기' };
+// Joining the party is a roll: the higher the NPC's affection and the player's reputation, the better the odds.
+// How much each NPC weighs the two, and how picky they are, is fixed per game and never shown; the player only learns yes or no.
+const PARTY_LIMIT = 2;
+const PARTY_THINK_MS = 2200;
+// An NPC who dislikes the player (affection under -20) never agrees; otherwise the odds grow with both numbers, from 2% up to 95%.
+const joinChance = (affection: number, reputation: number, taste: { affectionWeight: number; pickiness: number }) => {
+  if (affection < -20) return 0;
+  const score = taste.affectionWeight * Math.max(0, affection) / 100 + (1 - taste.affectionWeight) * reputationScore(reputation);
+  return Math.max(0.02, Math.min(0.95, score * 1.15 / taste.pickiness));
+};
+// After a refusal the same NPC can't be asked again until the story has moved on a few entries, so the roll can't be spammed.
+const INVITE_COOLDOWN = 6;
+const inviteWait = (s: Session, npc: string) => { const at = s.inviteRefusals?.[npc]; return at === undefined ? 0 : Math.max(0, at + INVITE_COOLDOWN - s.log.length); };
+// Reputation is open-ended: small deeds earn tens, a famous feat hundreds or thousands at once.
+const REPUTATION_STEP = 5000;
+const clampReputation = (v: number) => Math.max(-99999, Math.min(999999, Math.round(v)));
+// 0..1 for the join odds: 500 ≈ 0.28, 1,000 ≈ 0.49, 3,000 ≈ 0.86; infamy counts as nothing.
+const reputationScore = (rep: number) => rep <= 0 ? 0 : 1 - Math.exp(-rep / 1500);
+const reputationRank = (rep: number) => rep <= -5000 ? '공포의 대상' : rep <= -1000 ? '악명 높음' : rep <= -100 ? '수상한 자' : rep < 100 ? '무명' : rep < 500 ? '신참' : rep < 2000 ? '알려진 자' : rep < 5000 ? '유명인' : rep < 15000 ? '영웅' : '전설';
+const formatReputation = (rep: number) => `${rep > 0 ? '+' : ''}${rep.toLocaleString('ko-KR')}`;
+const hashText = (t: string) => { let h = 2166136261; for (const ch of t) h = Math.imul(h ^ (ch.codePointAt(0) || 0), 16777619); return h >>> 0; };
+// Some NPCs care mostly about how they feel about you, others about your name in the world; some are simply harder to win over.
+const npcTaste = (g: Game, name: string) => { const h = hashText(`${g.id}:${name.trim()}`); return { affectionWeight: 0.4 + (h % 41) / 100, pickiness: 0.75 + ((h >>> 8) % 51) / 100 }; };
+// Each NPC's setting line travels next to the scene so the GM keeps gender, age and personality in the voice; a speech style, once fixed, sticks for the whole playthrough.
+const NPC_PROFILE_LIMIT = 24;
+const knownNpcNames = (g: Game, s: Session) => [...new Set([...npcProfiles(g, s).map(p => p.name), ...(g.npcPortraits || []).map(n => n.name), ...(DEFAULT_NPC_NAMES[defaultMapGenre(g)] || [])])];
+const npcProfiles = (g: Game, s: Session) => {
+  const prompt = g.prompt || '';
+  const promptNames = [...prompt.matchAll(/^\s*\d+\.\s*([^(\n·]{1,20}?)\s*\(\d+\s*·\s*[남여]/gm)].map(m => m[1].trim());
+  const stage = [s.talkNpc || '', s.combat?.npc || '', ...(s.sceneNpcs || [])].filter(Boolean);
+  const names = [...new Set([...stage, ...(s.relationships || []).map(r => r.name), ...(g.npcPortraits || []).map(n => n.name), ...promptNames])].slice(0, NPC_PROFILE_LIMIT);
+  const lines = prompt.split('\n');
+  return names.map(name => {
+    const portrait = (g.npcPortraits || []).find(n => n.name === name);
+    const line = (lines.find(l => l.includes(name + '(')) || lines.find(l => l.includes(name)) || '').replace(/^\s*\d+\.\s*/, '').trim();
+    const gender = portrait?.gender === 'female' ? '여성' : portrait?.gender === 'male' ? '남성' : '';
+    const card = [gender, portrait?.age, portrait?.faction, portrait?.description].filter(Boolean).join(' / ');
+    const rel = (s.relationships || []).find(r => r.name.trim() === name.trim());
+    const attitude = rel ? { relation: rel.relation, affection: rel.affection, attitude: `${attitudeTier(rel.affection).label} — ${attitudeTier(rel.affection).act}` } : { attitude: '아직 만나지 않음' };
+    return { name, inScene: stage.includes(name), ...((s.party || []).includes(name) ? { inParty: true } : {}),profile: [line, card].filter(Boolean).join(' | ').slice(0, 320), ...(s.npcNotes?.[name] ? { remembers: stage.includes(name) || (s.party || []).includes(name) ? s.npcNotes[name] : s.npcNotes[name].slice(0, 200) } : {}), speechStyle: s.npcVoices?.[name] || '', ...attitude };
+  });
+};
 
 
 const GAME_TYPES = ['RPG / 탐험','전략 / 전쟁','추리 / 미스터리','파티 / 캐주얼','경영 / 경제','생존 / 협동','자유 시뮬레이션','기타'];
@@ -318,8 +423,12 @@ async function renderLabeledMap(source: string, pins: MapPin[]): Promise<string>
   return canvas.toDataURL('image/png');
 }
 
+// A game starts in its main story's city when that place is on the map; otherwise at the configured start.
 const getStartingLocation = (g: Game) => {
   const maps = g.maps || [];
+  for (const place of mainPrologue(g.wizardMain)?.startPlaces || []) {
+    for (const m of maps) { const p = m.pins.find(x => x.name === place && x.kind !== 'event' && x.kind !== 'exit'); if (p) return { mapId: m.id, pinId: p.id }; }
+  }
   const map = maps.find(m => m.id === g.startMapId) || maps[0];
   const pin = map?.pins.find(p => p.id === g.startPinId)
     || map?.pins.find(p => p.kind === 'start')
@@ -338,13 +447,27 @@ const nearbyPins = (map: BoardMap | undefined, pinId?: string): MapPin[] => {
   return current ? (map?.pins||[]).filter(p=>p.id!==pinId && p.kind!=='event' && p.kind!=='exit')
     .sort((a,b)=>Math.hypot(a.x-current.x,a.y-current.y)-Math.hypot(b.x-current.x,b.y-current.y)) : [];
 };
-// Minimap travel reaches places within this share of the map (coordinates are percentages).
-const NEAR_DISTANCE = 38;
-const reachablePins = (map: BoardMap, here: MapPin): MapPin[] => {
-  const near = map.pins.filter(p => p.id !== here.id && p.kind !== 'event' && Math.hypot(p.x-here.x, p.y-here.y) <= NEAR_DISTANCE);
-  // Never strand the player: an isolated spot can always reach its closest neighbour.
-  return near.length ? near : nearbyPins(map, here.id).slice(0, 1);
+// Minimap travel only links each place to its NEAR_NEIGHBORS closest places (both ways),
+// then joins any separated clusters by their shortest gap so every place stays reachable step by step.
+const NEAR_NEIGHBORS = 2;
+const travelLinks = (map: BoardMap, here?: MapPin): Map<string, Set<string>> => {
+  const nodes = map.pins.filter(p => p.kind !== 'event' || p.id === here?.id);
+  const dist = (a: MapPin, b: MapPin) => Math.hypot(a.x - b.x, a.y - b.y);
+  const links = new Map(nodes.map(p => [p.id, new Set<string>()]));
+  const link = (a: MapPin, b: MapPin) => { links.get(a.id)!.add(b.id); links.get(b.id)!.add(a.id); };
+  for (const p of nodes) nodes.filter(q => q.id !== p.id).sort((a, b) => dist(p, a) - dist(p, b)).slice(0, NEAR_NEIGHBORS).forEach(q => link(p, q));
+  for (;;) {
+    const seen = new Set([nodes[0]?.id]);
+    const stack = nodes.length ? [nodes[0].id] : [];
+    while (stack.length) for (const next of links.get(stack.pop()!) || []) if (!seen.has(next)) { seen.add(next); stack.push(next); }
+    if (seen.size >= nodes.length) break;
+    let best: [MapPin, MapPin] | undefined;
+    for (const a of nodes) if (seen.has(a.id)) for (const b of nodes) if (!seen.has(b.id) && (!best || dist(a, b) < dist(...best))) best = [a, b];
+    link(...best!);
+  }
+  return links;
 };
+const reachablePins = (map: BoardMap, here: MapPin): MapPin[] => { const links = travelLinks(map, here); return map.pins.filter(p => links.get(here.id)?.has(p.id)); };
 const d = (sides: number) => 1 + Math.floor(Math.random() * Math.max(1, sides));
 const signed = (n: number) => n >= 0 ? `+ ${n}` : `- ${Math.abs(n)}`;
 // Resource-like stats (mana, inner energy) are pools, not ability scores, so they never become modifiers.
@@ -356,9 +479,88 @@ const abilityMod = (g: Game, s: Session, pattern: RegExp) => {
 };
 const clampInt = (v: unknown, min: number, max: number, fallback: number) => { const n = Number(v); return Number.isFinite(n) ? Math.max(min, Math.min(max, Math.round(n))) : fallback; };
 // The GM sizes up the opponent once; missing or out-of-range numbers fall back to an average foe.
-const startCombat = (c: CombatState, enemy?: { hp?: unknown; dc?: unknown; damage?: unknown } | null): CombatState => {
-  const hp = clampInt(enemy?.hp, 20, 200, 60);
-  return { ...c, enemyHp: hp, enemyMaxHp: hp, enemyDc: clampInt(enemy?.dc, 8, 18, 12), enemyDamage: clampInt(enemy?.damage, 3, 20, 8), round: 1, itemUse: undefined };
+const startCombat = (c: CombatState, enemy?: { hp?: unknown; dc?: unknown; damage?: unknown; power?: unknown } | null): CombatState => {
+  const power = clampInt(enemy?.power, 1, MAX_POWER, 3);
+  const base = POWER_TIERS[power];
+  const hp = clampInt(enemy?.hp, 10, 3000, base.hp);
+  return { ...c, power, enemyHp: hp, enemyMaxHp: hp, enemyDc: clampInt(enemy?.dc, 6, 25, base.dc), enemyDamage: clampInt(enemy?.damage, 2, 100, base.damage), round: 1, itemUse: undefined };
+};
+// A monster or hostile NPC blocking the way: the player chooses to fight or to run (no talking).
+type Threat = { npc: string; monster: boolean; lead?: string; fleeTo?: { mapId: string; pinId: string } };
+// Escape odds: agility and a level edge help, a stronger foe hurts; never certain either way.
+const fleeChance = (g: Game, s: Session, t: Threat) => {
+  const foeLevel = t.monster ? levelForTier(findFoe(defaultMapGenre(g), t.npc)?.power || 3) : npcLevel(s, t.npc) || 3;
+  const agility = abilityMod(g, s, /민첩|agi|dex/i);
+  return Math.max(0.1, Math.min(0.9, 0.5 + agility * 0.05 + ((s.level || 1) - foeLevel) * 0.03));
+};
+// Test commands: a named foe ("고블린") wins; otherwise a generic request ("몬스터 인카운트") rolls a local encounter.
+const debugFoe = (g: Game, s: Session, command: string): Foe | undefined => {
+  const genre = defaultMapGenre(g);
+  const named = foesOf(genre).find(f => command.includes(f.name)) || foesOf(genre).find(f => f.name.split(' ').some(w => w.length >= 2 && !/무리|떼|패거리|우두머리|전사|병사/.test(w) && command.includes(w)));
+  if (named) return named;
+  if (!/몬스터|마물|괴물|습격|인카운트|적대|적 등장|매복/.test(command)) return undefined;
+  const pin = (g.maps || []).find(m => m.id === s.mapId)?.pins.find(p => p.id === s.pinId);
+  return pickEncounter(genre, `${pin?.name || ''} ${pin?.description || ''}`, s.level || 1);
+};
+// At or below this an NPC attacks on sight instead of talking.
+const HOSTILE_AFFECTION = -60;
+// Max HP grows with level on top of the game's base HP.
+const maxHpOf = (g: Game, s: Session) => g.hp + levelBonus(s.level || 1).hp;
+const npcLevel = (s: Session, name: string): number | undefined => s.companions?.[name]?.level ?? (s.npcPower?.[name] ? levelForTier(s.npcPower[name]) : undefined);
+// Use-based growth: what the player keeps doing builds up "training" on the matching stat,
+// and each level-up spends GROWTH_POINTS weighted by it. Pools (mana, 내공) grow in bigger steps.
+const GROWTH_POINTS = 3;
+const growthFields = (g: Game) => (g.characterConfig || defaultCharacterConfig()).fields.filter(f => f.kind === 'number' && !/체온|단서|temperature|clue/i.test(f.id + f.name));
+const statLike = (g: Game, re: RegExp) => growthFields(g).find(f => re.test(f.name) || re.test(f.id))?.id;
+const STRENGTH = /근력|힘|외공|str/i, AGILITY = /민첩|경공|agi|dex/i, CHARM = /매력|화술|카리스마|cha/i, MIND = /지능|오성|통찰|관찰|추리|insight|int|logic/i;
+const train = (s: Session, ids: (string | undefined)[], amount = 1): Session => {
+  const t = { ...(s.training || {}) };
+  for (const id of ids) if (id) t[id] = (t[id] || 0) + amount;
+  return { ...s, training: t };
+};
+const growStats = (g: Game, s: Session, levels: number): { session: Session; note: string } => {
+  const fields = growthFields(g);
+  if (levels <= 0 || !fields.length) return { session: s, note: '' };
+  const weights = fields.map(f => (s.training?.[f.id] || 0) + 0.5);
+  const total = weights.reduce((a, b) => a + b, 0);
+  const gains: Record<string, number> = {};
+  for (let i = 0; i < levels * GROWTH_POINTS; i++) {
+    let r = Math.random() * total, k = 0;
+    while (k < fields.length - 1 && (r -= weights[k]) > 0) k++;
+    gains[fields[k].id] = (gains[fields[k].id] || 0) + 1;
+  }
+  const values = { ...(s.characterValues || {}) };
+  const parts: string[] = [];
+  for (const field of fields) {
+    const points = gains[field.id];
+    if (!points) continue;
+    const base = Number(field.initial) || 10;
+    const step = base >= 30 ? Math.max(1, Math.round(base / 10)) : 1;
+    values[field.id] = String((Number(values[field.id] ?? field.initial) || 0) + points * step);
+    parts.push(`${field.name} +${points * step}`);
+  }
+  // Older habits fade by half each level so the build follows how the player plays now.
+  const training = Object.fromEntries(Object.entries(s.training || {}).map(([k, v]) => [k, Math.floor(v / 2)]).filter(([, v]) => (v as number) > 0));
+  const top = fields.filter(f => (s.training?.[f.id] || 0) > 0).sort((a, b) => (s.training?.[b.id] || 0) - (s.training?.[a.id] || 0))[0];
+  return { session: { ...s, characterValues: values, training }, note: `성장: ${parts.join(', ')}${top ? ` (최근 ${top.name}을(를) 많이 썼습니다)` : ''}` };
+};
+// Quests pay experience that keeps pace with the player's level.
+const questXp = (level: number) => 30 + 20 * level;
+const withXp = (g: Game, s: Session, amount: number, reason: string): { session: Session; levelsGained: number } => {
+  if (amount <= 0) return { session: s, levelsGained: 0 };
+  const before = s.level || 1;
+  const next = gainXp(before, s.xp || 0, amount);
+  const grown: Session = { ...s, level: next.level, xp: next.xp };
+  const hpGain = maxHpOf(g, grown) - maxHpOf(g, s);
+  const companions = { ...(s.companions || {}) }, allyUps: string[] = [];
+  for (const ally of s.party || []) {
+    const was = companions[ally] || { level: npcLevel(s, ally) || 3, xp: 0 };
+    const up = gainXp(was.level, was.xp, amount);
+    companions[ally] = { level: up.level, xp: up.xp };
+    if (up.levelsGained) allyUps.push(`시스템: 동료 ${ally} 레벨 업! Lv.${was.level} → Lv.${up.level}`);
+  }
+  const growth = growStats(g, grown, next.levelsGained);
+  return { levelsGained: next.levelsGained, session: { ...growth.session, companions, hp: Math.min(maxHpOf(g, grown), s.hp + hpGain), log: [...s.log, `시스템: 경험치 +${amount.toLocaleString('ko-KR')} (${reason})`, ...(next.levelsGained ? [`시스템: 레벨 업! Lv.${before} → Lv.${next.level} · 최대 HP ${maxHpOf(g, s)} → ${maxHpOf(g, grown)}`, ...(growth.note ? [`시스템: ${growth.note}`] : [])] : []), ...allyUps] } };
 };
 // One automatic exchange: the player strikes, then the foe answers if still standing.
 // Player damage scales with the foe's size so an ordinary fight resolves in about ten exchanges.
@@ -367,28 +569,42 @@ const autoBattleStep = (g: Game, s: Session): Session => {
   const c = s.combat;
   if (!c || c.result) return s;
   const strength = abilityMod(g, s, /근력|힘|str/i), agility = abilityMod(g, s, /민첩|agi|dex/i);
+  const grow = levelBonus(s.level || 1), maxHp = maxHpOf(g, s);
   const lines: string[] = [];
   let enemyHp = c.enemyHp, hp = s.hp, dealt = 0, taken = 0, countered = false, critTaken = false;
   const die = d(20);
-  if (die === 20 || (die !== 1 && die + strength >= c.enemyDc)) {
-    dealt = (d(8) + Math.max(0, strength) + Math.floor(c.enemyMaxHp / 12)) * (die === 20 ? 2 : 1);
+  if (die === 20 || (die !== 1 && die + strength + grow.hit >= c.enemyDc)) {
+    dealt = (d(8) + Math.max(0, strength) + grow.damage) * (die === 20 ? 2 : 1);
     enemyHp = Math.max(0, enemyHp - dealt);
     lines.push(`${die === 20 ? '치명타! ' : ''}내 공격 명중 — ${c.npc}에게 ${dealt} 피해 · ${c.npc} ${enemyHp}/${c.enemyMaxHp}`);
   } else lines.push(`내 공격이 빗나갔다 — ${c.npc}이(가) 피했다`);
+  // Companions strike after the player; a companion never fights against itself.
+  const allyHits: string[] = [];
+  for (const ally of (s.party || []).filter(n => n !== c.npc)) {
+    if (enemyHp <= 0) break;
+    const roll = d(20), allyTier = companionStats(npcLevel(s, ally) || 3);
+    if (roll === 20 || (roll !== 1 && roll + (allyTier.dc - 10) >= c.enemyDc - 2)) {
+      const hit = Math.ceil(d(allyTier.damage) * 0.7) * (roll === 20 ? 2 : 1);
+      enemyHp = Math.max(0, enemyHp - hit); dealt += hit; allyHits.push(ally);
+      lines.push(`${roll === 20 ? '치명타! ' : ''}동료 ${ally}의 공격 명중 — ${c.npc}에게 ${hit} 피해 · ${c.npc} ${enemyHp}/${c.enemyMaxHp}`);
+    } else lines.push(`동료 ${ally}의 공격이 빗나갔다`);
+  }
   if (enemyHp > 0) {
     const counter = d(20);
     countered = true; critTaken = counter === 20;
-    if (counter === 20 || (counter !== 1 && counter + 3 >= 12 + Math.max(0, agility))) {
+    // Stronger foes (higher dc) also land their counters more often: a civilian rarely connects, a legend almost always does.
+    if (counter === 20 || (counter !== 1 && counter + (c.enemyDc - 10) >= 12 + Math.max(0, agility) + grow.dodge)) {
       taken = d(c.enemyDamage) * (counter === 20 ? 2 : 1);
-      hp = Math.max(0, hp - taken);
-      lines.push(`${counter === 20 ? '치명타! ' : ''}${c.npc}의 반격 명중 — 나에게 ${taken} 피해 · 내 HP ${hp}/${g.hp}`);
+      hp = Math.max(c.lethal ? 0 : 1, hp - taken);
+      lines.push(`${counter === 20 ? '치명타! ' : ''}${c.npc}의 반격 명중 — 나에게 ${taken} 피해 · 내 HP ${hp}/${maxHp}`);
     } else lines.push(`${c.npc}의 반격을 피했다`);
   }
   const round = c.round + 1;
   // A stalemate is settled by whoever has more health left.
-  const result: CombatState['result'] = enemyHp <= 0 ? 'win' : hp <= 0 ? 'lose' : round > AUTO_BATTLE_LIMIT ? (enemyHp / c.enemyMaxHp < hp / Math.max(1, g.hp) ? 'win' : 'lose') : undefined;
-  if (result) lines.push(result === 'win' ? `승리 — ${c.npc}을(를) 쓰러뜨렸다` : `패배 — ${c.npc}에게 쓰러졌다`);
-  return { ...s, hp, combat: { ...c, enemyHp, round, lastDealt: dealt, lastTaken: taken, last: { dealt, critDealt: die === 20 && dealt > 0, taken: countered ? taken : null, critTaken: critTaken && taken > 0 }, totalDealt: (c.totalDealt || 0) + dealt, totalTaken: (c.totalTaken || 0) + taken, result }, log: [...s.log, ...lines.map(l => `전투: ${l}`)] };
+  const knockedOut = !c.lethal && hp <= 1 && taken > 0;
+  const result: CombatState['result'] = enemyHp <= 0 ? 'win' : hp <= 0 || knockedOut ? 'lose' : round > AUTO_BATTLE_LIMIT ? (enemyHp / c.enemyMaxHp < hp / Math.max(1, maxHp) ? 'win' : 'lose') : undefined;
+  if (result) lines.push(result === 'win' ? `승리 — ${c.npc}을(를) 쓰러뜨렸다` : knockedOut ? `패배 — ${c.npc}에게 쓰러져 빈사 상태가 됐다 (HP 1)` : `패배 — ${c.npc}에게 쓰러졌다`);
+  return { ...s, hp, combat: { ...c, enemyHp, round, lastDealt: dealt, lastTaken: taken, last: { allies: allyHits, dealt, critDealt: die === 20 && dealt > 0, taken: countered ? taken : null, critTaken: critTaken && taken > 0 }, totalDealt: (c.totalDealt || 0) + dealt, totalTaken: (c.totalTaken || 0) + taken, result }, log: [...s.log, ...lines.map(l => `전투: ${l}`)] };
 };
 const battleIntro = (c: CombatState, hp: number, maxHp: number) => `전투: ${c.npc}의 체력 ${c.enemyHp} · 나의 체력 ${hp}/${maxHp} — 전투 시작`;
 // The story log is text only; images belong to the scene stage.
@@ -453,6 +669,8 @@ const npcImage = (g: Game, name: string, activeKey?: string) => {
 };
 // 장르별 프롤로그의 첫 행동은 맵 탐색보다 사건과 인물에 직접 연결합니다.
 const openingActions = (g: Game): string[] => {
+  const main = mainPrologue(g.wizardMain);
+  if (main) return [...main.actions];
   const genre = defaultMapGenre(g);
   if (genre === 'wuxia') return [
     '종소리가 들려온 거리로 향해 도움을 청한 사람에게 무슨 일이 일어났는지 묻는다.',
@@ -490,7 +708,7 @@ const makeSession = (g: Game): Session => ({
   x: Math.floor(g.size / 2), y: Math.floor(g.size / 2), hp: g.hp,
   inventory: combinedStartingItems(g.prompt || '', g.startingEquipment || ''),
   characterValues: Object.fromEntries((g.characterConfig || defaultCharacterConfig()).fields.map(f=>[f.id,f.initial])), characterEquipment: {}, characterGold: (g.characterConfig || defaultCharacterConfig()).initialGold,
-  flags: [], triggeredEvents: [], completedGoalSteps:[],currentGoal: '', goalCompleted:false, relationships: [], sceneNpcs: [], suggestedActions: prologueText(g).trim() ? openingActions(g) : defaultActions(g, getStartingLocation(g).mapId, getStartingLocation(g).pinId), activeImageKey: undefined, roll: null, pendingCheck: null, lastCheck: null,
+  flags: [], triggeredEvents: [], completedGoalSteps:[],currentGoal: '', quests: [], reputation: 0, party: [], goalCompleted:false, relationships: [], sceneNpcs: [], suggestedActions: prologueText(g).trim() ? openingActions(g) : defaultActions(g, getStartingLocation(g).mapId, getStartingLocation(g).pinId), activeImageKey: undefined, roll: null, pendingCheck: null, lastCheck: null,
   log: [prologueText(g).trim() ? `프롤로그: ${prologueText(g).trim()}` : 'GM: 모험의 첫 장이 열린다. 주변 풍경을 살피며 어디로 향할지 정할 수 있다.']
 });
 
@@ -522,9 +740,10 @@ function TypeText({ text }: { text: string }) {
   return <span className="typeText" onClick={() => setShown(text.length)}>{text.slice(0, shown)}{shown < text.length && <i className="typeCaret" aria-hidden="true"/>}</span>;
 }
 function TalkBubble({ t, image, typing = false }: { t: TalkLine; image?: string; typing?: boolean }) {
-  if (t.speaker === 'scene') return <p className="talkScene">{t.line}</p>;
+  // Talk reads like a messenger chat: narration from older saves is hidden and gestures only drive the sprite motion.
+  if (t.speaker === 'scene') return null;
   if (t.speaker === 'me') return <div className="talkRow talkMe"><div className="talkBubbleBox">{t.line}</div></div>;
-  return <div className="talkRow talkNpc"><span className="talkAvatar">{image ? <img src={image} alt=""/> : t.name.slice(0, 1)}</span><div className="talkBody"><span className="talkName">{t.name}{t.gesture && !t.quiet && <em> · {t.gesture}</em>}</span><div className="talkBubbleBox" aria-label={t.line}>{typing ? <TypeText text={t.line}/> : t.line}</div></div></div>;
+  return <div className="talkRow talkNpc"><span className="talkAvatar">{image ? <img src={image} alt=""/> : t.name.slice(0, 1)}</span><div className="talkBody"><span className="talkName">{t.name}</span><div className="talkBubbleBox" aria-label={t.line}>{typing ? <TypeText text={t.line}/> : t.line}</div></div></div>;
 }
 function PrologueRichText({text,game}:{text:string;game:Game}) {
   const tokens = text.split(/(\{\{\s*img\s*::[^{}\n]+::[^{}\n]+\}\})/g);
@@ -545,7 +764,7 @@ function PrologueRichText({text,game}:{text:string;game:Game}) {
 
 const tabs: { id: Tab; label: string }[] = [{ id: 'prompt', label: '게임 프롬프트' }, { id: 'settings', label: '게임 설정' }, { id: 'register', label: '등록' }];
 
-function CharacterPanel({game,session,portrait}:{game:Game;session:Session;portrait?:string}) {
+function CharacterPanel({game,session,portrait,onInvite,onLeave,onDropQuest}:{game:Game;session:Session;portrait?:string;onInvite?:(npc:string)=>void;onLeave?:(npc:string)=>void;onDropQuest?:(quest:string)=>void}) {
  const c=game.characterConfig || defaultCharacterConfig();
  const hasStartingItems = combinedStartingItems(game.prompt || '', game.startingEquipment || '').length > 0;
  const tabs=([['stats','능력치'],['inventory','인벤토리'],['status','상태'],['relationships','관계도']] as const).filter(([key])=>key==='relationships' ? c.sections.relationships !== false : (c.sections[key] || (key==='inventory' && (hasStartingItems || c.sections.equipment))));
@@ -553,17 +772,15 @@ function CharacterPanel({game,session,portrait}:{game:Game;session:Session;portr
  const selected=tabs.some(([key])=>key===active)?active:tabs[0]?.[0];
  if(!c.sections.character && tabs.length===0)return null;
  return <div className="characterPanel"><div className="characterPanelHeading"><strong>플레이어 정보</strong><span>게임별 설정</span></div>
- <div className="characterGoal characterGoalFinal"><strong>최종 목표</strong><span>{getGameGoal(game) || '아직 최종 목표의 전모가 밝혀지지 않았습니다. 사건을 조사하고 주요 인물과 대화하여 단서를 찾아보세요.'}</span>{game.finalGoalMode==='progress'&&<div className="goalMilestoneProgress"><div className="goalMilestoneCount">진행도 {(session.completedGoalSteps||[]).filter(n=>n<(game.finalGoalSteps||[]).filter(Boolean).length).length} / {(game.finalGoalSteps||[]).filter(Boolean).length}</div><div className="goalMilestoneTrack"><i style={{width:`${(game.finalGoalSteps||[]).filter(Boolean).length?Math.min(100,(session.completedGoalSteps||[]).filter(n=>n<(game.finalGoalSteps||[]).filter(Boolean).length).length/(game.finalGoalSteps||[]).filter(Boolean).length*100):0}%`}}/></div>{(game.finalGoalSteps||[]).filter(Boolean).map((step,i)=><div className="goalMilestoneItem" key={i}><span>{(session.completedGoalSteps||[]).includes(i)?'✓':'○'}</span><span>{displayGoal(step)}</span></div>)}</div>}</div>
- 
- <div className="characterGoal characterGoalCurrent"><strong>현재 목표</strong><span>{session.currentGoal?.trim() || "현재 목표: 없음"}</span></div>
+ <section className="questLog" aria-label="퀘스트"><div className="questLogHeading"><strong><ScrollText size={15}/> 퀘스트</strong><span>{questsOf(session).length} / {MAX_QUESTS}</span></div>{Array.from({length:MAX_QUESTS},(_,i)=>questsOf(session)[i]).map((q,i)=>q ? <div key={i} className="questCard"><span className="questBadge">{i+1}</span><p>{q}</p><small>{session.questGivers?.[q] ? <>의뢰 · <b>{session.questGivers[q]}</b></> : '진행 중'}</small>{onDropQuest && <button type="button" className="questDrop" aria-label={`퀘스트 삭제: ${q}`} title="퀘스트 삭제" onClick={() => onDropQuest(q)}><X size={13}/></button>}</div> : <div key={i} className="questCard questEmpty">빈 퀘스트 슬롯</div>)}</section>
 
  {session.goalCompleted && <div className="characterGoal"><strong>게임 완료</strong> <span>최종 목표를 달성했습니다. 엔딩이 확정되었습니다.</span></div>}
- {c.sections.character&&<div className="characterSummary">{portrait&&<img className="characterPortrait" src={portrait} alt="플레이어 캐릭터"/>}<div className="characterIdentity"><strong>{c.initialName || '모험가'}</strong><small>{[c.initialRace,c.initialJob].filter(Boolean).join(' · ')}</small>{game.showHpBar !== false && <div className="characterVitals"><span>HP {session.hp}/{game.hp}</span><div className="characterVitalTrack"><i style={{width:`${Math.max(0,Math.min(100,session.hp/Math.max(1,game.hp)*100))}%`}}/></div></div>}{c.initialGold > 0 && <small>소지금 {session.characterGold ?? c.initialGold} G</small>}</div></div>}
+ {c.sections.character&&<div className="characterSummary">{portrait&&<img className="characterPortrait" src={portrait} alt="플레이어 캐릭터"/>}<div className="characterIdentity"><strong>{c.initialName || '모험가'}</strong><small>{[c.initialRace,c.initialJob].filter(Boolean).join(' · ')}</small>{game.showHpBar !== false && <div className="characterVitals"><span>HP {session.hp}/{maxHpOf(game, session)}</span><div className="characterVitalTrack"><i style={{width:`${Math.max(0,Math.min(100,session.hp/Math.max(1,maxHpOf(game, session))*100))}%`}}/></div></div>}<div className="characterLevel"><b>Lv.{session.level || 1}{(session.level || 1) >= MAX_LEVEL ? ' (MAX)' : ''}</b></div><div className="characterVitals characterExp"><span>EXP {(session.level || 1) >= MAX_LEVEL ? 'MAX' : `${(session.xp || 0).toLocaleString('ko-KR')} / ${xpToNext(session.level || 1).toLocaleString('ko-KR')}`}</span><div className="characterVitalTrack"><i style={{width:`${(session.level || 1) >= MAX_LEVEL ? 100 : Math.min(100, (session.xp || 0) / xpToNext(session.level || 1) * 100)}%`}}/></div></div>{c.initialGold > 0 && <small>소지금 {session.characterGold ?? c.initialGold} G</small>}<div className={`characterReputation${(session.reputation || 0) < 0 ? ' infamy' : ''}`}><Award size={16}/><span>명성</span><b>{(session.reputation || 0).toLocaleString('ko-KR')}</b><em>{reputationRank(session.reputation || 0)}</em></div></div></div>}
  {tabs.length>0&&<><div className="characterTabs">{tabs.map(([key,label])=><button key={key} type="button" className={selected===key?'active':''} onClick={()=>setActive(key)}>{label}</button>)}</div><div className="characterTabBody">
  {selected==='stats'&&<div className="characterStatGrid">{c.fields.filter(f=>f.visible).map(f=>{const value=session.characterValues?.[f.id] ?? f.initial;return <div className="characterStat" key={f.id}><small>{statDisplayName(f)}</small><strong>{statDisplayValue(f,String(value))}{f.kind==='gauge'?` / ${f.max || 100}`:''}</strong>{f.kind==='gauge'&&<div className="characterStatTrack"><i style={{width:`${Math.max(0,Math.min(100,Number(value)/Math.max(1,f.max || 100)*100))}%`}}/></div>}</div>;})}{c.fields.every(f=>!f.visible)&&<p>표시할 능력치가 없습니다.</p>}</div>}
  {selected==='inventory'&&<div className="characterItems">{(session.inventory || []).length?(session.inventory || []).map((item,i)=><span key={`${item}-${i}`}>{item}</span>):<p>인벤토리가 비어 있습니다.</p>}</div>}
  {selected==='status'&&<p className="characterEmptyStatus">적용된 상태 효과가 없습니다.</p>}
- {selected==='relationships'&&<div className="relationshipList">{(session.relationships||[]).length ? (session.relationships||[]).map(person=>{const image=(()=>{const portrait=(game.npcPortraits||[]).find(n=>n.name.trim()===person.name.trim());if(portrait?.image)return portrait.image;const row=(game.imageRows||[]).find(r=>r.name.trim()===person.name.trim());const col=(game.imageColumns||[]).find(x=>x.name.trim()==='기본');return (game.imageCells||[]).find(cell=>cell.rowId===row?.id&&cell.columnId===col?.id)?.image;})();return <div key={person.id} className="relationshipPerson">{image && <div className="relationshipPhoto"><img src={image} alt={`${person.name} 인물 사진`}/></div>}<div className="relationshipDetails"><strong>{person.name}</strong><small>관계 · {person.relation}</small><span>호감도 <b>{person.affection}</b> / 100</span><div className="relationshipGauge"><i style={{width:`${Math.max(0,Math.min(100,person.affection))}%`}}/></div></div></div>;}) : <p className="characterEmptyStatus">아직 만난 인물이 없습니다. 게임을 진행하며 NPC를 만나면 자동으로 등록됩니다.</p>}</div>}
+ {selected==='relationships'&&<div className="relationshipList">{(session.relationships||[]).length ? (session.relationships||[]).map(person=>{const image=(()=>{const portrait=(game.npcPortraits||[]).find(n=>n.name.trim()===person.name.trim());if(portrait?.image)return portrait.image;const row=(game.imageRows||[]).find(r=>r.name.trim()===person.name.trim());const col=(game.imageColumns||[]).find(x=>x.name.trim()==='기본');return (game.imageCells||[]).find(cell=>cell.rowId===row?.id&&cell.columnId===col?.id)?.image;})();return <div key={person.id} className="relationshipPerson">{image && <div className="relationshipPhoto"><img src={image} alt={`${person.name} 인물 사진`}/></div>}<div className="relationshipDetails"><strong>{person.name}{npcLevel(session, person.name) && <em className="npcLevelTag">Lv.{npcLevel(session, person.name)}</em>}</strong><small>관계 · {person.relation}{(session.party || []).includes(person.name) && <em className="partyBadge">동료</em>}</small><span className={`attitude-${attitudeTier(person.affection).tone}`}>호감도 <b>{person.affection > 0 ? '+' : ''}{person.affection}</b> · {attitudeTier(person.affection).label}</span><div className="relationshipGauge"><i className={person.affection < 0 ? 'neg' : ''} style={person.affection < 0 ? {right:'50%',width:`${Math.min(100,-person.affection)/2}%`} : {left:'50%',width:`${Math.min(100,person.affection)/2}%`}}/></div>{onInvite && ((session.party || []).includes(person.name) ? <div className="partyJoinedRow"><span className="partyJoined"><Check size={13}/> 합류</span><button type="button" className="partyLeaveLink" onClick={() => onLeave?.(person.name)}>헤어지기</button></div> : <button type="button" className="partyButton" disabled={(session.party || []).length >= PARTY_LIMIT} title={(session.party || []).length >= PARTY_LIMIT ? `파티는 최대 ${PARTY_LIMIT}명입니다` : '함께 다니자고 권유합니다'} onClick={() => onInvite(person.name)}><Users size={12}/> 파티 권유</button>)}</div></div>;}) : <p className="characterEmptyStatus">아직 만난 인물이 없습니다. 게임을 진행하며 NPC를 만나면 자동으로 등록됩니다.</p>}</div>}
 
  </div></>}
  </div>;
@@ -666,20 +883,14 @@ function PromptBuilder({game,update,busy,setBusy,error,setError,onMap}:{game:Gam
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[stage>=2,game.wizardWorld]);
  const chosenMain=directionOptions?.mains.find(m=>m.name===game.wizardMain);
- const directionDone=[!!game.wizardMain,!!game.wizardStart,true];
+ const directionDone=[!!game.wizardMain,true];
  const chooseMain=(main:DirectionOptions['mains'][number])=>{
   if(compressing)return;
   setError('');
   // A different story brings its own progress steps.
   const steps=main.name===game.wizardMain?{}:{finalGoalSteps:game.finalGoalMode==='progress'?main.progressSteps:[]};
-  update({wizardMain:main.name,compressedPrompt:undefined,...steps});
+  update({wizardMain:main.name,wizardStart:'',compressedPrompt:undefined,...steps});
   setDirStep(1);
- };
- const chooseStart=(name:string)=>{
-  if(compressing)return;
-  setError('');
-  update({wizardStart:name,compressedPrompt:undefined});
-  setDirStep(2);
  };
  const chooseGoalMode=(mode:'single'|'progress')=>{
   const prefill=mode==='progress'&&!(game.finalGoalSteps||[]).some(x=>x.trim())&&chosenMain?{finalGoalSteps:chosenMain.progressSteps}:{};
@@ -687,10 +898,11 @@ function PromptBuilder({game,update,busy,setBusy,error,setError,onMap}:{game:Gam
  };
  const submitDirections=async()=>{
   if(busy||compressing)return;
-  if(!game.wizardMain||!game.wizardStart){setError('이야기와 주인공 시작을 먼저 선택해 주세요.');return;}
+  if(!game.wizardMain){setError('이야기를 먼저 선택해 주세요.');return;}
   setCompressing(true);setError('');
   try{
-   const response=await fetch('/api/prompt/build-final',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gameName:game.name,gameDescription:game.description,genre:game.wizardWorld||game.wizardType,goalMode:game.finalGoalMode||'single',mainName:game.wizardMain,startName:game.wizardStart})});
+   // Each story ships a finished, consistency-checked prompt; nothing is assembled at random any more.
+   const response=await fetch('/api/prompt/complete?main='+encodeURIComponent(game.wizardMain));
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(data.error||'게임 설정 생성 실패');
    if(typeof data.prompt!=='string'||!data.prompt.trim())throw Error('AI가 게임 설정을 반환하지 않았습니다.');
@@ -701,12 +913,11 @@ function PromptBuilder({game,update,busy,setBusy,error,setError,onMap}:{game:Gam
   finally{setCompressing(false);}
  };
  const choiceCard=(key:string,checked:boolean,title:string,body:string,onPick:()=>void)=><div key={key} role="radio" aria-checked={checked} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onPick();}}} onClick={onPick} className={'wizardChoice wizardSelectable '+(checked?'selected':'')}><div className="wizardOptionSummary"><input type="radio" checked={checked} readOnly tabIndex={-1}/><div className="wizardOptionText"><strong>{title}</strong><span>{body}</span></div></div></div>;
- const directionStepTitles=['어떤 이야기로 시작할까요?','주인공은 누구로 시작할까요?','목표는 어떻게 보여줄까요?'];
- const directionStepHelp=['고른 메인 사건이 게임의 중심 줄거리가 됩니다. 등장 세력과 NPC도 이 사건에 맞춰 정해집니다.','고른 신분으로 게임을 시작합니다. 신분에 따라 시작 소지품과 첫 장면이 달라집니다.','최종 목표형은 하나의 큰 목표를 향해 가고, 진행도형은 단계별 진행 상황이 플레이 화면에 표시됩니다.'];
+ const directionStepTitles=['어떤 이야기로 시작할까요?','목표는 어떻게 보여줄까요?'];
+ const directionStepHelp=['고른 이야기의 완성된 게임 설정(무대·세력·NPC·사건·주인공 시작)이 그대로 쓰입니다.','최종 목표형은 하나의 큰 목표를 향해 가고, 진행도형은 단계별 진행 상황이 플레이 화면에 표시됩니다.'];
  const renderDirection=()=>{
   if(!directionOptions)return <p className="wizardHelp">선택지를 불러오는 중입니다...</p>;
   if(dirStep===0)return <div className="wizardChoices">{directionOptions.mains.map(m=>choiceCard(m.name,game.wizardMain===m.name,m.name,m.hook,()=>chooseMain(m)))}</div>;
-  if(dirStep===1)return <div className="wizardChoices">{(chosenMain?.starts||[]).map(s=>choiceCard(s.name,game.wizardStart===s.name,s.name,s.summary,()=>chooseStart(s.name)))}</div>;
   return <div className="wizardChoices">
    {choiceCard('single',game.finalGoalMode!=='progress','최종 목표형',chosenMain?.goal||'하나의 최종 목표를 달성하면 결말에 이릅니다.',()=>chooseGoalMode('single'))}
    {choiceCard('progress',game.finalGoalMode==='progress','진행도형',chosenMain?.progressSteps.join(' → ')||'단계별 목표를 차례로 달성합니다.',()=>chooseGoalMode('progress'))}
@@ -724,18 +935,18 @@ function PromptBuilder({game,update,busy,setBusy,error,setError,onMap}:{game:Gam
   {stage>=2&&<div className="bulkImportEntry"><div><strong>작성한 게임 규칙이 있나요?</strong><p>기본 규칙과 추가 규칙을 한 번에 붙여넣고 제목별로 자동 분류할 수 있어요.</p></div><button type="button" className="btn primary" onClick={()=>{setBulkOpen(v=>!v);setBulkError('');}}><Upload size={16}/>{bulkOpen?'일괄 입력 닫기':'전체 프롬프트 가져오기'}</button></div>}
   {stage>=2&&bulkOpen&&<div className="bulkImportPanel"><label htmlFor="bulkPromptText"><strong>전체 규칙 붙여넣기</strong></label><p>예: [역할과 기본 원칙], [세계관과 배경], [시작 소지품]. 원문 내용은 요약하지 않습니다.</p><textarea id="bulkPromptText" rows={12} value={bulkText} onChange={e=>{setBulkText(e.target.value);setBulkError('');}} placeholder={'[역할과 기본 원칙]\nGM 역할과 진행 규칙...\n\n[세계관과 배경]\n세계관...\n\n[플레이어와 시작 조건]\n시작 조건...\n\n[진행 방식과 정합성]\n진행 규칙...\n\n[시작 소지품]\n아이템 목록...'} /><div className="bulkImportSummary"><strong>분석 결과 · {bulkSections.length}개 항목</strong><span>{bulkText.length.toLocaleString()} / {PROMPT_LIMIT.toLocaleString()}자</span></div><div className="bulkImportTags">{bulkSections.map((section,i)=><span key={i} className={promptSections.some(p=>p.promptTitle===section.title)?'bulkBase':'bulkExtra'}>{section.title} · {promptSections.some(p=>p.promptTitle===section.title)?'기본':'추가'}</span>)}</div>{bulkError&&<p className="promptBuilderError" role="alert">{bulkError}</p>}<div className="bulkImportActions"><button type="button" className="btn" onClick={()=>setBulkOpen(false)}>취소</button><button type="button" className="btn primary" disabled={!bulkSections.length} onClick={applyBulkRules}>분석한 규칙 전체 적용</button></div><small>적용 시 기존 규칙은 확인 후 교체됩니다. 저장은 상단의 수동 저장 버튼으로 진행하세요.</small></div>}
 
-  {stage===1&&<div className="wizardStep"><h3>1. 게임 장르를 선택하세요</h3><p>세계관은 세 가지로 고정됩니다. 다음 단계에서 이야기·주인공·목표 방향을 고릅니다.</p><div className="wizardChoiceList">{worldChoices.map((w,i)=><button type="button" key={w} className={'wizardWorldRow '+(selectedWorld===w?'chosen':'')} onClick={()=>update({...(w!==selectedWorld?{wizardMain:'',wizardStart:'',finalGoalSteps:[]}:{}),wizardType:'rpg',wizardWorld:w,...genrePresetPatch(game,w)})}><b>{i+1}</b><span>{w}</span><ChevronRight size={16}/></button>)}</div><button type="button" className="btn primary" disabled={!worldChoices.includes(selectedWorld)} onClick={()=>{setDirStep(0);update({wizardStage:2,removedPromptSections:[...new Set([...removed,...promptSections.filter(s=>!s.required).map(s=>s.id)])],prompt:buildDraftPrompt(drafts,extras,[...new Set([...removed,...promptSections.filter(s=>!s.required).map(s=>s.id)])])});}}>장르 확정하고 방향 정하기 <ChevronRight size={16}/></button></div>}
+  {stage===1&&<div className="wizardStep"><h3>1. 게임 장르를 선택하세요</h3><p>세계관은 세 가지로 고정됩니다. 다음 단계에서 이야기와 목표 방식을 고릅니다.</p><div className="wizardChoiceList">{worldChoices.map((w,i)=><button type="button" key={w} className={'wizardWorldRow '+(selectedWorld===w?'chosen':'')} onClick={()=>update({...(w!==selectedWorld?{wizardMain:'',wizardStart:'',finalGoalSteps:[]}:{}),wizardType:'rpg',wizardWorld:w,...genrePresetPatch(game,w)})}><b>{i+1}</b><span>{w}</span><ChevronRight size={16}/></button>)}</div><button type="button" className="btn primary" disabled={!worldChoices.includes(selectedWorld)} onClick={()=>{setDirStep(0);update({wizardStage:2,removedPromptSections:[...new Set([...removed,...promptSections.filter(s=>!s.required).map(s=>s.id)])],prompt:buildDraftPrompt(drafts,extras,[...new Set([...removed,...promptSections.filter(s=>!s.required).map(s=>s.id)])])});}}>장르 확정하고 방향 정하기 <ChevronRight size={16}/></button></div>}
   {stage===2&&<div className="wizardStep rpgStepWizard">
-    <div className="rpgStepTop"><strong>2. 게임 방향 정하기 · {dirStep+1} / 3</strong><span>{game.wizardWorld}</span></div>
-    <div className="rpgStepProgress">{directionStepTitles.map((title,i)=><button key={title} type="button" title={title} className={i===dirStep?'active':directionDone[i]&&i<2?'done':''} disabled={!directionDone.slice(0,i).every(Boolean)} onClick={()=>setDirStep(i)}>{i+1}</button>)}</div>
-    <div className="wizardRequired"><div className="wizardRequiredLabel"><span>{dirStep+1} / 3</span><strong>{directionStepTitles[dirStep]}</strong>{dirStep<2&&directionDone[dirStep]&&<small>선택 완료 ✓</small>}</div>
+    <div className="rpgStepTop"><strong>2. 게임 방향 정하기 · {dirStep+1} / 2</strong><span>{game.wizardWorld}</span></div>
+    <div className="rpgStepProgress">{directionStepTitles.map((title,i)=><button key={title} type="button" title={title} className={i===dirStep?'active':directionDone[i]&&i<1?'done':''} disabled={!directionDone.slice(0,i).every(Boolean)} onClick={()=>setDirStep(i)}>{i+1}</button>)}</div>
+    <div className="wizardRequired"><div className="wizardRequiredLabel"><span>{dirStep+1} / 2</span><strong>{directionStepTitles[dirStep]}</strong>{dirStep<1&&directionDone[dirStep]&&<small>선택 완료 ✓</small>}</div>
     <p className="wizardHelp">{directionStepHelp[dirStep]}</p>
     {renderDirection()}
     </div>
-    <div className="rpgStepNavigation"><button className="btn" type="button" disabled={dirStep===0||compressing} onClick={()=>setDirStep(i=>Math.max(0,i-1))}><ArrowLeft size={15}/> 이전</button>{dirStep<2?<button className="btn primary" type="button" disabled={!directionDone[dirStep]} onClick={()=>setDirStep(i=>i+1)}>다음 <ChevronRight size={15}/></button>:<button className="btn primary" type="button" disabled={compressing||!game.wizardMain||!game.wizardStart||(game.finalGoalMode==='progress'&&(game.finalGoalSteps||[]).filter(x=>x.trim()).length<2)} onClick={()=>void submitDirections()}>{compressing?'게임 설정을 만들고 검토하는 중...':'방향 선택 완료 · 게임 설정 만들기'} <ChevronRight size={15}/></button>}</div>
-    <p className="wizardHelp">선택을 마치면 고른 방향으로 세계·NPC·사건이 채워지고, AI가 앞뒤가 맞는지 검토합니다.</p>
+    <div className="rpgStepNavigation"><button className="btn" type="button" disabled={dirStep===0||compressing} onClick={()=>setDirStep(i=>Math.max(0,i-1))}><ArrowLeft size={15}/> 이전</button>{dirStep<1?<button className="btn primary" type="button" disabled={!directionDone[dirStep]} onClick={()=>setDirStep(i=>i+1)}>다음 <ChevronRight size={15}/></button>:<button className="btn primary" type="button" disabled={compressing||!game.wizardMain||(game.finalGoalMode==='progress'&&(game.finalGoalSteps||[]).filter(x=>x.trim()).length<2)} onClick={()=>void submitDirections()}>{compressing?'게임 설정을 불러오는 중...':'방향 선택 완료 · 게임 설정 불러오기'} <ChevronRight size={15}/></button>}</div>
+    <p className="wizardHelp">이야기마다 미리 만들어 검수한 완성 설정을 불러옵니다. 무작위로 조립하지 않아 인물·장소·사건이 서로 맞습니다.</p>
   </div>}
-  {stage===3&&<div className="wizardStep"><h3>3. 최종 프롬프트 확인 및 선택적 보완</h3>{game.wizardBasePrompt?<div className="tip"><strong>{combined.length.toLocaleString()}자 · 최대 7,000자</strong><p>고른 방향({game.wizardMain} · {game.wizardStart} · {game.finalGoalMode==='progress'?'진행도형':'최종 목표형'})으로 만든 게임 설정입니다. 오른쪽 미리보기에서 NPC·사건·목표를 확인하세요.</p></div>:<div className="tip"><strong>원본 {combined.length.toLocaleString()}자 · 최대 7,000자</strong><p>가져온 규칙을 AI로 하나의 게임 설정으로 통합·압축합니다.</p><button type="button" className="btn primary" disabled={compressing||busy||!requiredReady||!!game.compressedPrompt} onClick={()=>void compressFinal()}><Sparkles size={16}/>{compressing?'전체 규칙 압축 중...':game.compressedPrompt?'통합·압축 완료':'AI로 최종 규칙 통합·압축 (최대 7,000자)'}</button>{game.compressedPrompt&&<p>최종 압축본 {game.compressedPrompt.length.toLocaleString()}자 · 오른쪽 미리보기에 적용됨</p>}</div>}<p>완성된 최종 규칙으로 게임을 시작할 수 있습니다. 필요하면 아래 예시를 참고해 원하는 규칙을 직접 추가하세요. 예시는 자동 적용되지 않습니다.</p><div className="tip">추가 규칙 예시: NPC와 관계(호감도·신뢰도), 세력과 조직(평판·외교), 전투와 대결(승패·부상), 시간과 일정(하루 행동·기한), 경제와 거래(자금·가격), 생존과 자원(식량·피로), 실패·패배·종료 조건(사망·퇴학·파산). 게임 장르에 맞게 제목과 내용을 자유롭게 작성하세요.</div>{optional.map(s=><div key={s.id} className="wizardOptionalEditor"><div className="wizardRowHeader"><strong>{s.name}</strong><button type="button" className="btn" onClick={()=>{const next=extras.filter(x=>x.id!==s.id);const nextDrafts={...drafts};delete nextDrafts[s.id];const full=withExtras(game.wizardBasePrompt,nextDrafts,next);update({customPromptSections:next,promptDrafts:nextDrafts,prompt:full||buildDraftPrompt(nextDrafts,next,removed),compressedPrompt:full});}}><Trash2 size={15}/> 삭제</button></div><textarea rows={4} value={draftText(drafts[s.id])} onChange={e=>setDraft(s.id,{selected:3,custom:e.target.value,enabled:true})} placeholder="게임에 추가할 규칙을 자유롭게 작성하세요."/></div>)}{!adding?<button type="button" className="btn" onClick={()=>setAdding(true)}><Plus size={16}/> 새 규칙 직접 추가</button>:<div className="wizardAdd"><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="규칙 제목"/><textarea value={newGuide} onChange={e=>setNewGuide(e.target.value)} rows={4} placeholder="추가할 규칙 내용을 직접 작성하세요."/><div className="wizardRowHeader"><button className="btn" type="button" onClick={()=>setAdding(false)}>취소</button><button className="btn primary" type="button" disabled={!newTitle.trim()||!newGuide.trim()} onClick={()=>{const id='custom-'+makeId();const next=[...extras,{id,name:newTitle.trim(),guide:''}];const nextDrafts={...drafts,[id]:{options:[],selected:3,custom:newGuide.trim(),enabled:true}};const full=withExtras(game.wizardBasePrompt,nextDrafts,next);update({customPromptSections:next,promptDrafts:nextDrafts,prompt:full||buildDraftPrompt(nextDrafts,next,removed),compressedPrompt:full});setNewTitle('');setNewGuide('');setAdding(false);}}>규칙 저장</button></div></div>}<button type="button" className="btn" onClick={()=>{setDirStep(0);setStage(2);}}><ArrowLeft size={15}/> 게임 방향 다시 선택</button><button type="button" className="btn primary" disabled={!game.compressedPrompt} onClick={()=>{const finalPrompt=game.compressedPrompt||combined;if(finalPrompt.length>PROMPT_LIMIT){setError('게임에 적용할 프롬프트가 7,000자를 초과했습니다. 먼저 AI 통합·압축을 실행해 주세요. 원본은 보존됩니다.');return;}onMap();}}>프롬프트 작성 완료 · 게임 설정으로 이동 <ChevronRight size={16}/></button></div>}
+  {stage===3&&<div className="wizardStep"><h3>3. 최종 프롬프트 확인 및 선택적 보완</h3>{game.wizardBasePrompt?<div className="tip"><strong>{combined.length.toLocaleString()}자 · 최대 7,000자</strong><p>고른 이야기({game.wizardMain} · {game.finalGoalMode==='progress'?'진행도형':'최종 목표형'})의 완성 게임 설정입니다. 오른쪽 미리보기에서 NPC·사건·목표를 확인하세요.</p></div>:<div className="tip"><strong>원본 {combined.length.toLocaleString()}자 · 최대 7,000자</strong><p>가져온 규칙을 AI로 하나의 게임 설정으로 통합·압축합니다.</p><button type="button" className="btn primary" disabled={compressing||busy||!requiredReady||!!game.compressedPrompt} onClick={()=>void compressFinal()}><Sparkles size={16}/>{compressing?'전체 규칙 압축 중...':game.compressedPrompt?'통합·압축 완료':'AI로 최종 규칙 통합·압축 (최대 7,000자)'}</button>{game.compressedPrompt&&<p>최종 압축본 {game.compressedPrompt.length.toLocaleString()}자 · 오른쪽 미리보기에 적용됨</p>}</div>}<p>완성된 최종 규칙으로 게임을 시작할 수 있습니다. 필요하면 아래 예시를 참고해 원하는 규칙을 직접 추가하세요. 예시는 자동 적용되지 않습니다.</p><div className="tip">추가 규칙 예시: NPC와 관계(호감도·신뢰도), 세력과 조직(평판·외교), 전투와 대결(승패·부상), 시간과 일정(하루 행동·기한), 경제와 거래(자금·가격), 생존과 자원(식량·피로), 실패·패배·종료 조건(사망·퇴학·파산). 게임 장르에 맞게 제목과 내용을 자유롭게 작성하세요.</div>{optional.map(s=><div key={s.id} className="wizardOptionalEditor"><div className="wizardRowHeader"><strong>{s.name}</strong><button type="button" className="btn" onClick={()=>{const next=extras.filter(x=>x.id!==s.id);const nextDrafts={...drafts};delete nextDrafts[s.id];const full=withExtras(game.wizardBasePrompt,nextDrafts,next);update({customPromptSections:next,promptDrafts:nextDrafts,prompt:full||buildDraftPrompt(nextDrafts,next,removed),compressedPrompt:full});}}><Trash2 size={15}/> 삭제</button></div><textarea rows={4} value={draftText(drafts[s.id])} onChange={e=>setDraft(s.id,{selected:3,custom:e.target.value,enabled:true})} placeholder="게임에 추가할 규칙을 자유롭게 작성하세요."/></div>)}{!adding?<button type="button" className="btn" onClick={()=>setAdding(true)}><Plus size={16}/> 새 규칙 직접 추가</button>:<div className="wizardAdd"><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} placeholder="규칙 제목"/><textarea value={newGuide} onChange={e=>setNewGuide(e.target.value)} rows={4} placeholder="추가할 규칙 내용을 직접 작성하세요."/><div className="wizardRowHeader"><button className="btn" type="button" onClick={()=>setAdding(false)}>취소</button><button className="btn primary" type="button" disabled={!newTitle.trim()||!newGuide.trim()} onClick={()=>{const id='custom-'+makeId();const next=[...extras,{id,name:newTitle.trim(),guide:''}];const nextDrafts={...drafts,[id]:{options:[],selected:3,custom:newGuide.trim(),enabled:true}};const full=withExtras(game.wizardBasePrompt,nextDrafts,next);update({customPromptSections:next,promptDrafts:nextDrafts,prompt:full||buildDraftPrompt(nextDrafts,next,removed),compressedPrompt:full});setNewTitle('');setNewGuide('');setAdding(false);}}>규칙 저장</button></div></div>}<button type="button" className="btn" onClick={()=>{setDirStep(0);setStage(2);}}><ArrowLeft size={15}/> 게임 방향 다시 선택</button><button type="button" className="btn primary" disabled={!game.compressedPrompt} onClick={()=>{const finalPrompt=game.compressedPrompt||combined;if(finalPrompt.length>PROMPT_LIMIT){setError('게임에 적용할 프롬프트가 7,000자를 초과했습니다. 먼저 AI 통합·압축을 실행해 주세요. 원본은 보존됩니다.');return;}onMap();}}>프롬프트 작성 완료 · 게임 설정으로 이동 <ChevronRight size={16}/></button></div>}
   
   {combined.length>PROMPT_LIMIT&&<div className="promptBuilderError">원본 {combined.length.toLocaleString()}자입니다. 실제 게임용 프롬프트는 최대 7,000자이므로 최종 통합·압축을 완료해야 합니다.</div>}
   {error&&<div className="promptBuilderError" role="alert">{error}</div>}
@@ -856,7 +1067,7 @@ export default function Home() {
     const timer = setTimeout(() => setSession(s => {
       if (s.mode !== 'combat' || !s.combat || s.combat.result) return s;
       // If the GM never answered, fight an average foe rather than stall.
-      if (s.combat.round < 1) { const combat = startCombat(s.combat, null); return { ...s, combat, log: [...s.log, battleIntro(combat, s.hp, game.hp)] }; }
+      if (s.combat.round < 1) { const combat = startCombat(s.combat, s.npcCombat?.[s.combat.npc] || null);return { ...s, combat, log: [...s.log, battleIntro(combat, s.hp, maxHpOf(game, s))] }; }
       return autoBattleStep(game, s);
     }), c.round < 1 ? 1700 : 1150);
     return () => clearTimeout(timer);
@@ -917,14 +1128,8 @@ export default function Home() {
       if (!Array.isArray(data.choices) || data.choices.length !== 4) throw new Error('invalid opening choices');
       setSession(current => {
         if (current.gameId !== g.id || current.log.length !== 1 || !current.log[0].startsWith('프롤로그:')) return current;
-        const relationships = [...(current.relationships || [])];
-        for (const raw of (Array.isArray(data.metCharacters) ? data.metCharacters : []).slice(0, 20)) {
-          if (!raw || typeof raw.name !== 'string') continue;
-          const name = raw.name.trim().slice(0, 50);
-          if (!name || name === (g.characterConfig || defaultCharacterConfig()).initialName || relationships.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())) continue;
-          relationships.push({id:makeId(),name,relation:typeof raw.relation==='string' ? raw.relation.slice(0,30) : '초면',affection:0});
-        }
-        return {...current, relationships, currentGoal: typeof data.currentGoal === 'string' ? data.currentGoal.trim().slice(0,240) : current.currentGoal, suggestedActions:data.choices, sceneNpcs: (Array.isArray(data.metCharacters) ? data.metCharacters : []).filter((x: {name?: unknown}) => !!x && typeof x.name === 'string').map((x: {name: string}) => x.name.trim()).filter(Boolean).slice(0, 3)};
+        // The game opens on an empty stage: nobody is met or encountered until the player acts.
+        return {...current, quests: typeof data.currentGoal === 'string' && data.currentGoal.trim() ? [data.currentGoal.trim().slice(0,160)] : questsOf(current), suggestedActions:data.choices, sceneNpcs: []};
       });
     } catch {
       // API 오류 시에도 장르별 사건 기반 선택지 3개를 유지합니다.
@@ -951,7 +1156,7 @@ export default function Home() {
             flags: Array.isArray(saved.flags) ? saved.flags : [],
             triggeredEvents: Array.isArray(saved.triggeredEvents) ? saved.triggeredEvents : [],
             relationships: Array.isArray(saved.relationships) ? saved.relationships : [],
-            currentGoal: typeof saved.currentGoal === 'string' ? saved.currentGoal : '', completedGoalSteps:Array.isArray(saved.completedGoalSteps)?saved.completedGoalSteps.filter((x:unknown)=>Number.isInteger(x)&&Number(x)>=0):[],goalCompleted:saved.goalCompleted === true,
+            currentGoal: typeof saved.currentGoal === 'string' ? saved.currentGoal : '', quests: Array.isArray(saved.quests) ? saved.quests.filter((x: unknown): x is string => typeof x === 'string').slice(0, MAX_QUESTS) : undefined, completedGoalSteps:Array.isArray(saved.completedGoalSteps)?saved.completedGoalSteps.filter((x:unknown)=>Number.isInteger(x)&&Number(x)>=0):[],goalCompleted:saved.goalCompleted === true,
             suggestedActions: Array.isArray(saved.suggestedActions) && saved.suggestedActions.some((x: unknown) => typeof x === 'string' && x.trim()) ? saved.suggestedActions.filter((x: unknown) => typeof x === 'string' && x.trim()).slice(0, 4) : (saved.pendingCheck ? [] : (saved.log.length===1 && saved.log[0]?.startsWith('프롤로그:') ? openingActions(g) : defaultActions(g, location.mapId, location.pinId))),
             activeImageKey: typeof saved.activeImageKey === 'string' ? saved.activeImageKey : undefined, travel: undefined,
             sceneNpcs: Array.isArray(saved.sceneNpcs) ? saved.sceneNpcs.filter((x: unknown): x is string => typeof x === 'string').slice(0, 3) : [],
@@ -1001,7 +1206,9 @@ export default function Home() {
     const success = die === 20 || (die !== 1 && total >= check.dc);
     const result: DiceResult = { ability: check.ability, label: check.label, dc: check.dc, die, modifier, total, success, critical: die === 20 ? '대성공' : die === 1 ? '대실패' : '' };
     const verdict = result.critical || (success ? '성공' : '실패');
-    const next: Session = { ...session, pendingCheck: null, lastCheck: result, roll: die,
+    // A check trains the ability it tested, a bit more when it succeeds.
+    const trained = train(session, [field?.id], success ? 3 : 2);
+    const next: Session = { ...trained, pendingCheck: null, lastCheck: result, roll: die,
       suggestedActions: [], log: [...session.log, `주사위: ${check.label} — D20(${die}) ${modifier >= 0 ? '+' : '-'} ${Math.abs(modifier)} = ${total} / DC ${check.dc} → ${verdict}`] };
     setSession(next);
     await requestGM(check.action, next, undefined, true, result);
@@ -1017,8 +1224,36 @@ export default function Home() {
       update({finalGoalSteps:data.steps});
     }catch(e){setGoalStepsError(e instanceof Error?e.message:'AI 단계 추천 실패');}finally{setGoalStepsBusy(false);}
   }
+  // Once enough entries pile up past the summary, the older ones are folded into long-term memory in the background.
+  const memoryBusy = useRef(false);
+  // The scene stage swaps to the travel map while this is open; picking a destination swaps it back.
+  const [mapOpen, setMapOpen] = useState(false);
+  const [repBurst, setRepBurst] = useState<{ delta: number; total: number; key: number } | null>(null);
+  const [levelBurst, setLevelBurst] = useState<{ level: number; key: number } | null>(null);
+  useEffect(() => { if (levelBurst) { const t = setTimeout(() => setLevelBurst(null), 3200); return () => clearTimeout(t); } }, [levelBurst]);
+  useEffect(() => { if (repBurst) { const t = setTimeout(() => setRepBurst(null), 3200); return () => clearTimeout(t); } }, [repBurst]);
+  const [partyResult, setPartyResult] = useState<{ npc: string; accepted: boolean; chance: number; thinking: boolean } | null>(null);
+  // While the map is open the stage takes the map image's own ratio, so the art fills it edge to edge.
+  const [mapRatios, setMapRatios] = useState<Record<string, number>>({});
+  const noteMapRatio = (src: string, img: HTMLImageElement) => { if (img.naturalWidth && img.naturalHeight && !mapRatios[src]) setMapRatios(r => r[src] ? r : { ...r, [src]: img.naturalWidth / img.naturalHeight }); };
+  async function rememberStory(s: Session) {
+    const upTo = s.memory?.upTo || 0;
+    // At most 60 entries per call, so an old save without memory catches up over a few turns.
+    const target = Math.min(s.log.length - MEMORY_KEEP_RECENT, upTo + 60);
+    if (memoryBusy.current || target - upTo < MEMORY_BATCH) return;
+    memoryBusy.current = true;
+    try {
+      const res = await fetch('/api/gm/memory', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary: s.memory?.summary || '', currentGoal: questsOf(s).join(' / '), entries: s.log.slice(upTo, target).map(historyLine) }) });
+      const data = await res.json();
+      if (!res.ok || typeof data.summary !== 'string') throw new Error(data.error || '장기 기억 갱신 실패');
+      // Apply only if this is still the same playthrough and nobody summarized in between.
+      setSession(cur => cur.gameId === s.gameId && (cur.memory?.upTo || 0) === upTo && cur.log.length >= target && cur.log[0] === s.log[0] ? { ...cur, memory: { summary: data.summary, upTo: target } } : cur);
+    } catch (e) { console.warn('장기 기억 갱신 실패', e); }
+    finally { memoryBusy.current = false; }
+  }
   async function requestGM(message: string, next: Session, event?: { id: string; text: string; trigger: string }, movementAllowed = true, diceResult?: DiceResult, debug = false, reroll = false) {
-    if (next.goalCompleted) return;
+    if (next.goalCompleted || (next.dead && !next.log[next.log.length - 1]?.startsWith('시스템: 사망'))) return;
     setBusy(true);
     try {
       const map = (game.maps || []).find(m => m.id === next.mapId);
@@ -1027,20 +1262,20 @@ export default function Home() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: (game.prompt || [game.world, game.rules, game.gm].join('\n')).slice(0, PROMPT_LIMIT),
-          action: message, history: next.log.slice(-12).map(historyLine), prologue: prologueText(game), movementAllowed, diceResult: diceResult || null,
-          debug, reroll, previousChoices: reroll ? next.suggestedActions || [] : [], mode: next.mode || '', npc: next.mode === 'talk' ? next.talkNpc || '' : next.combat?.npc || '', combat: next.mode === 'combat' && next.combat ? { round: next.combat.round, enemyHp: next.combat.enemyHp, enemyMaxHp: next.combat.enemyMaxHp, itemUse: next.combat.itemUse || '' } : null,
+          action: message, history: recentHistory(next).map(historyLine), withThisNpc: next.mode === 'talk' ? npcHistory(next, next.talkNpc || '') : [], memory: next.memory?.summary || '', prologue: prologueText(game), movementAllowed, diceResult: diceResult || null,
+          debug, reroll, previousChoices: reroll ? next.suggestedActions || [] : [], mode: next.mode || '', genre: defaultMapGenre(game), talkTurns: next.mode === 'talk' ? talkTurns(next) : 0, npc: next.mode === 'talk' ? next.talkNpc || '' : next.combat?.npc || '', monsters: foesOf(defaultMapGenre(game)).map(m => ({ name: m.name, power: m.power, desc: m.desc, boss: !!m.boss })), combat: next.mode === 'combat' && next.combat ? { monster: !!next.combat.monster, foeDesc: next.combat.foeDesc || '', round: next.combat.round, enemyHp: next.combat.enemyHp, enemyMaxHp: next.combat.enemyMaxHp, itemUse: next.combat.itemUse || '' } : null,
           initialEquipment: combinedStartingItems(game.prompt || "", game.startingEquipment || "").join(", "),
           ruleEquipment: extractRuleItems(game.prompt || ""),
           state: {
-            relationships: next.relationships || [], currentGoal:next.currentGoal || "", finalGoal:getGameGoal(game), finalGoalMode:game.finalGoalMode||'single', finalGoalSteps:game.finalGoalSteps||[],completedGoalSteps:next.completedGoalSteps||[],goalCompleted:next.goalCompleted === true,
+            relationships: next.relationships || [], quests: questsOf(next), reputation: next.reputation || 0, reputationRank: reputationRank(next.reputation || 0), party: next.party || [], partyLevels: Object.fromEntries((next.party || []).map(n => [n, npcLevel(next, n) || 3])),maxQuests: MAX_QUESTS,finalGoal:getGameGoal(game), finalGoalMode:game.finalGoalMode||'single', finalGoalSteps:game.finalGoalSteps||[],completedGoalSteps:next.completedGoalSteps||[],goalCompleted:next.goalCompleted === true,
             availableImages: [...(game.npcPortraits||[]).filter(n=>n.image).map(n=>`${n.name}::기본`),...(game.imageCells||[]).flatMap(cell=>{const row=(game.imageRows||[]).find(r=>r.id===cell.rowId);const col=(game.imageColumns||[]).find(c=>c.id===cell.columnId);return row&&col?[`${row.name}::${col.name}`]:[];})],
             currentMapId: map?.id || '', mapName: map?.name || '', locationName: pin?.name || '', locationDescription: pin?.description || '',
             locations: (game.maps || []).flatMap(worldMap => worldMap.pins.map(p => ({ id: p.id, mapId: worldMap.id, mapName: worldMap.name, name: p.name, kind: p.kind, description: p.description || '', targetMapId: p.targetMapId || '', targetPinId: p.targetPinId || '' }))),
             adjacentLocationIds: (map?.pins||[]).filter(p=>p.kind!=='event').map(p => p.id),
-            adjacentLocations: nearbyPins(map, pin?.id).slice(0, 4).map(p => ({ id:p.id, name:p.name, kind:p.kind })),
-            knownNpcs: (game.npcPortraits || []).map(n => n.name), sceneNpcs: next.sceneNpcs || [],
+            adjacentLocations: map && pin ? reachablePins(map, pin).map(p => ({ id:p.id, name:p.name, kind:p.kind })) : [],
+            knownNpcs: knownNpcNames(game, next), sceneNpcs: next.sceneNpcs || [], npcProfiles: npcProfiles(game, next),
             event: event?.text || '', eventTrigger: event?.trigger || '', currentInteractionEvent: pin?.eventTrigger === 'interact' ? pin.eventText || '' : '',
-            characterValues: next.characterValues || {}, hp: next.hp, maxHp: game.hp, inventory: next.inventory || [], flags: next.flags || [], roll: next.roll
+            characterValues: next.characterValues || {}, trainableStats: growthFields(game).map(f => ({ id: f.id, name: f.name })), hp: next.hp, maxHp: maxHpOf(game, next), level: next.level || 1, xp: next.xp || 0, inventory: next.inventory || [], flags: next.flags || [], roll: next.roll
           }
         })
       });
@@ -1066,7 +1301,7 @@ export default function Home() {
       const current = next;
       {
         const delta = Number(data.hpDelta);
-        const hp = Number.isFinite(delta) ? Math.max(0, Math.min(game.hp, current.hp + Math.max(-game.hp, Math.min(game.hp, Math.trunc(delta))))) : current.hp;
+        const hp = Number.isFinite(delta) ? Math.max(0, Math.min(maxHpOf(game, current), current.hp + Math.max(-maxHpOf(game, current), Math.min(maxHpOf(game, current), Math.trunc(delta))))) : current.hp;
         const inventory = [...(current.inventory || [])];
         const add = Array.isArray(data.addItems) ? data.addItems.filter((v: unknown): v is string => typeof v === 'string').slice(0, 5) : [];
         const remove = Array.isArray(data.removeItems) ? data.removeItems.filter((v: unknown): v is string => typeof v === 'string').slice(0, 5) : [];
@@ -1088,36 +1323,94 @@ export default function Home() {
         const relationships = [...(current.relationships || [])];
         if (Array.isArray(data.relationshipUpdates)) {
           for (const raw of data.relationshipUpdates.slice(0, 12)) {
-            if (!raw || typeof raw.name !== 'string') continue;
+            if (!raw || typeof raw.name !== 'string' || isFoeName(defaultMapGenre(game), raw.name)) continue;
             const name = raw.name.trim().slice(0, 50);
             if (!name || name === (game.characterConfig || defaultCharacterConfig()).initialName) continue;
             const index = relationships.findIndex(p => p.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase());
             if (index < 0 && raw.met !== true) continue;
+            if (index < 0 && !debug && !knownNpcNames(game, current).includes(name)) continue;
             const previous = index >= 0 ? relationships[index] : undefined;
             const relation = typeof raw.relation === 'string' && raw.relation.trim() ? raw.relation.trim().slice(0, 30) : (previous?.relation || '초면');
-            const affection = previous ? (typeof raw.affection === 'number' && Number.isFinite(raw.affection) ? Math.max(0, Math.min(100, Math.round(raw.affection))) : previous.affection) : 0;
+            // One scene moves affection by at most AFFECTION_STEP, so a single line can't flip a friend into an enemy; test commands are exempt.
+            const proposed = typeof raw.affection === 'number' && Number.isFinite(raw.affection) ? clampAffection(raw.affection) : undefined;
+            const affection = proposed === undefined ? (previous?.affection ?? 0) : !previous || debug ? (previous ? proposed : clampAffection(Math.max(-40, Math.min(40, proposed)))) : clampAffection(Math.max(previous.affection - AFFECTION_STEP, Math.min(previous.affection + AFFECTION_STEP, proposed)));
             const person = { id: previous?.id || makeId(), name: previous?.name || name, relation, affection };
             if (index >= 0) relationships[index] = person;
             else if (relationships.length < 100) relationships.push(person);
           }
         }
-        const currentGoal = typeof data.currentGoal === 'string' && data.currentGoal.trim() ? data.currentGoal.trim().slice(0,240) : current.currentGoal;
+        const questLog = applyQuests(questsOf(current), data, current.questGivers || {});
+        const exercised = Array.isArray(data.trained) ? data.trained.filter((id: unknown): id is string => typeof id === 'string' && growthFields(game).some(f => f.id === id)).slice(0, 2) : [];
+        for (const giver of questLog.doneGivers) { const i = giver ? relationships.findIndex(p => p.name.trim() === giver.trim()) : -1; if (i >= 0) relationships[i] = { ...relationships[i], affection: clampAffection(relationships[i].affection + QUEST_AFFECTION) }; }
+        const repDelta = (typeof data.reputationDelta === 'number' && Number.isFinite(data.reputationDelta) ? Math.max(-REPUTATION_STEP, Math.min(REPUTATION_STEP, Math.round(data.reputationDelta))) : 0) + questLog.done.length * QUEST_REPUTATION;
+        // Every affection change is spelled out, so the player sees what their choices did.
+        const affectionNotes = relationships.flatMap(p => { const before = (current.relationships || []).find(r => r.id === p.id); const diff = before ? p.affection - before.affection : 0; return diff ? [`${p.name} 호감도 ${diff > 0 ? '+' : ''}${diff} (${attitudeTier(p.affection).label})`] : []; });
+        if (affectionNotes.length) setNotice(affectionNotes.join(' · '));
+        const reputation = clampReputation((current.reputation || 0) + repDelta);
+        // A big deed gets its own fanfare instead of a quiet log line.
+        if (Math.abs(repDelta) >= 300) setRepBurst({ delta: repDelta, total: reputation, key: Date.now() });
+        // A companion who has come to dislike the player walks out.
+        const deserters = (current.party || []).filter(n => (relationships.find(r => r.name.trim() === n.trim())?.affection ?? 0) < 0);
+        const party = (current.party || []).filter(n => !deserters.includes(n));
         const configuredSteps=(game.finalGoalSteps||[]).map(x=>x.trim()).filter(Boolean);
         const validStepIndices=Array.isArray(data.completedGoalSteps)?data.completedGoalSteps.filter((n:unknown):n is number=>typeof n==='number'&&Number.isInteger(n)&&n>=0&&n<configuredSteps.length):[];
         const completedGoalSteps=[...new Set([...(current.completedGoalSteps||[]),...validStepIndices])].filter(n=>n<configuredSteps.length).sort((a,b)=>a-b);
         const goalCompleted = current.goalCompleted === true || (game.finalGoalMode==='progress' ? (configuredSteps.length>0 && completedGoalSteps.length===configuredSteps.length) : (data.finalGoalCompleted === true && !!getGameGoal(game).trim()));
-        const knownNpcs = (game.npcPortraits || []).map(n => n.name);
+        // Named people come from the game's cast (portraits, prompt NPC list, people already met); the GM can't invent a new named NPC like "잭".
+        const knownNpcs = knownNpcNames(game, current);
         const sceneNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => v.trim()).filter((v: string) => !!v && (debug || !knownNpcs.length || knownNpcs.includes(v))))].slice(0, 3) as string[] : (current.sceneNpcs || []);
         // A talk or fight keeps its partner on stage; the encounter prompt only returns for newcomers.
-        const stageNpcs = current.mode ? (current.sceneNpcs || []) : sceneNpcs.filter(n => debug || !(current.handledNpcs || []).includes(n));
+        // Companions travel with the player, so the GM naming one in the scene never turns into a fresh encounter.
+        const stageNpcs = current.mode ? (current.sceneNpcs || []) : sceneNpcs.filter(n => !(current.party || []).includes(n) && !isFoeName(defaultMapGenre(game), n) && (debug || !(current.handledNpcs || []).includes(n)));
         // A test action may also teleport within the current map.
         const debugPin = debug && typeof data.moveToPinId === 'string' ? (game.maps || []).find(m => m.id === current.mapId)?.pins.find(p => p.id === data.moveToPinId && p.id !== current.pinId && p.kind !== 'event' && p.kind !== 'exit') : undefined;
         const handledNpcs = current.handledNpcs || [];
-        const combat = current.mode === 'combat' && current.combat ? (current.combat.round === 0 ? startCombat(current.combat, data.enemy) : { ...current.combat, itemUse: undefined }) : current.combat;
+        // Whatever an NPC's strength turns out to be the first time, it stays that way for every later fight.
+        const knownFoe = current.combat ? current.npcCombat?.[current.combat.npc] : undefined;
+        const combat = current.mode === 'combat' && current.combat ? (current.combat.round === 0 ? startCombat(current.combat, knownFoe || data.enemy) : { ...current.combat, itemUse: undefined }) : current.combat;
+        const npcCombat = current.mode === 'combat' && current.combat?.round === 0 && combat && !knownFoe ? { ...(current.npcCombat || {}), [combat.npc]: { hp: combat.enemyMaxHp, dc: combat.enemyDc, damage: combat.enemyDamage, power: combat.power } } : current.npcCombat;
         const nextActions = current.mode === 'combat' ? [] : current.mode === 'talk' ? suggestedActions.slice(0, 3) : (suggestedActions.length ? suggestedActions : defaultActions(game, current.mapId, current.pinId));
-        const result: Session = { ...current, relationships, currentGoal, completedGoalSteps,goalCompleted, sceneNpcs: stageNpcs, handledNpcs: debug ? handledNpcs.filter(n => !stageNpcs.includes(n)) : handledNpcs, combat, suggestedActions: nextActions, hp, inventory, flags, activeImageKey, ...(debugPin ? { pinId: debugPin.id } : {}),
-          log: [...withPlayerLine(current.log, current.mode === 'talk' ? data.playerLine : ''), ...(current.mode === 'talk' && current.talkNpc ? talkEntries(current.talkNpc, data) : [`GM: ${String(data.text || 'GM 응답이 없습니다.')}`]), ...(current.mode === 'combat' && current.combat?.round === 0 && combat ? [battleIntro(combat, hp, game.hp)] : []), ...(debugPin ? [`시스템: [테스트] ${debugPin.name}(으)로 이동했습니다.`] : []), ...(hp !== current.hp ? [`시스템: HP ${current.hp} → ${hp}`] : []), ...(add.length ? [`시스템: 획득 — ${add.join(', ')}`] : []), ...(remove.length ? [`시스템: 사용 — ${remove.join(', ')}`] : []), ...(goalCompleted && !current.goalCompleted ? ['시스템: 최종 목표 달성 — 게임 완료'] : [])] };
-        setSession(result);
+        // A voice is fixed the first time an NPC speaks and never rewritten afterwards.
+        const npcVoices = { ...(current.npcVoices || {}) };
+        for (const v of Array.isArray(data.npcVoices) ? data.npcVoices : []) if (v && typeof v.name === 'string' && typeof v.style === 'string' && !npcVoices[v.name]) npcVoices[v.name] = v.style;
+        const result: Session = { ...train(current, exercised), npcVoices, relationships, quests: questLog.quests, questGivers: questLog.givers, reputation, party, npcCombat, completedGoalSteps,goalCompleted, sceneNpcs: stageNpcs, handledNpcs: debug ? handledNpcs.filter(n => !stageNpcs.includes(n)) : handledNpcs, combat, suggestedActions: nextActions, hp, inventory, flags, activeImageKey, ...(debugPin ? { pinId: debugPin.id } : {}),
+          log: [...withPlayerLine(current.log, current.mode === 'talk' ? data.playerLine : ''), ...(current.mode === 'talk' && current.talkNpc && !data.talkLeft ? talkEntries(current.talkNpc, data) : [`GM: ${String(data.text || 'GM 응답이 없습니다.')}`]), ...(current.mode === 'combat' && current.combat?.round === 0 && combat ? [battleIntro(combat, hp, maxHpOf(game, current))] : []), ...(debugPin ? [`시스템: [테스트] ${debugPin.name}(으)로 이동했습니다.`] : []), ...questLog.done.map(q => `시스템: 목표 완료 — ${q}`), ...questLog.failed.map(q => `시스템: 목표 실패 — ${q}`), ...affectionNotes.map(n => `시스템: ${n}`), ...(repDelta ? [`시스템: 명성 ${formatReputation(repDelta)} (${reputation.toLocaleString('ko-KR')} · ${reputationRank(reputation)})`] : []), ...deserters.map(n => `시스템: ${n}이(가) 실망해 파티를 떠났습니다.`),...questLog.added.map(q => `시스템: 새 목표 — ${q}`), ...(hp !== current.hp ? [`시스템: HP ${current.hp} → ${hp}`] : []),...(add.length ? [`시스템: 획득 — ${add.join(', ')}`] : []), ...(remove.length ? [`시스템: 사용 — ${remove.join(', ')}`] : []), ...(goalCompleted && !current.goalCompleted ? ['시스템: 최종 목표 달성 — 게임 완료'] : [])] };
+        // Experience: deeds the GM recognised, plus every quest finished this turn.
+        const earned = (typeof data.xpGain === 'number' && Number.isFinite(data.xpGain) ? Math.max(0, Math.min(5000, Math.round(data.xpGain))) : 0) + questLog.done.length * questXp(current.level || 1);
+        const grown = withXp(game, { ...result, npcPower: { ...(result.npcPower || {}), ...(data.npcPowers && typeof data.npcPowers === 'object' ? data.npcPowers : {}) } }, earned, questLog.done.length ? '퀘스트 완료' : '성장');
+        if (grown.levelsGained) setLevelBurst({ level: grown.session.level || 1, key: Date.now() });
+        // Test command "레벨 50": jump straight to that level, with the stat growth those levels would have given, at full HP.
+        const wantLevel = debug ? (typeof data.setLevel === 'number' && data.setLevel > 0 ? data.setLevel : Number((message.match(/(?:레벨|lv\.?)\s*(\d{1,3})/i) || [])[1]) || 0) : 0;
+        if (wantLevel) {
+          const target = Math.max(1, Math.min(MAX_LEVEL, Math.round(wantLevel)));
+          const jumped = growStats(game, { ...grown.session, level: target, xp: 0 }, Math.max(0, target - (grown.session.level || 1)));
+          grown.session = { ...jumped.session, hp: maxHpOf(game, jumped.session), log: [...jumped.session.log, `시스템: [테스트] 레벨 → Lv.${target} · 최대 HP ${maxHpOf(game, jumped.session)}`, ...(jumped.note ? [`시스템: ${jumped.note}`] : [])] };
+          setLevelBurst({ level: target, key: Date.now() });
+        }
+        // The NPC's closing line stays in the log; the scene then resumes with fresh choices, as if the player had left.
+        const talkOver = current.mode === 'talk' && !!current.talkNpc && (data.endTalk === true || talkTurns(result) >= TALK_LIMIT);
+        if (talkOver && current.talkNpc) {
+          const npc = current.talkNpc;
+          const closed: Session = { ...grown.session, mode: undefined, talkNpc: undefined, sceneNpcs: (grown.session.sceneNpcs || []).filter(n => n !== npc), suggestedActions: [], log: [...grown.session.log, `시스템: ${npc}와(과)의 대화가 끝났습니다.`] };
+          setSession(closed);
+          void rememberStory(closed);
+          void rememberTalk(grown.session, npc);
+          // If the player walked off mid-talk, the scene was already narrated: only fresh choices are needed.
+          if (data.talkLeft) await requestGM('대화를 마치고 다른 행동으로 넘어갔다. 현재 장면에 맞는 선택지만 새로 제시하라.', closed, undefined, true, undefined, false, true);
+          else await requestGM(`${npc}와(과)의 대화가 끝났다. 대화에서 얻은 것을 바탕으로 다음 장면을 이어 간다.`, closed);
+          return;
+        }
+        if (!grown.session.dead && !grown.session.mode && grown.session.hp <= 0 && current.hp > 0) grown.session = { ...grown.session, dead: true, log: [...grown.session.log, '시스템: 사망 — 체력이 다했습니다.'] };
+        if (grown.session.dead) grown.session = { ...grown.session, suggestedActions: [] };
+        setSession(grown.session);
+        void rememberStory(grown.session);
+        if (!grown.session.mode && !grown.session.goalCompleted && !grown.session.dead) {
+          // A monster the GM set on the player, or an NPC who hates the player, means a fight with no talking first.
+          const ambush = (typeof data.ambush === 'string' ? findFoe(defaultMapGenre(game), data.ambush) : undefined) || (debug ? debugFoe(game, current, message) : undefined);
+          const hostile = (grown.session.sceneNpcs || []).find(n => !(grown.session.party || []).includes(n) && ((grown.session.relationships || []).find(r => r.name.trim() === n.trim())?.affection ?? 0) <= HOSTILE_AFFECTION);
+          if (ambush) setSession({ ...grown.session, threat: { npc: ambush.name, monster: true }, log: [...grown.session.log, `시스템: 습격! ${ambush.name}이(가) 앞을 막아섭니다.`] });
+          else if (hostile) setSession({ ...grown.session, threat: { npc: hostile, monster: false }, log: [...grown.session.log, `시스템: ${hostile}이(가) 적의를 드러내며 앞을 막아섭니다.`] });
+        }
       }
     } catch (err) {
       setSession(s => ({ ...s, log: [...s.log, `시스템: ${err instanceof Error ? err.message : 'AI 연결 실패'}`] }));
@@ -1126,10 +1419,11 @@ export default function Home() {
   // Map marker is managed independently from the retired image matrix.
   const playerBaseImage = undefined;
   async function moveTo(p: MapPin) {
-    if (busy || session.pendingCheck || session.goalCompleted) return;
+    if (busy || session.pendingCheck || session.goalCompleted || session.dead) return;
     const map = (game.maps || []).find(m => m.id === session.mapId);
     const here = map?.pins.find(x => x.id === session.pinId);
     if (!map || !here || !reachablePins(map, here).some(x => x.id === p.id)) return;
+    setMapOpen(false);
     let destinationMap = map;
     let destinationPin = p;
     if (p.kind === 'exit') {
@@ -1146,16 +1440,56 @@ export default function Home() {
     const next: Session = { ...session, mapId: destinationMap.id, pinId: destinationPin.id, travel: undefined, sceneNpcs: [], handledNpcs: [], mode: undefined, talkNpc: undefined, combat: null, suggestedActions: [], lastCheck: null,
       triggeredEvents: arrival && destinationPin.eventOnce ? [...(session.triggeredEvents || []), key] : session.triggeredEvents,
       log: [...session.log, `시스템: ${destinationMap.name} / ${destinationPin.name}(으)로 이동했습니다.`] };
+    const genre = defaultMapGenre(game);
+    const place = `${destinationPin.name} ${destinationPin.description || ''}`;
+    const ambusher = !arrival && isDangerous(genre, place) && Math.random() < ENCOUNTER_CHANCE ? pickEncounter(genre, place, next.level || 1) : undefined;
+    if (ambusher) { setSession({ ...next, threat: { npc: ambusher.name, monster: true, lead: `${destinationPin.name}에 들어서자`, fleeTo: session.mapId && session.pinId ? { mapId: session.mapId, pinId: session.pinId } : undefined }, log: [...next.log, `시스템: 습격! ${ambusher.name}이(가) 앞을 막아섭니다.`] }); return; }
     setSession(next);
     await requestGM(`시스템이 이동을 확정했습니다. 플레이어가 ${destinationPin.name}에 도착했습니다. 도착한 장면을 묘사하세요.`, next, arrival, false);
+  }
+  async function faceThreat() {
+    const t = session.threat;
+    if (busy || !t) return;
+    const base: Session = { ...session, threat: undefined };
+    const foe = t.monster ? findFoe(defaultMapGenre(game), t.npc) : undefined;
+    if (foe) await startMonsterFight(foe, base, t.lead || '');
+    else await startFight(t.npc, base, true);
+  }
+  async function fleeThreat() {
+    const t = session.threat;
+    if (busy || !t) return;
+    const chance = fleeChance(game, session, t);
+    const practiced = train(session, [statLike(game, AGILITY)], 2);
+    if (Math.random() >= chance) {
+      // A failed escape turns straight into the fight.
+      const caught: Session = { ...practiced, threat: undefined, log: [...session.log, `시스템: 도망 실패! ${t.npc}에게 따라잡혔습니다. (확률 ${Math.round(chance * 100)}%)`] };
+      const foe = t.monster ? findFoe(defaultMapGenre(game), t.npc) : undefined;
+      if (foe) await startMonsterFight(foe, caught, '도망치려다 붙잡혀');
+      else await startFight(t.npc, caught, true);
+      return;
+    }
+    const back = t.fleeTo && (game.maps || []).find(m => m.id === t.fleeTo!.mapId)?.pins.find(p => p.id === t.fleeTo!.pinId);
+    const escaped: Session = { ...practiced, threat: undefined, ...(back ? { mapId: t.fleeTo!.mapId, pinId: back.id, sceneNpcs: [] } : {}), handledNpcs: [...new Set([...(session.handledNpcs || []), t.npc])], sceneNpcs: (back ? [] : (session.sceneNpcs || []).filter(n => n !== t.npc)), suggestedActions: [],
+      log: [...session.log, `시스템: 도망 성공 — ${t.npc}에게서 벗어났습니다.${back ? ` ${back.name}(으)로 물러났습니다.` : ''}`] };
+    setSession(escaped);
+    await requestGM(`${t.npc}에게서 간신히 도망쳤다.${back ? ` 왔던 길을 되짚어 ${back.name}(으)로 물러났다.` : ''} 도망친 직후의 장면을 묘사하라.`, escaped, undefined, false);
+  }
+  // Monsters and hostile gangs are enemies on sight: straight into combat, never into the relationship list.
+  async function startMonsterFight(foe: Foe, base: Session, lead = '') {
+    const stats = POWER_TIERS[foe.power];
+    const next: Session = { ...base, mode: 'combat', talkNpc: undefined, combat: { npc: foe.name, monster: true, lethal: true, foeDesc: foe.desc, power: foe.power, enemyHp: stats.hp, enemyMaxHp: stats.hp, enemyDc: stats.dc, enemyDamage: stats.damage, round: 0 },
+      npcCombat: { ...(base.npcCombat || {}), [foe.name]: { hp: stats.hp, dc: stats.dc, damage: stats.damage, power: foe.power } },
+      suggestedActions: [], lastCheck: null, log: [...base.log, `시스템: 습격! ${foe.name}이(가) 나타났습니다.`] };
+    setSession(next);
+    await requestGM(`${lead ? lead + ' ' : ''}${foe.name}(${foe.desc})이(가) 덮쳐 온다. 대화의 여지 없이 전투가 시작된다.`, next);
   }
   function meetNpc(s: Session, npc: string, hostile = false): Relationship[] {
     const types = relationshipTypes(game);
     const hostileType = types.find(t => /적대|원수/.test(t)) || types[types.length - 1] || '적대';
     const list = [...(s.relationships || [])];
     const index = list.findIndex(p => p.name.trim().toLocaleLowerCase() === npc.trim().toLocaleLowerCase());
-    if (index < 0) list.push({ id: makeId(), name: npc, relation: hostile ? hostileType : (types[0] || '초면'), affection: hostile ? 0 : 10 });
-    else if (hostile) list[index] = { ...list[index], relation: hostileType };
+    if (index < 0) list.push({ id: makeId(), name: npc, relation: hostile ? hostileType : (types[0] || '초면'), affection: hostile ? -60 : 10 });
+    else if (hostile) list[index] = { ...list[index], relation: hostileType, affection: Math.min(list[index].affection, -60) };
     return list;
   }
   function ignoreNpc(npc: string) {
@@ -1172,29 +1506,81 @@ export default function Home() {
     const clean = line.trim(); const npc = session.talkNpc;
     if (!clean || !npc || busy) return;
     setAction('');
-    const next: Session = { ...session, suggestedActions: [], log: [...session.log, `대화-나: ${clean}`] };
+    // Talking trains charm, or the mind when the game has no charm stat.
+    const next: Session = { ...train(session, [statLike(game, CHARM) || statLike(game, MIND)]), suggestedActions: [], log: [...session.log, `대화-나: ${clean}`] };
     setSession(next);
     await requestGM(clean, next);
+  }
+  async function rememberTalk(s: Session, npc: string) {
+    const start = s.log.lastIndexOf(`시스템: ${npc}와(과) 대화를 시작했습니다.`);
+    const lines = start >= 0 ? s.log.slice(start + 1).filter(e => parseTalk(e)).map(historyLine) : [];
+    if (!lines.length) return;
+    try {
+      const res = await fetch('/api/gm/npc-memory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ npc, note: s.npcNotes?.[npc] || '', lines }) });
+      const data = await res.json();
+      if (res.ok && typeof data.note === 'string') setSession(cur => cur.gameId === s.gameId ? { ...cur, npcNotes: { ...(cur.npcNotes || {}), [npc]: data.note } } : cur);
+    } catch (e) { console.warn('NPC 기억 갱신 실패', e); }
   }
   async function endTalk() {
     const npc = session.talkNpc;
     if (busy || !npc) return;
     const next: Session = { ...session, mode: undefined, talkNpc: undefined, sceneNpcs: (session.sceneNpcs || []).filter(n => n !== npc), suggestedActions: [], log: [...session.log, `시스템: ${npc}와(과)의 대화를 마쳤습니다.`] };
     setSession(next);
+    void rememberTalk(session, npc);
     await requestGM(`${npc}와(과)의 대화를 마치고 물러난다.`, next);
   }
-  async function startFight(npc: string) {
-    if (busy) return;
-    const next: Session = { ...session, mode: 'combat', relationships: meetNpc(session, npc, true), combat: { npc, enemyHp: 60, enemyMaxHp: 60, enemyDc: 12, enemyDamage: 8, round: 0 }, handledNpcs: [...(session.handledNpcs || []), npc], suggestedActions: [], lastCheck: null, log: [...session.log, `시스템: ${npc}와(과) 전투가 시작됐습니다.`] };
+  async function startFight(npc: string, base: Session = session, ambush = false) {
+    if (busy && !ambush) return;
+    const leaving = (base.party || []).includes(npc);
+    // Falling to a monster or an NPC who already hated the player is death; a fight the player picks with anyone else ends in near-death.
+    const lethal = ambush || ((base.relationships || []).find(r => r.name.trim() === npc.trim())?.affection ?? 0) <= HOSTILE_AFFECTION;
+    const next: Session = { ...base, mode: 'combat', relationships: meetNpc(base, npc, true), party: (base.party || []).filter(n => n !== npc),combat: { lethal, npc, enemyHp: 60, enemyMaxHp: 60, enemyDc: 12, enemyDamage: 8, round: 0 }, handledNpcs: [...(base.handledNpcs || []), npc], suggestedActions: [], lastCheck: null, log: [...base.log, ...(leaving ? [`시스템: ${npc}이(가) 파티를 떠났습니다.`] : []), ambush ? `시스템: ${npc}이(가) 적의를 드러내며 덤벼듭니다!` : `시스템: ${npc}와(과) 전투가 시작됐습니다.`] };
     setSession(next);
-    await requestGM(`${npc}에게 덤벼들어 전투를 시작한다.`, next);
+    await requestGM(ambush ? `${npc}이(가) 플레이어를 보자마자 적의를 드러내며 덤벼든다. 대화 없이 전투가 시작된다.` : `${npc}에게 덤벼들어 전투를 시작한다.`, next);
+  }
+  // The answer is all the player sees; the bar it was checked against stays hidden.
+  function inviteToParty(npc: string) {
+    if (busy || session.mode || session.goalCompleted) { setNotice('진행 중인 장면이 끝난 뒤 권유할 수 있습니다.'); return; }
+    const party = session.party || [];
+    if (party.includes(npc) || partyResult) return;
+    if (party.length >= PARTY_LIMIT) { setNotice(`파티는 최대 ${PARTY_LIMIT}명까지입니다. 먼저 동료 한 명과 헤어지세요.`); return; }
+    const rel = (session.relationships || []).find(r => r.name.trim() === npc.trim());
+    if (inviteWait(session, npc) > 0) { setNotice(`${npc}은(는) 얼마 전에 거절했습니다. 이야기가 좀 더 진행된 뒤 다시 권유해 보세요.`); return; }
+    const chance = rel ? joinChance(rel.affection, session.reputation || 0, npcTaste(game, npc)) : 0;
+    const accepted = Math.random() < chance;
+    // The NPC visibly weighs the offer before answering; the companion joins only when the answer is revealed.
+    // The GM learns of a new companion through state.party, not the log.
+    setPartyResult({ npc, accepted, chance, thinking: true });
+    window.setTimeout(() => {
+      if (accepted) setSession(s => (s.party || []).includes(npc) || (s.party || []).length >= PARTY_LIMIT ? s : { ...s, party: [...(s.party || []), npc], sceneNpcs: (s.sceneNpcs || []).filter(n => n !== npc), handledNpcs: [...new Set([...(s.handledNpcs || []), npc])], companions: s.companions?.[npc] ? s.companions : { ...(s.companions || {}), [npc]: { level: npcLevel(s, npc) || 3, xp: 0 } } });
+      else setSession(s => ({ ...s, inviteRefusals: { ...(s.inviteRefusals || {}), [npc]: s.log.length } }));
+      setPartyResult(r => r && r.npc === npc ? { ...r, thinking: false } : r);
+    }, PARTY_THINK_MS);
+  }
+  // Abandoning frees a slot; the GM sees it in the log and stops steering toward it.
+  function dropQuest(quest: string) {
+    if (busy) return;
+    if (!window.confirm(`이 퀘스트를 삭제할까요?\n\n${quest}`)) return;
+    setSession(s => ({ ...s, quests: questsOf(s).filter(q => q !== quest), log: [...s.log, `시스템: 목표 포기 — ${quest}`] }));
+  }
+  function leaveParty(npc: string) {
+    if (busy || session.mode) return;
+    setSession(s => ({ ...s, party: (s.party || []).filter(n => n !== npc), log: [...s.log, `시스템: ${npc}와(과) 헤어졌습니다.`] }));
   }
   async function finishBattle() {
     const c = session.combat;
     if (busy || !c?.result) return;
     const ending = c.result === 'win' ? `${c.npc}을(를) 쓰러뜨려 전투에서 이겼다.` : `${c.npc}에게 패배해 쓰러졌다.`;
-    const next: Session = { ...session, mode: undefined, combat: null, sceneNpcs: (session.sceneNpcs || []).filter(n => n !== c.npc), suggestedActions: [], log: [...session.log, `시스템: 전투 종료 — ${c.result === 'win' ? '승리' : '패배'}`] };
+    // Fighting trains strength (and agility for long fights).
+    const fought = train(session, [statLike(game, STRENGTH), ...(c.round > 6 ? [statLike(game, AGILITY)] : [])], 2);
+    const ended: Session = { ...fought, mode: undefined, combat: null, sceneNpcs: (session.sceneNpcs || []).filter(n => n !== c.npc), suggestedActions: [], log: [...session.log, `시스템: 전투 종료 — ${c.result === 'win' ? '승리' : '패배'}`] };
+    const died = c.result === 'lose' && !!c.lethal;
+    const won = c.result === 'win' ? withXp(game, ended, xpForTier(c.power || 3), `${c.npc} 격파`) : { session: ended, levelsGained: 0 };
+    if (won.levelsGained) setLevelBurst({ level: won.session.level || 1, key: Date.now() });
+    const next: Session = died ? { ...won.session, dead: true, hp: 0, suggestedActions: [], log: [...won.session.log, `시스템: 사망 — ${c.npc}에게 목숨을 잃었습니다.`] } : won.session;
     setSession(next);
+    if (died) { await requestGM(`전투 결과: ${c.npc}에게 패배해 플레이어가 죽었다. 구출·포로·기적적 생존 없이 죽음이 확정이다. 플레이어의 마지막 순간을 비장하게 묘사하고 이야기를 끝내라. choices는 빈 배열이다.`, next); return; }
+    if (c.result === 'lose') { await requestGM(`전투 결과: ${c.npc}에게 패배해 빈사 상태(HP 1)로 쓰러졌다. 죽지는 않았다. ${c.npc}이(가) 숨통은 끊지 않고 어떻게 했는지(조롱하며 떠남, 소지품을 빼앗음, 경고하고 돌아섬 등) 그 인물답게 묘사하라. hpDelta는 0이다.`, next); return; }
     await requestGM(`전투 결과: ${Math.max(0, c.round - 1)}합의 공방 끝에 ${ending} 입힌 피해 ${c.totalDealt || 0}, 받은 피해 ${c.totalTaken || 0}. 전투가 끝난 뒤의 장면을 묘사하세요.`, next);
   }
   function interact() {
@@ -1217,7 +1603,7 @@ export default function Home() {
   }
   async function sendPlayerAction(message: string, debug = false) {
     const clean = message.trim();
-    if (!clean || busy || session.pendingCheck) return;
+    if (!clean || busy || session.pendingCheck || session.dead) return;
     setAction('');
     // Naming a dismissed NPC calls them back, so the encounter prompt can appear again.
     // Anyone the player already knows can be addressed; talking brings them on stage.
@@ -1547,33 +1933,33 @@ export default function Home() {
   const m = maps.find(x => x.id === session.mapId) || maps[0];
   const here = m?.pins.find(p => p.id === session.pinId);
   const reachable = m && here ? reachablePins(m, here).map(p => p.id) : [];
-  const locked = busy || !!session.pendingCheck || session.goalCompleted === true || !!session.mode;
-  const encounterNpc = !session.mode ? (session.sceneNpcs || []).find(n => !(session.handledNpcs || []).includes(n)) : undefined;
+  const locked = busy || !!session.pendingCheck || session.goalCompleted === true || !!session.dead || !!session.threat || !!session.mode;
+  const encounterNpc = !session.mode && !session.dead && !session.threat ? (session.sceneNpcs || []).find(n => !(session.handledNpcs || []).includes(n) && !(session.party || []).includes(n)) : undefined;
   const talkStart = session.mode === 'talk' && session.talkNpc ? session.log.lastIndexOf(`시스템: ${session.talkNpc}와(과) 대화를 시작했습니다.`) : -1;
   const talkThread = talkStart >= 0 ? session.log.slice(talkStart + 1).map(parseTalk).filter((t): t is TalkLine => !!t) : [];
-  const background = here?.background || prologueImage(game);
+  const background = placeBackground(game, here);
   const npcs = (session.sceneNpcs || []).map(name => ({ name, image: npcImage(game, name, session.activeImageKey) }));
   const interactKey = m && here ? `${m.id}:${here.id}` : '';
+  const showMap = mapOpen && !!m && session.mode !== 'combat';
   const interactable = !!here && here.eventTrigger === 'interact' && !!here.eventText?.trim() && !(here.eventOnce && (session.triggeredEvents || []).includes(interactKey));
   return <div className="playGrid playGridThree">
   <section className="playInfoPanel">
     <div className="panelHeading"><h2><Dices size={18} /> 플레이어</h2><span className="softPill">{game.playMode === 'multi' ? `멀티 ${game.minPlayers || 2}~${game.maxPlayers || 4}인` : '싱글'} · D20</span></div>
-    <CharacterPanel game={game} session={session} portrait={game.playerPortrait}/>
-    <div className="miniMapPanel">
-      <div className="miniMapHeading"><strong><MapIcon size={15}/> 미니맵</strong><span>{m?.name || '맵 없음'}</span></div>
-      {m ? <div className="miniMap">
-        <img src={m.baseImage || m.image} alt={m.name} draggable={false}/>
-        {m.pins.filter(p => p.kind !== 'event').map(p => { const current = p.id === here?.id; const near = reachable.includes(p.id); return <button key={p.id} type="button" className={`miniMapPin ${current ? 'current' : near ? 'near' : 'far'}${p.kind === 'exit' ? ' exit' : ''}`} style={{left:`${p.x}%`,top:`${p.y}%`}} aria-disabled={!near || locked} title={current ? `현재 위치: ${p.name}` : near ? (p.kind === 'exit' ? p.name : `${p.name}(으)로 이동`) : `${p.name} · 너무 멀어서 바로 갈 수 없습니다`} onClick={() => { if (near && !locked) void moveTo(p); }}><i aria-hidden="true"/><span>{p.name}</span></button>; })}
-        {here && <img className="miniMapPlayer" src={playerMarkerSrc(game)} alt="플레이어 현재 위치" draggable={false} style={{left:`${here.x}%`,top:`${here.y}%`}}/>}
-      </div> : <div className="emptyPreview"><ImageIcon size={32}/><span>등록된 맵이 없습니다.</span></div>}
-      <p className="miniMapHint">{locked ? '진행 중인 장면이 끝나면 이동할 수 있습니다.' : '밝게 표시된 가까운 장소를 눌러 이동하세요.'}</p>
-    </div>
+    <CharacterPanel game={game} session={session} portrait={game.playerPortrait} onInvite={inviteToParty} onLeave={leaveParty} onDropQuest={dropQuest}/>
   </section>
   <section className="playScenePanel">
-    <div className={`sceneStage${session.mode === 'combat' ? ' sceneBattleMode' : ''}`}>
-      {background ? <img className="sceneBackground" src={background} alt="" draggable={false}/> : <div className="sceneBackground sceneFallback"/>}
-      <div className="sceneLocation"><MapPinIcon size={14}/> {m ? `${m.name} · ` : ''}{here?.name || '위치 미지정'}</div>
-      {session.mode !== 'combat' && (npcs.length > 0 || session.mode === 'talk') && <div className={`sceneNpcs${session.mode === 'talk' ? ' sceneTalking' : ''}`}>{session.mode === 'talk' && (() => {
+    <div className={`sceneStage${session.mode === 'combat' ? ' sceneBattleMode' : ''}${showMap ? ' sceneMapMode' : ''}${showMap && m && mapRatios[m.baseImage || m.image] ? ' sceneMapFitted' : ''}`} style={showMap && m && mapRatios[m.baseImage || m.image] ? { aspectRatio: String(mapRatios[m.baseImage || m.image]) } : undefined}>
+      {background ?<img className="sceneBackground" src={background} alt="" draggable={false}/> : <div className="sceneBackground sceneFallback"/>}
+      <button type="button" className={`sceneLocation${showMap ? ' open' : ''}`} disabled={!m} aria-expanded={showMap} title={showMap ? '지도 닫기' : '지도를 열어 이동'} onClick={() => setMapOpen(o => !o)}><MapPinIcon size={14}/><span>{m ? `${m.name} · ` : ''}{here?.name || '위치 미지정'}</span><b>{showMap ? <><X size={13}/> 닫기</> : <><MapIcon size={13}/> 지도</>}</b></button>
+      {showMap && m && <div className="stageMap">
+        <div className="miniMap"><div className="stageMapFrame">
+          <img src={m.baseImage || m.image} alt={m.name} draggable={false} ref={img => { if (img?.complete) noteMapRatio(m.baseImage || m.image, img); }} onLoad={e => noteMapRatio(m.baseImage || m.image, e.currentTarget)}/>
+          {m.pins.filter(p => p.kind !== 'event').map(p => { const current = p.id === here?.id; const near = reachable.includes(p.id); return <button key={p.id} type="button" className={`miniMapPin ${current ? 'current' : near ? 'near' : 'far'}${p.kind === 'exit' ? ' exit' : ''}`} style={{left:`${p.x}%`,top:`${p.y}%`}} aria-disabled={!near || locked} title={current ? `현재 위치: ${p.name}` : near ? (p.kind === 'exit' ? p.name : `${p.name}(으)로 이동`) : `${p.name} · 너무 멀어서 바로 갈 수 없습니다`} onClick={() => { if (near && !locked) void moveTo(p); }}><i aria-hidden="true"/><span>{p.name}</span></button>; })}
+          {here && <img className="miniMapPlayer" src={playerMarkerSrc(game)} alt="플레이어 현재 위치" draggable={false} style={{left:`${here.x}%`,top:`${here.y}%`}}/>}
+        </div></div>
+        <p className="stageMapHint">{locked ? '진행 중인 장면이 끝나면 이동할 수 있습니다.' : '밝게 표시된 가까운 장소를 눌러 이동하세요.'}</p>
+      </div>}
+      {!showMap && session.mode !== 'combat' && (npcs.length > 0 || session.mode === 'talk') && <div className={`sceneNpcs${session.mode === 'talk' ? ' sceneTalking' : ''}`}>{session.mode === 'talk' && (() => {
         const mine = talkThread.filter(t => t.speaker === 'me');
         const speaking = talkThread[talkThread.length - 1]?.speaker === 'me';
         return <figure key="__player" className={`sceneNpc scenePlayer${speaking ? ' scenePlayerSpeaking' : ''}`}><div key={`me-${mine.length}`} className={`sceneNpcBody${speaking ? ' npcTalk' : ''}`}><img src={playerPortraitSrc(game)} alt="플레이어" draggable={false}/></div><figcaption>나</figcaption></figure>;
@@ -1597,7 +1983,7 @@ export default function Home() {
           <div className="battleFlash" aria-hidden="true"/>
           <div className="battleVs" aria-hidden="true">VS {c.npc}</div>
           <div className="battleSide battlePlayer">
-            <div className="battleHp"><span>나</span><div><i style={{width:`${Math.max(0, Math.min(100, session.hp / Math.max(1, game.hp) * 100))}%`}}/></div><b>{session.hp}/{game.hp}</b></div>
+            {(session.party || []).filter(n => n !== c.npc).length > 0 && <div className="battleAllyRow">{(session.party || []).filter(n => n !== c.npc).map(ally => { const face = npcImage(game, ally); const struck = !!ev?.allies?.includes(ally); return <figure key={`${ally}-${c.round}`} className={`battleAlly${struck ? ' battleAllyHit' : ''}`}>{face ? <img src={face} alt={ally} draggable={false}/> : <Users size={20}/>}<figcaption>{ally} Lv.{npcLevel(session, ally) || 3}</figcaption></figure>; })}</div>}<div className="battleHp"><span>나</span><div><i style={{width:`${Math.max(0, Math.min(100, session.hp / Math.max(1, maxHpOf(game, session)) * 100))}%`}}/></div><b>{session.hp}/{maxHpOf(game, session)}</b></div>
             <div key={`p${c.round}`} className={`battleBody${ev && !c.result ? ' battleLungeRight' : ''}`}>
               <div className={`battleReact${c.result === 'lose' ? ' battleDown' : react(ev?.taken, ev?.critTaken) + ' battleLate'}`}><img src={playerPortraitSrc(game)} alt="플레이어" draggable={false}/></div>
             </div>
@@ -1605,14 +1991,23 @@ export default function Home() {
             {!!ev?.taken && <i key={`ps${c.round}`} className="battleSlash battleSlashBack battleLate" aria-hidden="true"/>}
           </div>
           <div className="battleSide battleEnemy">
-            <div className="battleHp"><span>{c.npc}</span><div><i style={{width:`${c.enemyHp / Math.max(1, c.enemyMaxHp) * 100}%`}}/></div><b>{c.enemyHp}/{c.enemyMaxHp}</b></div>
+            <div className="battleHp"><span>{c.npc} Lv.{levelForTier(c.power || 3)}</span><div><i style={{width:`${c.enemyHp / Math.max(1, c.enemyMaxHp) * 100}%`}}/></div><b>{c.enemyHp}/{c.enemyMaxHp}</b></div>
             <div key={`e${c.round}`} className={`battleBody${ev && ev.taken !== null && !c.result ? ' battleLungeLeft battleCounter' : ''}`}>
-              <div className={`battleReact${c.result === 'win' ? ' battleDown' : react(ev?.dealt, ev?.critDealt) + ' battleEarly'}`}>{enemyImage ? <img src={enemyImage} alt={c.npc} draggable={false}/> : <div className="sceneNpcSilhouette"><Users size={42}/></div>}</div>
+              <div className={`battleReact${c.result === 'win' ? ' battleDown' : react(ev?.dealt, ev?.critDealt) + ' battleEarly'}`}>{enemyImage && !c.monster ? <img src={enemyImage} alt={c.npc} draggable={false}/> : c.monster ? <div className="battleMonsterArt">{foeImage(defaultMapGenre(game), c.npc) && <img src={foeImage(defaultMapGenre(game), c.npc)} alt={c.npc} draggable={false} onLoad={e => e.currentTarget.parentElement?.classList.add('hasArt')} onError={e => { e.currentTarget.style.display = 'none'; }}/>}<div className="sceneNpcSilhouette battleMonster"><Skull size={54}/></div></div> : <div className="sceneNpcSilhouette"><Users size={42}/></div>}</div>
             </div>
             {enemyPop && <span key={`ep${c.round}`} className={`battlePop battleEarly${enemyPop.cls}`}>{enemyPop.text}</span>}
             {!!ev?.dealt && <i key={`es${c.round}`} className="battleSlash battleEarly" aria-hidden="true"/>}
           </div>
         </div>;
+      })()}
+      {!showMap && session.threat && !session.mode && (() => {
+        // The foe blocking the way stands on the stage while the player decides to fight or run.
+        const t = session.threat;
+        const art = t.monster ? foeImage(defaultMapGenre(game), t.npc) : npcImage(game, t.npc);
+        return <figure className="sceneThreat">
+          <div className="battleMonsterArt">{art && <img src={art} alt={t.npc} draggable={false} onLoad={e => e.currentTarget.parentElement?.classList.add('hasArt')} onError={e => { e.currentTarget.style.display = 'none'; }}/>}<div className="sceneNpcSilhouette battleMonster"><Skull size={54}/></div></div>
+          <figcaption>{t.npc}</figcaption>
+        </figure>;
       })()}
       {busy && <div className="sceneBusy">이야기가 이어지고 있습니다...</div>}
     </div>
@@ -1631,6 +2026,13 @@ export default function Home() {
       {!busy && !!session.suggestedActions?.length && <div className="talkSuggestions">{session.suggestedActions.slice(0, 3).map((line, i) => <button key={`${i}-${line}`} type="button" onClick={() => void sayToNpc(line)}><span className="gmChoiceNumber">{i + 1}</span>{line}</button>)}</div>}
       <form className="talkInput" onSubmit={e => { e.preventDefault(); void sayToNpc(action); }}><input value={action} onChange={e => setAction(e.target.value)} maxLength={300} disabled={busy} placeholder={`${session.talkNpc}에게 메시지 보내기`} aria-label="대사 입력"/><button className="btn primary" type="submit" disabled={busy || !action.trim()}><Send size={15}/> 보내기</button></form>
     </div>
+    : session.threat && !session.dead ? <div className="encounterPanel threatPanel">
+      <p>{session.threat.monster ? <Skull size={16}/> : <Swords size={16}/>} <strong>{session.threat.npc}</strong><em className="npcLevelTag">Lv.{session.threat.monster ? levelForTier(findFoe(defaultMapGenre(game), session.threat.npc)?.power || 3) : npcLevel(session, session.threat.npc) || 3}</em>이(가) 앞을 막아섰습니다! 대화는 통하지 않습니다.</p>
+      <div className="encounterActions">
+        <button type="button" className="encounterAction encounterFight" disabled={busy} onClick={() => void faceThreat()}><Swords size={22}/><strong>싸운다</strong></button>
+        <button type="button" className="encounterAction encounterFlee" disabled={busy} onClick={() => void fleeThreat()}><Footprints size={22}/><strong>도망친다</strong><small>성공 확률 {Math.round(fleeChance(game, session, session.threat) * 100)}%</small></button>
+      </div>
+    </div>
     : encounterNpc && !session.pendingCheck ? <div className="encounterPanel">
       <p><strong>{encounterNpc}</strong>이(가) 눈앞에 있습니다. 어떻게 할까요?</p>
       <div className="encounterActions">
@@ -1640,7 +2042,8 @@ export default function Home() {
       </div>
     </div>
     : <>
-    {!session.pendingCheck && !busy && !!session.suggestedActions?.length && <div className="gmChoices"><div className="gmChoicesHeading"><strong>다음 행동을 선택하세요</strong><span>이동은 미니맵에서</span><button type="button" className="gmReroll" onClick={() => void rerollChoices()} title="장면은 그대로 두고 선택지만 새로 뽑습니다"><RotateCcw size={13}/> 선택지 다시 뽑기</button></div>{session.suggestedActions.slice(0, 4).map((choice, index) => <button key={`${index}-${choice}`} type="button" className={`gmChoiceButton${index === 3 ? ' gmChoiceWild' : ''}`} onClick={() => void sendPlayerAction(choice)}><span className="gmChoiceNumber">{index + 1}</span><span>{choice}</span>{index === 3 && <em className="gmChoiceTag">특이한 행동</em>}<ChevronRight size={16}/></button>)}</div>}
+    {session.dead && !busy && <div className="deathPanel"><Skull size={30}/><strong>사망</strong><p>당신의 이야기는 여기서 끝났습니다.</p><button type="button" className="btn primary" onClick={newGame}><RotateCcw size={16}/> 새로 시작하기</button></div>}
+    {!session.dead && !session.threat && !session.pendingCheck && !busy && !!session.suggestedActions?.length && <div className="gmChoices"><div className="gmChoicesHeading"><strong>다음 행동을 선택하세요</strong><span>이동은 지도 버튼으로</span><button type="button" className="gmReroll" onClick={() => void rerollChoices()} title="장면은 그대로 두고 선택지만 새로 뽑습니다"><RotateCcw size={13}/> 선택지 다시 뽑기</button></div>{session.suggestedActions.slice(0, 4).map((choice, index) => <button key={`${index}-${choice}`} type="button" className={`gmChoiceButton${index === 3 ? ' gmChoiceWild' : ''}`} onClick={() => void sendPlayerAction(choice)}><span className="gmChoiceNumber">{index + 1}</span><span>{choice.replace(/^\s*[(\[]?\s*특이한\s*행동\s*\d?\s*[)\]]?\s*[:：\-—]?\s*/, '')}</span><ChevronRight size={16}/></button>)}</div>}
     {/* Test aid: a fifth, free-typed action alongside the four suggested ones. */}
     {!locked && <form className="gmChoiceCustom" onSubmit={e => { e.preventDefault(); void sendPlayerAction(action, true); }}><span className="gmChoiceNumber">5</span><input value={action} onChange={e => setAction(e.target.value)} maxLength={300} placeholder="테스트 명령 — 적은 그대로 바로 일어납니다 (예: 혈영이 나타난다)" aria-label="직접 행동 입력"/><button className="btn primary" type="submit" disabled={!action.trim()}><Send size={15}/> 전송</button></form>}
     {interactable && !locked && <button type="button" className="btn sceneInteract" onClick={interact}><Sparkles size={15}/> {here!.name}에서 상호작용하기</button>}
@@ -1648,11 +2051,35 @@ export default function Home() {
   </section>
   {session.mode === 'combat' && session.combat?.result && <div className="battleResultBackdrop" role="dialog" aria-modal="true" aria-labelledby="battle-result-title"><div className={`battleResultModal ${session.combat.result}`}>
     <span className="battleResultIcon"><Swords size={28}/></span>
-    <h2 id="battle-result-title">{session.combat.result === 'win' ? '승리!' : '패배'}</h2>
+    <h2 id="battle-result-title">{session.combat.result === 'win' ? '승리!' : session.combat.lethal ? '사망' : '패배'}</h2>
     <p>{Math.max(0, session.combat.round - 1)}합 만에 {session.combat.npc}{session.combat.result === 'win' ? '을(를) 쓰러뜨렸습니다.' : '에게 쓰러졌습니다.'}</p>
-    <div className="battleResultStats"><span>입힌 피해 <b>{session.combat.totalDealt || 0}</b></span><span>받은 피해 <b>{session.combat.totalTaken || 0}</b></span><span>남은 HP <b>{session.hp}/{game.hp}</b></span></div>
+    <div className="battleResultStats"><span>입힌 피해 <b>{session.combat.totalDealt || 0}</b></span><span>받은 피해 <b>{session.combat.totalTaken || 0}</b></span><span>남은 HP <b>{session.hp}/{maxHpOf(game, session)}</b></span></div>
     <button type="button" className="btn primary" disabled={busy} autoFocus onClick={() => void finishBattle()}>확인</button>
   </div></div>}
+  {levelBurst && <div key={levelBurst.key} className="repBurst levelBurst" role="status" onClick={() => setLevelBurst(null)}>
+    <Sparkles size={34}/>
+    <strong>레벨 업!</strong>
+    <b>Lv.{levelBurst.level}</b>
+    <span>최대 HP {maxHpOf(game, session)} · 공격과 회피가 강해졌습니다</span>
+  </div>}
+  {repBurst && <div key={repBurst.key} className={`repBurst${repBurst.delta < 0 ? ' infamy' : ''}`} role="status" onClick={() => setRepBurst(null)}>
+    <Award size={34}/>
+    <strong>{repBurst.delta > 0 ? '명성 대폭 상승!' : '명성 급락!'}</strong>
+    <b>{formatReputation(repBurst.delta)}</b>
+    <span>{repBurst.total.toLocaleString('ko-KR')} · {reputationRank(repBurst.total)}</span>
+  </div>}
+  {partyResult && (() => { const face = npcImage(game, partyResult.npc); return <div className="battleResultBackdrop" role="dialog" aria-modal="true" aria-labelledby="party-result-title" onClick={() => { if (!partyResult.thinking) setPartyResult(null); }}><div className={`battleResultModal partyResult ${partyResult.thinking ? 'thinking' : partyResult.accepted ? 'accepted' : 'declined'}`} onClick={e => e.stopPropagation()}>
+    <span key={partyResult.thinking ? 'wait' : 'done'} className="partyResultFace">{face ? <img src={face} alt={partyResult.npc} draggable={false}/> : <Users size={30}/>}</span>
+    {partyResult.thinking ? <>
+      <h2 id="party-result-title" className="partyThinkingTitle">고민 중<span className="partyDots" aria-hidden="true"><i/><i/><i/></span></h2>
+      <p>{partyResult.npc}이(가) 당신의 제안을 곰곰이 생각하고 있습니다…</p>
+      <div className="partyChance"><span>합류 확률 <b>{Math.round(partyResult.chance * 100)}%</b></span><div className="partyChanceTrack"><i style={{width:`${Math.round(partyResult.chance * 100)}%`}}/></div></div>
+    </> : <>
+      <h2 id="party-result-title" className="partyVerdict">{partyResult.accepted ? '합류!' : '거절'}</h2>
+      <p>{partyResult.accepted ? `${partyResult.npc}이(가) 파티에 합류했습니다. 이제 전투에서 함께 싸웁니다.` : `${partyResult.npc}이(가) 파티 권유를 거절했습니다.`}</p>
+      <button type="button" className="btn primary" autoFocus onClick={() => setPartyResult(null)}>확인</button>
+    </>}
+  </div></div>; })()}
   <section className="playChatPanel playLogPanel">
     <div className="panelHeading"><h2><ScrollText size={18} /> 진행 기록</h2><span className="softPill">GM</span></div>
     <div className="chatLog storyLog" ref={chatRef}>{(() => { const items = groupLog(session.log); const lastTalk = items.map(x => x.kind).lastIndexOf('talk'); const lastBattle = items.map(x => x.kind).lastIndexOf('battle'); return items.map((item, i) => { if (item.kind === 'battle') { const name = item.lines[0]?.match(/^(.+?)의 체력/)?.[1] || '상대'; const outcome = item.lines[item.lines.length - 1]?.match(/^(승리|패배)/)?.[1]; const rows = <ul className="battleLines">{item.lines.map((l, j) => <li key={j} className={/^승리/.test(l) ? 'win' : /^패배/.test(l) ? 'lose' : /내 공격 명중/.test(l) ? 'dealt' : /반격 명중/.test(l) ? 'taken' : /전투 시작$/.test(l) ? 'start' : 'miss'}>{l}</li>)}</ul>; return session.mode === 'combat' && i === lastBattle ? <div key={i} className="battleRecord battleLive"><div className="battleRecordTitle"><Swords size={14}/> {name}와(과) 전투 중</div>{rows}</div> : <details key={i} className="talkRecord battleRecord"><summary><Swords size={14}/> {name}와(과)의 전투{outcome ? ` · ${outcome}` : ''}</summary>{rows}</details>; } if (item.kind === 'talk') { const name = item.lines.find(t => t.speaker === 'npc')?.name || '대화'; return session.mode === 'talk' && i === lastTalk ? <div key={i} className="talkRecord talkLive"><MessageCircle size={14}/> {name}와(과) 대화 중 · 가운데 창에서 이어집니다</div> : <details key={i} className="talkRecord"><summary><MessageCircle size={14}/> {name}와(과)의 대화 · {item.lines.filter(t => t.speaker !== 'scene').length}마디</summary><div className="talkThread talkThreadLog">{item.lines.map((t, j) => <TalkBubble key={j} t={t} image={t.speaker === 'npc' ? npcImage(game, t.name) : undefined}/>)}</div></details>; } const entry = item.entry; const player = entry.startsWith('플레이어:'); const system = entry.startsWith('시스템:') || entry.startsWith('주사위:'); const event = entry.startsWith('이벤트:'); const prologue = entry.startsWith('프롤로그:'); const content = storyText(entry.replace(/^(GM:|플레이어:|시스템:|주사위:|이벤트:|프롤로그:)\s*/, '')); return <div key={i} className={`storyEntry ${player ? 'storyPlayer' : system ? 'storySystem' : event ? 'storyEvent' : 'storyGM'}`}>{player && <span className="storyEntryLabel">나의 행동</span>}{event && <span className="storyEntryLabel">장소 이벤트</span>}{prologue && <span className="storyEntryLabel">프롤로그 · {prologueTitle(game)}</span>}{system && <span className="storyEntryLabel">{entry.startsWith('주사위:') ? '판정' : '게임 기록'}</span>}<div className="storyEntryText">{content}</div></div>; }); })()}{busy && <div className="storyEntry storyGM storyLoading">이야기가 이어지고 있습니다...</div>}</div>
