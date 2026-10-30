@@ -119,6 +119,14 @@
 .storyLoading{color:#87909e;font-style:italic}
 .storyMore{align-self:center;margin:4px auto 10px;font-size:12px}
 .storyLog .storyEntryText{white-space:pre-wrap}
+.storyLog .storyGM .storyEntryText,.storyLog .storyEvent .storyEntryText{white-space:normal}
+.storyHeading{display:inline-block;margin:0 0 6px;padding:2px 10px;border-radius:999px;background:#eef1f6;color:#4a5568;font-size:11.5px;font-weight:700;line-height:1.7}
+.storyNarration{margin:0 0 8px;color:#4b5563}
+.storySpeech{margin:4px 0 10px;padding:6px 12px;border-left:3px solid #c9a35a;background:#fdf8ee;border-radius:0 8px 8px 0;color:#2f2a20}
+.storyQuote{quotes:none;color:#7a4e12;font-weight:600}
+.storyQuote::before{content:'“'}
+.storyQuote::after{content:'”'}
+.storySpeech .storyQuote{color:#5b3a0c}
 
 /* AI GM prompt builder */
 .promptBuilder{display:flex;flex-direction:column;gap:16px;padding:16px;border:1px solid var(--border,#dce2ea);border-radius:14px;background:var(--panel,#fff)}
@@ -513,6 +521,14 @@
 .gmChoiceButton.gmChoiceWild .gmChoiceNumber{background:#ede7ff;color:#6d4fd8}
 .gmChoiceTag{flex-shrink:0;font-style:normal;font-size:10px;font-weight:700;color:#6d4fd8;background:#ede7ff;border-radius:10px;padding:3px 7px}
 .sceneInteract{align-self:flex-start}
+.questBoard{display:flex;flex-direction:column;gap:8px;align-self:stretch}
+.questBoardList{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid #e3d7bd;border-radius:10px;background:#fbf7ee}
+.questBoardItem{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #eee4cf}
+.questBoardItem strong{display:block;font-size:13px}
+.questBoardItem small{font-size:11px;color:#8a94a6}
+.questBoardItem p{margin:4px 0 0;font-size:12px;line-height:1.5;color:#4b5563}
+.questBoardItem .btn{flex-shrink:0}
+.questBoardFull{margin:0;font-size:12px;color:#b45309}
 .pinBackgroundPreview{display:block;width:100%;max-height:180px;object-fit:cover;border-radius:9px;margin-top:10px;border:1px solid #e4e6ea}
 .pinBackgroundRemove{margin-top:8px}
 @media(max-width:1100px){.playGrid.playGridThree{grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr)}.playGridThree .playLogPanel{grid-column:1/-1;position:static;max-height:none}.playGridThree .playLogPanel .chatLog.storyLog{max-height:480px}}
@@ -851,6 +867,8 @@
 @media (prefers-reduced-motion:reduce){.sceneThreat{animation:none}}
 /* The main story quest: a wider badge and a deeper accent than side quests. */
 .questCard.questMain{border-left-color:#b4232c;background:linear-gradient(#fff8f1,#fff1e4)}
+.questCard.questRegion{border-left-color:#2f7d5b}
+.questCard.questRegion .questBadge{width:auto;padding:0 7px;border-radius:999px;background:#2f7d5b}
 .questCard.questMain .questBadge{width:auto;padding:0 7px;border-radius:999px;background:#b4232c}
 .questClearList li.main{background:#fff1f1;border-color:#f3b4b8}
 .questMainTag{font-style:normal;font-size:11px;font-weight:800;color:#fff;background:#b4232c;border-radius:999px;padding:1px 7px;margin-right:6px;vertical-align:1px}
@@ -876,6 +894,20 @@
 .characterItems .itemChip.equipped{box-shadow:0 0 0 2px var(--grade)}
 .characterItems .itemChip.grade5{background:linear-gradient(90deg,#fff3e0,#ffe4e1);font-weight:700}
 .gearHint{display:block;margin-top:6px;font-size:11px;color:#8a94a6}
+button.gearSlot{font:inherit;text-align:left;cursor:pointer}
+button.gearSlot:disabled{cursor:default}
+.gearSlot.picked,.characterItems .itemChip.picked{outline:2px solid var(--grade);outline-offset:1px}
+.itemCard{margin-top:8px;padding:10px 12px;border:1px solid var(--grade);border-radius:10px;background:var(--gradeBg);display:flex;flex-direction:column;gap:6px}
+.itemCardHead{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;color:var(--grade)}
+.itemCardHead button{border:0;background:none;padding:2px;cursor:pointer;color:#8a94a6;display:flex}
+.itemCard strong{font-size:14px;color:var(--grade)}
+.itemCardStats{display:flex;flex-wrap:wrap;gap:4px}
+.itemCardStats span{font-size:11.5px;padding:2px 7px;border-radius:6px;background:#fff;border:1px solid color-mix(in srgb,var(--grade) 30%,transparent);color:#374151}
+.itemCardNone{font-size:11.5px;color:#8a94a6}
+.itemCardSkill{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--grade)}
+.itemCard p{margin:0;font-size:12px;line-height:1.5;color:#4b5563}
+.itemCardEquip{align-self:flex-start;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border-radius:8px;border:1px solid var(--grade);background:#fff;color:var(--grade);cursor:pointer}
+.itemCardEquip:hover{background:var(--grade);color:#fff}
 .itemName{color:var(--grade)}
 .foeCard{display:flex;flex-direction:column;gap:6px;margin:4px 0 10px}
 .foeDesc{margin:0;font-size:12.5px;color:#6b7280}
@@ -891,3 +923,41 @@
 .itemBurstSkill{font-weight:600!important;color:#7c2d12;max-width:320px;text-align:center}
 .repBurst.awakenBurst{background:linear-gradient(#fffbea,#fde68a);border-color:#eab308;color:#713f12}.repBurst.awakenBurst svg,.repBurst.awakenBurst b{color:#ca8a04}
 .gmChoiceTest{margin-top:14px;opacity:.75;border-color:#e6d3b3;background:#fffaf2}.gmChoiceTest:focus-within{opacity:1}.gmChoiceTestTag{font-size:11px;font-weight:700;color:#a8762a;background:#fbecd2;border-radius:6px;padding:3px 7px;white-space:nowrap}
+.equipOffer p{margin:0 0 10px;font-size:14px;line-height:1.5}
+.equipOfferCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;text-align:left}
+.equipOfferCards small{font-size:11px;font-weight:700;color:#6b5b45}
+.equipOfferCards .itemCard{margin-top:4px}
+.equipOfferButtons{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.diceRollModal{min-width:min(340px,calc(100vw - 32px))}
+.diceRollModal h2{display:flex;align-items:center;justify-content:center;gap:8px}
+.diceNeed{display:flex;justify-content:center;gap:14px;font-size:13px;color:#596477}.diceNeed b{font-size:16px;color:#d9505d}
+.diceFace{margin:14px auto 6px;width:84px;height:84px;display:grid;place-items:center;font-size:38px;font-weight:800;border-radius:18px;border:3px solid #c9ced8;background:#fff;color:#2b3140;box-shadow:0 6px 18px rgba(30,40,60,.15)}
+.diceFace.rolling{animation:diceTumble .28s linear infinite}
+.diceFace.landed{animation:diceLand .35s ease-out}
+.diceRollModal.win .diceFace{border-color:#3aa66b;color:#1f7a4a}.diceRollModal.lose .diceFace{border-color:#d9505d;color:#b4232c}
+.diceFace.crit{box-shadow:0 0 0 4px rgba(227,182,95,.5),0 6px 18px rgba(30,40,60,.15)}
+@keyframes diceTumble{0%{transform:rotate(0) scale(1)}25%{transform:rotate(14deg) scale(1.05)}50%{transform:rotate(-10deg) scale(.97)}75%{transform:rotate(8deg) scale(1.03)}100%{transform:rotate(0) scale(1)}}
+@keyframes diceLand{0%{transform:scale(1.25)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.diceFace.rolling,.diceFace.landed{animation:none}}
+.diceMods{list-style:none;margin:8px 0 4px;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px;text-align:left}
+.diceMods li{display:flex;justify-content:space-between;gap:12px;padding:4px 8px;border-radius:6px;background:#f2f5f9}.diceMods li b{font-variant-numeric:tabular-nums}
+.diceMods .diceTotal{background:#e7ecf3;font-weight:700}.diceMods small{font-weight:400;color:#596477}
+.diceRule{display:block;font-size:11px;color:#8a92a0}
+.diceVerdict{margin:10px 0 4px;display:flex;flex-direction:column;gap:4px}.diceVerdict strong{font-size:20px}.diceRollModal.win .diceVerdict strong{color:#1f7a4a}.diceRollModal.lose .diceVerdict strong{color:#b4232c}.diceVerdict span{font-size:13px;color:#596477}
+.battleMp i{background:linear-gradient(90deg,#60a5fa,#2563eb)!important}
+.battleCast i{background:linear-gradient(90deg,#fde68a,#f59e0b)!important;transition:width .3s}
+.characterMp .characterVitalTrack i{background:linear-gradient(90deg,#60a5fa,#2563eb)}
+.talkEndedLine{display:flex;align-items:center;gap:10px;margin:14px 0 4px;color:#8a92a0;font-size:12px;font-weight:700}
+.talkEndedLine::before,.talkEndedLine::after{content:"";flex:1;border-top:1px dashed #c9ced8}
+.itemCardDiscard{align-self:flex-start;font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border-radius:8px;border:1px solid #d9a3a8;background:#fff;color:#b4232c;cursor:pointer}
+.itemCardDiscard:hover{background:#fff5f5}
+.gmChoiceOwn{display:flex;align-items:center;gap:10px}
+.gmChoiceOwn input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:14px;outline:none;color:inherit}
+.gmChoiceOwn button{border:0;background:transparent;cursor:pointer;color:inherit;display:grid;place-items:center;padding:0}
+.gmChoiceOwn button:disabled{opacity:.35;cursor:default}
+.characterCombat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;margin-top:6px;padding:8px 10px;border-radius:8px;background:#f2f5f9;font-size:12px}
+.characterCombat div{display:flex;justify-content:space-between;gap:6px;min-width:0}
+.characterCombat span{color:#596477;white-space:nowrap}
+.characterCombat b{font-variant-numeric:tabular-nums;text-align:right}
+.characterCombat .characterCombatSkills{grid-column:1/-1;flex-direction:column;align-items:flex-start}
+.characterCombat .characterCombatSkills b{text-align:left;font-weight:600}

@@ -170,3 +170,15 @@ export function referenceOptions(genreLabel:string){
  });
  return {genre,mains};
 }
+// The main story's parts exactly as buildReferencePrompt writes them, so a saved game prompt can be brought up to
+// date when a story's text changes (the prompt is assembled once, when the game is made).
+export function mainSections(genreLabel:string,mainName:string,goalMode?:string){
+ const genre=genres.find(k=>genreLabel.includes(k));if(!genre)return null;
+ const src=reference[genre];const main=src.mains.find(m=>m.name===mainName);if(!main)return null;
+ const loc=locationMap(src.cities[cityMap[genre][src.mains.indexOf(main)]].locations);
+ let mainText='';
+ try{mainText=materialize(main.text.split('\n').filter(x=>!x.startsWith('이 사건과 함께 쓰지 않을 재료')).join('\n'),loc);}catch{return null;}
+ const goalLines=mainText.split('\n').filter(l=>l.startsWith('최종 목표('));
+ const goal=goalLines.find(l=>l.startsWith(goalMode==='progress'?'최종 목표(진행도형)':'최종 목표(최종 목표형)'))||goalLines[0]||main.name;
+ return {main:`${main.name}\n${mainText.split('\n').filter(l=>!l.startsWith('최종 목표(')).join('\n')}`,goal:goal.replace(/^최종 목표\([^)]+\):\s*/,''),hook:mainText.match(/^시작 계기:\s*(.+)$/m)?.[1]||''};
+}

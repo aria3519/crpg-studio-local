@@ -1,7 +1,7 @@
 // Hostile foes per genre: creatures and hostile groups that are enemies on sight.
 // They are not NPCs: no conversation, no relationship entry, and they only ever appear as fights.
 // Each genre keeps to its own concept — no goblins in wuxia, no demonic-cult elders in a gate city.
-import { levelForTier } from './progression';
+import { foeLevelRange } from './progression';
 
 // Art: public/_default_monsters/<genre>/<name>.png (Korean name), or <image>.png as a fallback.
 export type Foe = { name: string; image: string; power: number; desc: string; habitat: string[]; boss?: boolean };
@@ -31,6 +31,12 @@ const ROSTERS: Record<string, Roster> = {
       { name: '고대 고룡', image: 'ancient-dragon', power: 10, desc: '수백 년을 산 거대한 용. 바다 밑에서 잠들어 있었다', habitat: [], boss: true },
       { name: '홍염의 패왕', image: 'crimson-overlord', power: 10, desc: '불타는 대검을 든 붉은 갑주의 마계 패왕. 누구의 밑에도 서지 않는다', habitat: [], boss: true },
       { name: '마왕', image: 'demon-king', power: 10, desc: '세상을 집어삼키려는 마의 군주', habitat: [], boss: true },
+      // Act bosses of the chronicle mains; the scouts and the bandit chief also roam.
+      { name: '산적 두목', image: 'bandit-chief', power: 4, desc: '약탈대를 거느린 흉터투성이 산적 두목. 쇠사슬 도끼를 휘두른다', habitat: ['forest', 'street'] },
+      { name: '마왕군 척후대', image: 'demon-scouts', power: 5, desc: '검은 뿔 투구를 쓰고 늑대를 탄 마족 척후병들', habitat: ['forest', 'abyss'] },
+      { name: '마왕군 장군', image: 'demon-general', power: 8, desc: '검은 뿔 깃발을 든 마왕군의 장군. 거대한 언월도를 휘두른다', habitat: [], boss: true },
+      { name: '흑철 기사', image: 'black-iron-knight', power: 8, desc: '검은 강철 갑주로 얼굴까지 가린 대공의 비밀 친위대장', habitat: [], boss: true },
+      { name: '홍염 마인', image: 'crimson-fiend', power: 8, desc: '홍염의 패왕이 먼저 보낸 불꽃의 마인. 몸에서 불길이 솟는다', habitat: [], boss: true },
     ],
   },
   wuxia: {
@@ -81,21 +87,40 @@ export const findFoe = (genre: string, name: string) => rosterOf(genre).foes.fin
 // Built-in art for a foe; a missing file falls back to the skull icon on screen.
 export const foeImage = (genre: string, name: string) => { const foe = findFoe(genre, name); return foe ? `/api/default-monster/${ROSTERS[genre] ? genre : 'fantasy'}/${encodeURIComponent(foe.name)}` : undefined; };
 export const isFoeName = (genre: string, name: string) => !!findFoe(genre, name);
+// Stand-in art until a foe has its own picture: the fantasy picture that looks closest (public/_default_monsters/
+// fantasy/<name>.png). A file of the foe's own, by name or slug, always wins over this.
+export const ART_STAND_IN: Record<string, string> = {
+  // fantasy
+  '산적 두목': '뒷골목 불량배', '마왕군 척후대': '심연의 하수인', '마왕군 장군': '마왕', '흑철 기사': '망령 기사', '홍염 마인': '홍염의 패왕',
+  // wuxia
+  '산적 떼': '뒷골목 불량배', '독물 떼': '거대 거미', '수적 무리': '머맨 약탈자', '흑도 낭인': '청부 암살자', '산중 맹호': '다이어울프 우두머리',
+  '서역 마적단': '고블린 약탈대', '마교 교도': '심연의 사도 광신도', '강시': '구울', '사파 살수': '청부 암살자', '혈교 무사': '심연의 사도 광신도',
+  '마교 호법': '망령 기사', '사파 마두': '홍염의 패왕', '혈마 장로': '마왕', '천마': '마왕',
+  // modern
+  '가시쥐 떼': '굶주린 늑대 무리', '고블린 척후조': '고블린 약탈대', '게이트 늑대': '다이어울프 우두머리', '오크 돌격병': '숲 트롤',
+  '불법 헌터 패거리': '뒷골목 불량배', '문지기회 광신도': '심연의 사도 광신도', '철갑 하이에나': '다이어울프 우두머리', '리자드맨 전사': '머맨 약탈자',
+  '브레이크 마수 군집': '심연의 하수인', '연구소 변이체': '촉수 마물', '미노타우로스': '숲 트롤', '심해 크라켄': '촉수 마물',
+  'S급 드래곤': '고대 고룡', '재앙급 게이트 군주': '마왕',
+};
 
 // Places whose name or description sounds dangerous (forests, ruins, gates...) can ambush the player.
 export const isDangerous = (genre: string, place: string) => rosterOf(genre).danger.test(place);
 
 // Random ambush on arrival: only non-boss foes that live there, and nothing far beyond the player's level.
+// recent: foes fought lately (newest first); they are skipped while anything else fits, so fights don't repeat.
 export const ENCOUNTER_CHANCE = 0.4;
-export const pickEncounter = (genre: string, place: string, playerLevel: number, rand = Math.random): Foe | undefined => {
+export const pickEncounter = (genre: string, place: string, playerLevel: number, rand = Math.random, recent: string[] = []): Foe | undefined => {
   const roster = rosterOf(genre);
   const tags = Object.entries(roster.habitats).filter(([, re]) => re.test(place)).map(([tag]) => tag);
   const local = roster.foes.filter(f => !f.boss && f.habitat.some(h => tags.includes(h)));
   const pool = local.length ? local : roster.foes.filter(f => !f.boss && f.power <= 3);
-  // Foes up to a little above the player's own tier; stronger ones stay rare, weaker ones common.
-  const fair = pool.filter(f => levelForTier(f.power) <= playerLevel + 10);
-  const options = fair.length ? fair : pool.slice().sort((a, b) => a.power - b.power).slice(0, 1);
-  const weights = options.map(f => 1 / (1 + Math.abs(levelForTier(f.power) - playerLevel) / 6));
+  // Foes whose level range starts at most a few levels above the player (they are met near the player's level, see
+  // encounterLevel); those whose range covers the player are the most common.
+  const gapOf = (f: Foe) => { const [min, max] = foeLevelRange(f.power, f.boss); return playerLevel < min ? min - playerLevel : playerLevel > max ? playerLevel - max : 0; };
+  const fair = pool.filter(f => foeLevelRange(f.power, f.boss)[0] <= playerLevel + 4);
+  const fresh = fair.filter(f => !recent.includes(f.name));
+  const options = fresh.length ? fresh : fair.length ? fair : pool.slice().sort((a, b) => a.power - b.power).slice(0, 1);
+  const weights = options.map(f => 1 / (1 + gapOf(f) / 6));
   let r = rand() * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < options.length; i++) { r -= weights[i]; if (r <= 0) return options[i]; }
   return options[options.length - 1];
@@ -103,10 +128,14 @@ export const pickEncounter = (genre: string, place: string, playerLevel: number,
 
 // The roster foe a scene's text is describing ("늑대 무리가 달려든다" → 굶주린 늑대 무리), matched by its name or a
 // telling word of it. Bosses only by full name, so a passing "마왕" in the narration never starts the finale.
-const FOE_STOP = /^(무리|거대|거대한|우두머리|병사|마물|약탈대|약탈자|하수인)$/;
+// Generic words that name a kind of person or a crowd, not one foe: never enough on their own.
+export const FOE_STOP = /^(무리|떼|거대|거대한|우두머리|병사|기사|전사|무사|마물|약탈대|약탈자|하수인|교도|패거리|광신도|부대|척후대|장군|두목|군집|조)$/;
+// A word standing as a word: followed by a space, punctuation, the end, or a particle (기사단·기사검 are other words).
+export const wordIn = (text: string, w: string) => new RegExp(`${w.replace(/[.*+?^${}()|[\]\\]/g, ch => '\\' + ch)}(?=$|[\\s.,!?…"'”』」)]|(들)?(이|가|을|를|은|는|의|에게|에|과|와|도|로|으로|만)(?![가-힣])|들(?![가-힣]))`).test(text);
+export const namesFoe = (text: string, name: string) => text.includes(name) || name.split(/\s+/).some(w => w.length >= 2 && !FOE_STOP.test(w) && wordIn(text, w));
 export const foeInText = (genre: string, text: string): Foe | undefined => {
   const foes = rosterOf(genre).foes;
-  return foes.find(f => text.includes(f.name)) || foes.filter(f => !f.boss).find(f => f.name.split(/\s+/).some(w => w.length >= 2 && !FOE_STOP.test(w) && text.includes(w)));
+  return foes.find(f => text.includes(f.name)) || foes.filter(f => !f.boss).find(f => namesFoe(text, f.name));
 };
 
 // A 토벌 quest naming a foe that lives here makes that foe the one waiting at this place.
