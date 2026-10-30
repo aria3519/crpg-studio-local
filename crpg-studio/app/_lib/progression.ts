@@ -26,9 +26,26 @@ export const levelForTier = (tier: number) => TIER_LEVELS[Math.max(1, Math.min(M
 
 // Experience for defeating a foe of a given tier; quests and deeds add on top.
 export const xpForTier = (tier: number) => Math.round(15 * Math.pow(2.6, Math.max(1, Math.min(MAX_POWER, tier)) - 1));
-// Experience needed to go from `level` to `level + 1`: ~300 at the start, ~4,600 at 40, ~30,000 at 80 —
-// roughly one or two fights against foes of the player's own level.
-export const xpToNext = (level: number) => Math.round(50 * level + 250 * Math.pow(1.06, level));
+// Experience needed to go from `level` to `level + 1`: 60 at the start, ~1,300 at 10, ~13,000 at 40, ~43,000 at 80.
+// Early levels come fast (a couple of fights each), later ones slow down.
+export const xpToNext = (level: number) => Math.round(25 * Math.pow(level, 1.7) + 35);
+// Rewards are shares of the level the player is on, so they stay meaningful at any level, and always rank
+// main quest > event > side quest > hunting. A main quest pays more the further along the story it is (the first
+// errand takes Lv.1 to Lv.3); with ~3 fights and a side quest per main step a player reaches about Lv.92 by the
+// last main step before the finale (simulated), ready for a Lv.100 final boss with companions.
+export const MAIN_QUEST_BASE = 5, MAIN_QUEST_STEP = 2;
+export const SIDE_QUEST_SHARE = 1.5;
+// A fight pays 0.4 of a level against an even foe, more against a stronger one, never past a side quest's worth.
+export const battleXp = (tier: number, playerLevel: number) => {
+  const level = Math.max(1, playerLevel);
+  const share = Math.max(0.15, Math.min(1, 0.4 + 0.04 * (levelForTier(tier) - level)));
+  return Math.round(xpToNext(level) * share);
+};
+export const questXp = (level: number) => Math.round(xpToNext(level) * SIDE_QUEST_SHARE);
+export const mainQuestXp = (level: number, step = 0) => Math.round(xpToNext(level) * (MAIN_QUEST_BASE + MAIN_QUEST_STEP * Math.max(0, step)));
+// Deeds the GM recognises outside quests and fights. A special or sudden event sits between a side quest and a main quest.
+export const DEED_SHARES: Record<string, number> = { minor: 0.4, deed: 1, event: 4 };
+export const deedXp = (kind: unknown, level: number) => typeof kind === 'string' && DEED_SHARES[kind] ? Math.round(xpToNext(Math.max(1, level)) * DEED_SHARES[kind]) : 0;
 
 // What each level adds on top of the character sheet. Growth is spread over 100 levels.
 export const levelBonus = (level: number) => {

@@ -61,7 +61,7 @@ export async function POST(request:Request){
    const instruction=`현재 항목 ${id}: ${sections[id]||String(body.guide||'장르에 맞는 구체적 규칙')}.\n${angle}\n최종 전체 5단계는 5,000~6,000자를 목표로 한다. 이번 항목은 대략 ${targetChars}자 분량의 새로운 정보에 집중하며 강제 상한은 없다. 구체적 사실과 실행 규칙을 우선한다. 다른 안의 문장을 재활용하지 않는다. 각 문장마다 이 항목만의 새로운 규칙·수치·사건 조건을 담는다. 기존 문장의 단어만 바꾼 반복은 금지한다. ${npc?'반드시 JSON {"npcs":[{"name":"이름","age":"나이","affiliation":"소속/역할","appearance":"외형","gender":"남성 또는 여성","goal":"목표","conflict":"갈등 또는 비밀"}, ...]} 형식으로 12~18명의 서로 다른 NPC 객체를 출력한다. 이름이 다른 고유 NPC 10명 이상을 생성한다. 인물별 설명은 한 줄에 핵심만 남기고 각각 70~100자 정도로 압축한다. NPC 목록은 12~18명으로 구성하며 중복 인물 없이 고유한 목적과 사건 연결을 보존한다.':'반드시 JSON {"text":"규칙 본문"} 형식으로 출력한다. 번호/제목 없이 정보 밀도 높은 구체적인 규칙을 작성한다. 단순한 문장 반복이나 강제 분량 맞추기는 금지한다.'}`;
    let parsed=await completion([{role:'system',content:system+'\n'+instruction},{role:'user',content:JSON.stringify({...base,variant:index+1})}],npc?3800:2600);
    if(!npc){
-    const priorText=previous.map(x=>x.text).join('\n');
+    const priorText=previous.map((x:{text:string})=>x.text).join('\n');
     const repeated=(text:string)=>text.split(/[.!?。\n]/).map(x=>x.trim()).filter(x=>x.length>=35&&priorText.includes(x));
     const first=String(parsed.text||'');
     const duplicates=repeated(first);

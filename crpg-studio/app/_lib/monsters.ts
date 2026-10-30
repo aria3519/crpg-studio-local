@@ -28,8 +28,8 @@ const ROSTERS: Record<string, Roster> = {
       { name: '뒷골목 불량배', image: 'alley-thugs', power: 2, desc: '몽둥이를 든 뒷골목 패거리', habitat: ['street'] },
       { name: '청부 암살자', image: 'assassin', power: 5, desc: '돈을 받고 목숨을 노리는 그림자 속 암살자', habitat: ['street'] },
       { name: '와이번', image: 'wyvern', power: 7, desc: '독 꼬리를 가진 하늘의 포식자', habitat: ['forest', 'coast'] },
-      { name: '고대 고룡', image: 'ancient-dragon', power: 9, desc: '수백 년을 산 거대한 용', habitat: [], boss: true },
-      { name: '마왕군 대장군', image: 'demon-general', power: 9, desc: '마왕을 섬기는 최강의 장수', habitat: [], boss: true },
+      { name: '고대 고룡', image: 'ancient-dragon', power: 10, desc: '수백 년을 산 거대한 용. 바다 밑에서 잠들어 있었다', habitat: [], boss: true },
+      { name: '홍염의 패왕', image: 'crimson-overlord', power: 10, desc: '불타는 대검을 든 붉은 갑주의 마계 패왕. 누구의 밑에도 서지 않는다', habitat: [], boss: true },
       { name: '마왕', image: 'demon-king', power: 10, desc: '세상을 집어삼키려는 마의 군주', habitat: [], boss: true },
     ],
   },
@@ -48,8 +48,8 @@ const ROSTERS: Record<string, Roster> = {
       { name: '사파 살수', image: 'unorthodox-assassin', power: 5, desc: '암기와 독을 쓰는 사파의 살수', habitat: ['street', 'desert'] },
       { name: '혈교 무사', image: 'blood-cult-warrior', power: 5, desc: '피로 무공을 닦는 혈교의 무사', habitat: ['demon', 'desert'] },
       { name: '마교 호법', image: 'demon-cult-guardian', power: 6, desc: '마교 교주를 지키는 호법', habitat: ['demon'] },
-      { name: '사파 마두', image: 'unorthodox-fiend', power: 7, desc: '강호를 피로 물들인 사파의 마두', habitat: ['mountain', 'demon'] },
-      { name: '혈마 장로', image: 'blood-demon-elder', power: 8, desc: '혈공을 극한까지 익힌 혈교의 장로', habitat: [], boss: true },
+      { name: '사파 마두', image: 'unorthodox-fiend', power: 10, desc: '강호를 피로 물들인 천하 최악의 사파 마두', habitat: [], boss: true },
+      { name: '혈마 장로', image: 'blood-demon-elder', power: 10, desc: '혈공을 극한까지 익힌 혈교의 장로', habitat: [], boss: true },
       { name: '천마', image: 'heavenly-demon', power: 10, desc: '마교의 정점, 천하를 노리는 천마', habitat: [], boss: true },
     ],
   },
@@ -68,8 +68,8 @@ const ROSTERS: Record<string, Roster> = {
       { name: '브레이크 마수 군집', image: 'break-swarm', power: 5, desc: '게이트 브레이크로 쏟아져 나온 마수 떼', habitat: ['ruin', 'gate'] },
       { name: '연구소 변이체', image: 'lab-mutant', power: 5, desc: '인공 각성 실험이 낳은 뒤틀린 변이체', habitat: ['ruin'] },
       { name: '미노타우로스', image: 'minotaur', power: 6, desc: 'B급 게이트의 보스급 우두인', habitat: ['gate'] },
-      { name: '심해 크라켄', image: 'kraken', power: 7, desc: '해상 게이트 깊은 곳의 거대 두족류', habitat: ['gate', 'wild'] },
-      { name: 'S급 드래곤', image: 's-rank-dragon', power: 9, desc: '도시 하나를 불태울 수 있는 S급 게이트의 용', habitat: [], boss: true },
+      { name: '심해 크라켄', image: 'kraken', power: 10, desc: '해상 게이트 깊은 곳에서 불려 나온 거대 두족류', habitat: [], boss: true },
+      { name: 'S급 드래곤', image: 's-rank-dragon', power: 10, desc: '도시 하나를 불태울 수 있는 S급 게이트의 용', habitat: [], boss: true },
       { name: '재앙급 게이트 군주', image: 'gate-overlord', power: 10, desc: '세계를 잇는 게이트의 지배자', habitat: [], boss: true },
     ],
   },
@@ -99,4 +99,20 @@ export const pickEncounter = (genre: string, place: string, playerLevel: number,
   let r = rand() * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < options.length; i++) { r -= weights[i]; if (r <= 0) return options[i]; }
   return options[options.length - 1];
+};
+
+// The roster foe a scene's text is describing ("늑대 무리가 달려든다" → 굶주린 늑대 무리), matched by its name or a
+// telling word of it. Bosses only by full name, so a passing "마왕" in the narration never starts the finale.
+const FOE_STOP = /^(무리|거대|거대한|우두머리|병사|마물|약탈대|약탈자|하수인)$/;
+export const foeInText = (genre: string, text: string): Foe | undefined => {
+  const foes = rosterOf(genre).foes;
+  return foes.find(f => text.includes(f.name)) || foes.filter(f => !f.boss).find(f => f.name.split(/\s+/).some(w => w.length >= 2 && !FOE_STOP.test(w) && text.includes(w)));
+};
+
+// A 토벌 quest naming a foe that lives here makes that foe the one waiting at this place.
+export const HUNT_CHANCE = 0.7;
+export const huntTarget = (genre: string, place: string, quests: string[]): Foe | undefined => {
+  const roster = rosterOf(genre);
+  const tags = Object.entries(roster.habitats).filter(([, re]) => re.test(place)).map(([tag]) => tag);
+  return roster.foes.find(f => !f.boss && f.habitat.some(h => tags.includes(h)) && quests.some(q => q.includes(f.name)));
 };

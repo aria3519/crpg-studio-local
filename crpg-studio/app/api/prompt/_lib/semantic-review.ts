@@ -26,5 +26,5 @@ export function parseReview(raw:string):Review{
  if(!data||typeof data!=='object'||!Array.isArray(data.issues)||!Array.isArray(data.patches)||typeof data.passed!=='boolean')throw Error('AI 검증 결과 형식 오류');
  const issues=data.issues.slice(0,30).map((x:Record<string,unknown>)=>({code:String(x.code||'SEMANTIC'),severity:(['critical','major','minor'].includes(String(x.severity))?x.severity:'major') as Issue['severity'],section:String(x.section||'전체'),detail:String(x.detail||'').slice(0,400),evidence:String(x.evidence||'').slice(0,200)}));
  const patches=data.patches.slice(0,8).map((x:Record<string,unknown>)=>({section:String(x.section||''),oldText:String(x.oldText||''),newText:String(x.newText||''),reason:String(x.reason||'')}));
- return {passed:data.passed&&issues.every(x=>x.severity==='minor'),issues,patches};
+ return {passed:data.passed&&issues.every((x:{severity:Issue['severity']})=>x.severity==='minor'),issues,patches};
 }

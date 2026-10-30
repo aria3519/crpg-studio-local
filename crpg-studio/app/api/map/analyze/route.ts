@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       const candidate=planned.length ? (input.find((v:Record<string,unknown>)=>String(v.name||'').trim()===String(loc.name||'').trim()) || input[index]) : loc;
       const position=candidate&&Number.isFinite(Number(candidate.x))&&Number.isFinite(Number(candidate.y))?candidate:loc;
       return {name:String(loc.name||'').slice(0,70),x:Math.max(0,Math.min(100,Number(position.x??loc.approxX??50))),y:Math.max(0,Math.min(100,Number(position.y??loc.approxY??50))),kind:kinds.includes(String(loc.kind))?String(loc.kind):'place',description:String(loc.description||'').slice(0,500),eventText:String(loc.eventText||'').slice(0,1000),eventTrigger:loc.eventTrigger==='interact'?'interact':'enter',eventOnce:Boolean(loc.eventOnce)};
-    }).filter(p=>p.name.trim());
+    }).filter((p:{name:string})=>p.name.trim());
     if (!pins.length) return NextResponse.json({error:'분석 가능한 장소를 찾지 못했습니다.'},{status:422});
     pins.forEach((p:{kind:string})=>{if(p.kind==='start')p.kind='place';});
     return NextResponse.json({pins});
