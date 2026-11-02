@@ -1162,7 +1162,7 @@ function CharacterPanel({game,session,portrait,onInvite,onLeave,onDropQuest,onEq
   <div><span>{cs.gear.caster ? '지팡이 타격' : '공격 피해'}</span><b>{cs.gear.caster ? `${Math.max(1, 1 + cs.strength)}~${Math.max(1, 4 + cs.strength)}` : `${cs.blow[0]}~${cs.blow[1]}`}</b></div>
   {cs.gear.caster && cs.maxMana > 0 && <><div><span>마법 명중</span><b>{sign(cs.spellHit)}</b></div><div><span>마법 피해</span><b>{cs.spell[0]}~{cs.spell[1]}</b></div><div><span>시전 속도</span><b>+{cs.gear.haste}%</b></div><div><span>주문 마나</span><b>{SPELL_COST}</b></div></>}
   <div><span>회피</span><b>{cs.dodge}</b></div>
-  <div><span>치명타</span><b>{`${(21 - cs.critFrom) * 5}% (주사위 ${cs.critFrom >= 20 ? '20' : `${cs.critFrom}~20`})`}</b></div>
+  <div><span>치명타</span><b>{`${(21 - cs.critFrom) * 5}%`}</b></div>
   {cs.gear.skills.length > 0 && <div className="characterCombatSkills"><span>고유 능력</span><b>{cs.gear.skills.map(k => `${k.name}(${SKILLS[k.id].label})`).join(' · ')}</b></div>}
 </div>; })()}</div></div>}
  {tabs.length>0&&<><div className="characterTabs">{tabs.map(([key,label])=><button key={key} type="button" className={selected===key?'active':''} onClick={()=>setActive(key)}>{label}</button>)}</div><div className="characterTabBody">
@@ -1263,6 +1263,15 @@ function PromptBuilder({game,update,busy,setBusy,error,setError,onMap}:{game:Gam
   finally{setCompressing(false);}
  };
  const [dirStep,setDirStep]=useState(0);
+ // 무협·현대는 잠시 막아 두었으므로 장르 선택 없이 정통 판타지로 바로 방향 정하기 단계에 들어갑니다.
+ useEffect(()=>{
+  if(stage!==1)return;
+  const w='정통 판타지';
+  const nextRemoved=[...new Set([...removed,...promptSections.filter(s=>!s.required).map(s=>s.id)])];
+  setDirStep(0);
+  update({...(w!==game.wizardWorld?{wizardMain:'',wizardStart:'',finalGoalSteps:[]}:{}),wizardType:'rpg',wizardWorld:w,...genrePresetPatch(game,w),wizardStage:2,removedPromptSections:nextRemoved,prompt:buildDraftPrompt(drafts,extras,nextRemoved)});
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[stage]);
  const [directionOptions,setDirectionOptions]=useState<DirectionOptions|null>(null);
  useEffect(()=>{
   if(stage<2||!game.wizardWorld)return;

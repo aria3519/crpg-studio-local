@@ -22,7 +22,7 @@ export const BONUS: Record<Exclude<ItemKind, 'item'>, { hit: number[]; damage: n
 export const SKILLS: Record<SkillId, { label: string; kinds: ItemKind[]; values: number[]; text: (v: number) => string }> = {
   lifesteal: { label: '흡혈', kinds: ['weapon', 'accessory'], values: [0, 0, 0, 15, 25, 40], text: v => `준 피해의 ${v}%만큼 HP 회복` },
   double: { label: '연타', kinds: ['weapon', 'accessory'], values: [0, 0, 0, 20, 30, 45], text: v => `${v}% 확률로 한 번 더 공격` },
-  keen: { label: '예리', kinds: ['weapon', 'accessory'], values: [0, 0, 0, 19, 18, 16], text: v => `주사위 ${v} 이상이면 치명타` },
+  keen: { label: '예리', kinds: ['weapon', 'accessory'], values: [0, 0, 0, 19, 18, 16], text: v => `치명타 확률 ${(21 - v) * 5}%` },
   thorns: { label: '가시', kinds: ['armor', 'accessory'], values: [0, 0, 0, 20, 35, 50], text: v => `받은 피해의 ${v}%를 되돌려 줌` },
   guard: { label: '수호', kinds: ['armor', 'accessory'], values: [0, 0, 0, 30, 60, 120], text: v => `전투 시작 시 보호막 ${v}` },
   regen: { label: '재생', kinds: ['armor', 'accessory'], values: [0, 0, 0, 4, 8, 15], text: v => `매 라운드 HP ${v} 회복` },
@@ -153,4 +153,4 @@ export const enemySkill = (name: string, tier: number): EnemySkill | undefined =
   const id = BOSS_SKILLS[name.trim().replace(/ /g, '_')] || ids[[...name].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7) % ids.length];
   return { id, value: id === 'keen' ? (grade >= 4 ? 18 : 19) : Math.max(1, Math.round(SKILLS[id].values[grade] / 2)) };
 };
-export const enemySkillText = (s: EnemySkill) => `${SKILLS[s.id].label} — ${s.id === 'thorns' ? `내가 준 피해의 ${s.value}%를 되돌려 받음` : s.id === 'lifesteal' ? `입힌 피해의 ${s.value}%만큼 회복` : s.id === 'double' ? `${s.value}% 확률로 한 번 더 반격` : s.id === 'keen' ? `주사위 ${s.value} 이상이면 치명타` : s.id === 'guard' ? `보호막 ${s.value}` : `매 라운드 HP ${s.value} 회복`}`;
+export const enemySkillText = (s: EnemySkill) => `${SKILLS[s.id].label} — ${s.id === 'thorns' ? `내가 준 피해의 ${s.value}%를 되돌려 받음` : s.id === 'lifesteal' ? `입힌 피해의 ${s.value}%만큼 회복` : s.id === 'double' ? `${s.value}% 확률로 한 번 더 반격` : s.id === 'keen' ? `치명타 확률 ${(21 - s.value) * 5}%` : s.id === 'guard' ? `보호막 ${s.value}` : `매 라운드 HP ${s.value} 회복`}`;
