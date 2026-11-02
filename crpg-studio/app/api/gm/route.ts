@@ -106,6 +106,8 @@ async function retryTalkLine(partner: string, body: { action?: unknown }, histor
   } catch { return ''; }
 }
 
+// Who the hero is: the first line of the game prompt's [시작 조건] ("신입 모험가: 막 철급 등록을 마친 …").
+const heroIdentity = (prompt: string) => (prompt.match(/# \[시작 조건\]\n([^\n]+)/)?.[1] || '').slice(0, 200);
 export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY 환경변수가 없습니다.' }, { status: 500 });
   try {
@@ -208,7 +210,7 @@ export async function POST(request: Request) {
         const lines = now.length ? [`퀘스트 "${quest}": 이번 장면에서 반드시 일어나는 일 — ${now.join(' / ').slice(0, 400)}. 이 일을 장면의 중심으로 분명하게 묘사하세요. 이 일은 이번 장면(대화라면 이번 대답) 안에서 이미 이루어진 것으로 쓰고, 같은 일을 다시 요구하거나 나중으로 미루지 마세요.`] : [];
         if (!n || mode === 'combat') return lines;
         const who = String(n.who || '').slice(0, 30), at = String(n.at || '').slice(0, 60), goal = String(n.goal || '').slice(0, 120);
-        if (mode === 'talk') return n.do === 'talk' && who === partner ? [...lines, `퀘스트 "${quest}"에서 ${partner}와(과) 매듭지을 일이 남았습니다. JSON에 acceptLine 문자열을 따로 넣으세요: 플레이어가 ${partner}의 말을 받아들여 이 일을 매듭짓는 한 문장(예: "네, 입단 지원서를 내겠습니다.", "그 늑대들, 제가 처리하고 오겠습니다.", "늑대는 모두 쫓아냈습니다. 보고드립니다."). 질문·망설임·되묻기는 안 됩니다. choices에는 acceptLine과 다른 말(질문, 다른 방법, 거절)을 넣으세요. 대화는 플레이어가 acceptLine을 고를 때까지 이어지니 endTalk는 false로 두고, ${partner}의 말은 반드시 큰따옴표 대사로 쓰세요.`] : lines;
+        if (mode === 'talk') return n.do === 'talk' && who === partner ? [...lines, `퀘스트 "${quest}"에서 ${partner}와(과) 매듭지을 일이 남았습니다. JSON에 acceptLine 문자열을 따로 넣으세요: 플레이어가 ${partner}의 말을 받아들여 이 일을 매듭짓는 한 문장(예: "네, 입단 지원서를 내겠습니다.", "그 늑대들, 제가 처리하고 오겠습니다.", "늑대는 모두 쫓아냈습니다. 보고드립니다."). 질문·망설임·되묻기는 안 됩니다. ${partner}가 방금 무언가를 물었다면(출신·이름·목적·사정) acceptLine이 먼저 그 물음에 실제 내용으로 답합니다: 제작자 프롬프트의 [시작 조건]에 적힌 주인공 신분과 프롤로그에서 일어난 일만 쓰고, "명확합니다"·"말씀드린 대로입니다"처럼 답을 피하는 말은 쓰지 않습니다(예: "레븐홀트로 오는 길에 문장을 맡은 떠돌이 모험가입니다. 입단 시험을 치르겠습니다."). choices에는 acceptLine과 다른 말(질문, 다른 방법, 거절)을 넣으세요. 대화는 플레이어가 acceptLine을 고를 때까지 이어지니 endTalk는 false로 두고, 그 전에는 이 일의 결과(물건을 건네줌·완성됨·보상·다음 일 맡김)를 이미 일어난 것처럼 쓰지 말고 아직 남은 일로만 말하게 하며, ${partner}의 말은 반드시 큰따옴표 대사로 쓰세요.`] : lines;
         if (n.here === false) return [...lines, `퀘스트 "${quest}"의 다음 일은 ${at}에서 할 일(${goal})입니다. 지금 있는 곳에서는 그 일의 결과나 그곳의 단서를 꺼내지 말고, 선택지 하나는 ${at}(으)로 가는 행동으로 쓰세요.`];
         if (n.do === 'talk') return [...lines, `${who}이(가) 이 자리에 있습니다. 장면에 등장시키고 presentNpcs에 넣으세요. 퀘스트 "${quest}"는 플레이어가 ${who}에게 말을 걸어야 진행되니, ${who}가 그 결과를 먼저 말해 버리지 마세요.`];
         if (n.do === 'defeat') return [...lines, `이번 장면 끝에 ${who}이(가) 나타나 플레이어 앞을 막아섭니다(전투는 게임이 시작합니다). 등장하는 순간까지만 묘사하고 싸움의 결과는 쓰지 마세요. ambush는 비워 두세요.`];
@@ -224,7 +226,7 @@ export async function POST(request: Request) {
     ];
     const modeRules = mode === 'talk' ? [
       `지금은 플레이어가 ${partner}와(과) 직접 대화하는 대화 모드입니다. playerAction은 플레이어가 ${partner}에게 한 말입니다. 대화는 메신저 채팅처럼 대사만 오갑니다. 상황 설명·지문·행동 묘사는 쓰지 말고 text는 반드시 빈 문자열입니다. line에는 ${partner}가 하는 말만 따옴표·이름표 없이 쓰세요. 채팅 메시지처럼 짧게 1~3개로 나누고 메시지 사이는 줄바꿈(\\n)으로 구분하세요. 감정과 태도는 지문 대신 말투·어휘로 드러내세요. "..."이나 "…"만 있는 대답은 금지입니다. 과묵하거나 적대적인 인물도 짧더라도 실제 말로 반응해야 하며(예: "할 말 없어. 가."), 플레이어가 물은 내용에 답하거나 답하지 않는 이유를 말하세요. 표정이나 몸짓은 화면 연출용으로 gesture에 20자 안팎의 짧은 구절로만 쓰세요(예: 잠시 머뭇거리며). JSON에 line 필드를 꼭 포함하세요. 플레이어의 대사나 행동을 대신 쓰지 마세요. ${partner}의 성격·목표·비밀·관계를 지키고, 아직 밝힐 때가 아닌 비밀은 숨기거나 둘러대세요.`,
-      `npcProfiles의 remembers는 각 인물이 플레이어에 대해 기억하는 내용(이전 대화의 요약)입니다. 그 인물이 등장하면 대화든 일반 장면이든 이 기억과 어긋나지 않게 행동하세요. recentHistory에 ${partner}가 이미 한 말은 다시 하지 마세요. 같은 경고·같은 소식을 표현만 바꿔 되풀이하는 것도 반복입니다. 매 대답은 아직 하지 않은 말이어야 합니다. 플레이어가 무엇을 하겠다고 정하면(가 보겠다, 처리하고 오겠다 등) 그 대답은 짧은 작별 한마디로 끝내세요. withThisNpc는 지금까지 플레이어와 ${partner} 사이에 있었던 일(이전 대화·약속·도움·싸움·거래)의 기록이고, storySoFar의 [인물 메모]와 [약속·거래·빚]도 함께 참고하세요. ${partner}는 그 일을 기억하는 사람처럼 말해야 합니다: 이미 나눈 이야기를 처음 듣는 척하거나 같은 설명을 반복하지 말고, 지난 약속·빚·도움·상처를 자연스럽게 언급하며, 플레이어가 이룬 일(퀘스트 완료, 명성)을 들었다면 그에 맞게 대하세요.`,
+      `npcProfiles의 remembers는 각 인물이 플레이어에 대해 기억하는 내용(이전 대화의 요약)입니다. 그 인물이 등장하면 대화든 일반 장면이든 이 기억과 어긋나지 않게 행동하세요. recentHistory에 ${partner}가 이미 한 말은 다시 하지 마세요. 같은 경고·같은 소식을 표현만 바꿔 되풀이하는 것도 반복입니다. 매 대답은 아직 하지 않은 말이어야 합니다. 플레이어가 무엇을 하겠다고 정하면(가 보겠다, 처리하고 오겠다 등) 그 대답은 짧은 작별 한마디로 끝내세요. withThisNpc는 지금까지 플레이어와 ${partner} 사이에 있었던 일(이전 대화·약속·도움·싸움·거래)의 기록이고, storySoFar의 [인물 메모]와 [약속·거래·빚]도 함께 참고하세요. ${partner}는 그 일을 기억하는 사람처럼 말해야 합니다: 이미 나눈 이야기를 처음 듣는 척하거나 같은 설명을 반복하지 말고, 지난 약속·빚·도움·상처를 자연스럽게 언급하며, 플레이어가 이룬 일(퀘스트 완료, 명성)을 들었다면 그에 맞게 대하세요. [지난 대화]가 붙은 줄은 이미 끝나 매듭지어진 대화입니다: 그 일(받은 시험·맡긴 일)은 끝난 일로만 기억하고, 지금 대화의 주제로 다시 꺼내 칭찬·확인·재부여하지 마세요. 지금 대화의 주제는 플레이어의 말과 questBeats에서 ${partner}와 남은 일입니다.`,
       `대화 모드에서 choices에는 플레이어가 ${partner}에게 실제로 입 밖에 내는 말 그대로(구어체 직접 화법) 대사 3개를 따옴표 없이 넣으세요. 세 대사는 역할이 완전히 달라야 합니다: 1번 진행 — ${partner}가 방금 한 말(제안·부탁·정보·요구)을 받아들이거나 그 흐름대로 이야기를 앞으로 진행하는 말(수락, 다음에 할 일 확인, 바로 움직이겠다는 말). 2번 살짝 다른 방법 — 같은 화제에 응하되 방식을 바꾸는 말(조건 걸기, 보수 흥정, 다른 방법 제안, 의심하며 확인하기). 3번 거절 또는 상황에서 벗어나기 — 제안을 거절하거나 미루는 말, 또는 이 대화·상황에서 빠져나오는 말(다른 볼일을 대며 자리를 뜨기, 생각해 보겠다며 물러나기, 작별). 도발이나 허세, 새 질문이 아닙니다. 1번처럼 받아들이거나 출발하겠다는 말이면 안 됩니다. 셋 다 질문이거나 셋 다 같은 내용을 다르게 묻는 말이면 안 됩니다. ${playerVoice} '~라고 한다', '~을 묻는다', '~을 부탁한다' 같은 행동 서술은 금지입니다. 예: (X) 그 의뢰에 대해 자세히 알려 달라고 한다 → (O) 그 의뢰, 좀 더 자세히 알려 줄 수 있어요? playerAction이 이런 행동 서술이면 그 의도를 플레이어가 실제로 하는 말로 바꿔 playerLine에 넣고, 이미 대사이거나 다가가 말을 거는 행동뿐이면 playerLine은 빈 문자열입니다. check는 null, moveToPinId는 빈 문자열입니다. 관계나 호감도가 실제로 변했다면 relationshipUpdates에 반영하세요.`,
       `플레이어가 다음에 할 일이 정해지면(의뢰를 받거나 거절함, 갈 곳·만날 사람·건넬 물건이 정해짐, 약속이나 거래가 맺어짐) 더 끌지 말고 그 대답에서 바로 한두 마디로 마무리하고 endTalk:true를 반환하세요. 그러면 게임이 곧장 다음 장면으로 넘어갑니다. 플레이어가 대화 중에 자리를 뜨거나 다른 곳으로 가는 등 대화가 아닌 행동을 하면, line은 빈 문자열로 두고 text에 그 행동을 짧게 서술한 뒤 endTalk:true를 반환하세요. 그 서술을 NPC의 말처럼 쓰지 마세요. 대화는 짧게 끝납니다. NPC는 매 대답마다 새 정보·결정·조건 중 하나를 꼭 내놓고, 같은 이야기를 반복하거나 질문으로 되묻기만 하며 시간을 끌지 마세요. 대화에는 끝이 있습니다. 다음 중 하나가 되면 ${partner}가 자연스럽게 마무리하는 말을 하고 endTalk:true를 반환하세요: 의뢰·퀘스트를 맡기거나 플레이어가 수락·거절함, 거래·약속이 성사되거나 결렬됨, 플레이어가 물은 것을 다 들어 더 나눌 이야기가 없음, ${partner}가 더 말하기 싫어하거나(반감·적대) 볼일이 있어 자리를 떠야 함, 플레이어가 작별 인사를 함. 할 말이 없는데 같은 이야기를 되풀이하거나 "더 궁금한 게 있나요?"로 대화를 억지로 이어 가지 마세요. endTalk:true일 때 choices는 빈 배열입니다. 지금까지 플레이어가 이 대화에서 한 말은 ${talkTurns}번입니다.${lastReply ? ` 이번이 이 대화의 마지막 대답입니다.${decided ? ' 플레이어가 할 일을 정하고 떠나려 합니다.' : ''} ${partner}는 플레이어의 말에 짧게 답한 뒤 작별·당부·응원 같은 마무리 한마디로 끝내세요. 질문이나 새 화제를 꺼내 대답을 기다리게 하지 마세요. endTalk:true를 반환하세요.` : talkTurns >= 3 ? ` 대화가 길어지고 있습니다. 새로 줄 정보나 결정이 없다면 이번 대답에서 정리하고 endTalk:true를 반환하세요.` : ''}`,
     ] : mode === 'combat' ? [
@@ -291,7 +293,7 @@ export async function POST(request: Request) {
       '판정이 필요하면 text에 지금 무엇이 위험하고 왜 굴리는지를 한두 문장으로 분명히 쓰고, check에 {ability,label,dc,reason,success,failure}을 반환하세요. success는 성공하면 얻는 구체적인 것(예: 사냥꾼보다 먼저 흔적을 찾아 은신처 위치를 알아냄), failure는 실패하면 치르는 구체적인 대가(예: 덫에 걸려 HP 피해, 적에게 들켜 습격당함)로 각 40자 이내입니다. ability는 currentState.characterValues에 존재하는 숫자형 능력치 ID 중 하나여야 합니다. 판정 요청 단계에서는 성공·실패·피해·보상·이동을 확정하지 말고 변경 필드를 비우세요.',
       'diceResult가 제공되면 이미 확정된 판정입니다. 같은 행동에 주사위를 다시 요청하지 말고 check:null을 반환하세요. 성공/실패는 diceResult.success를 반드시 따르고, diceResult.onSuccess/onFailure에 미리 약속한 결과를 실제로 일으키세요. 성공은 눈에 보이는 이득(새 단서·물건 addItems·목표 진척·적보다 유리한 위치, xpGain "minor")이고, 실패는 눈에 보이는 대가(hpDelta -5~-20 피해, 들켜서 ambush 습격, 물건 잃음 removeItems, 호감도·명성 하락, 적이 먼저 움직임)입니다. "아무 일도 일어나지 않았다"로 끝내지 마세요. 실패해도 이야기는 대가를 치르고 앞으로 나아갑니다.',
       '판정이 필요하지 않으면 check:null을 반환하세요. 하나의 행동에 불필요한 반복 판정을 요구하지 마세요.',
-      '각 장면이 끝날 때 플레이어가 고를 행동 3가지를 choices 문자열 배열로 제시하세요(네 번째는 플레이어가 직접 입력합니다). 3개는 성격이 완전히 달라야 하며 반드시 이 순서와 역할을 지키세요. 1번 메인 따라가기 — 메인 목표(mainQuest)를 지금 바로 한 걸음 진척시키는 가장 곧은 행동. 메인 목표가 다른 곳의 일이면 그곳으로 가는 행동이고, 이미 들은 정보가 있으면 그 정보를 따라 움직이는 행동입니다(같은 걸 다시 묻기·주변 살피기 금지). 2번 서브 스토리 따라가기 — currentState.quests 가운데 메인이 아닌 퀘스트(지역 이야기·의뢰)를 한 걸음 진척시키는 행동. 그런 퀘스트가 없으면 근처의 의뢰 게시판·소문·인물에게서 새 일을 찾는 행동입니다. 3번 상황 벗어나기 — 지금 장면에서 물러나는 행동: 자리를 뜨기, 여관에서 쉬며 회복하기, 장비 정비, 근처의 다른 장소로 가기. 각 선택지의 target에 그 행동의 대상(인물·장소·물건 하나)을 쓰고, 세 target은 모두 달라야 합니다. 같은 대상에게 말 거는 선택지를 두 개 이상 넣지 마세요. 비밀을 미리 알거나 결과를 확정하지 마세요.',
+      '각 장면이 끝날 때 플레이어가 고를 행동 3가지를 choices 문자열 배열로 제시하세요(네 번째는 플레이어가 직접 입력합니다). 체력은 전투가 아닌 장면마다 게임이 저절로 조금씩 회복시키므로, 휴식·회복하러 가기·잠자기 같은 선택지는 넣지 마세요. 3개는 성격이 완전히 달라야 하며 반드시 이 순서와 역할을 지키세요. 1번 메인 따라가기 — 메인 목표(mainQuest)를 지금 바로 한 걸음 진척시키는 가장 곧은 행동. 메인 목표가 다른 곳의 일이면 그곳으로 가는 행동이고, 이미 들은 정보가 있으면 그 정보를 따라 움직이는 행동입니다(같은 걸 다시 묻기·주변 살피기 금지). 2번 서브 퀘스트 또는 메인의 다른 길 — currentState.quests 가운데 메인이 아닌 퀘스트(지역 이야기·의뢰)가 있으면 그것을 한 걸음 진척시키는 행동. 그런 퀘스트가 없으면 메인 목표를 1번과 다른 방법(다른 인물을 통해, 다른 경로로, 다른 수단으로)으로 진척시키는 행동입니다. 3번 도박·의외의 행동 — 판을 흔들거나 상황을 벗어나는 대담하고 위험한 행동: 몰래 잠입하기, 뇌물·거래 제안, 내기·허세, 엿듣기·미행, 정면으로 도발하기, 예상 밖의 수를 두기. 성공하면 크게 앞서지만 실패하면 대가가 따르는 행동이어야 하고, 휴식·회복·그냥 다른 곳으로 떠나기는 3번이 아닙니다. 각 선택지의 target에 그 행동의 대상(인물·장소·물건 하나)을 쓰고, 세 target은 모두 달라야 합니다. 같은 대상에게 말 거는 선택지를 두 개 이상 넣지 마세요. 비밀을 미리 알거나 결과를 확정하지 마세요.',
 
       'choices는 플레이어의 행동으로 그대로 쓰이는 자연스러운 1인칭 행동 문장으로 작성하세요. 4번을 포함해 어떤 선택지에도 "특이한 행동", "(4)" 같은 꼬리표나 머리말을 붙이지 말고 행동 문장만 쓰세요. 이미 확정된 행동을 다시 반복하거나 플레이어가 알 수 없는 비밀을 누설하지 마세요.',
       '선택지가 점점 단순해지지 않게 하세요. "주변을 살펴본다", "이야기를 듣는다", "다음 장소로 향한다" 같은 막연한 행동은 금지입니다. 각 선택지는 구체적인 대상(이름 있는 인물·물건·장소·단서)과 의도·방법을 담은 한 문장입니다. recentHistory에서 플레이어가 이미 했던 것과 같은 유형의 행동은 다시 제시하지 마세요.',
@@ -305,7 +307,7 @@ export async function POST(request: Request) {
       '서브 퀘스트: 플레이어가 다른 장소에 도착하거나 메인 퀘스트 사이에 숨을 돌릴 때, 남은 퀘스트 칸이 있으면 그 장소에 어울리는 서브 퀘스트를 장면 속 제안으로 내놓으세요. 그곳의 기존 NPC가 하는 부탁(배달·호위·수색·거래·화해)이나, 그 지역에 나타나는 currentState.monsters 중 하나(boss:true 제외)를 잡아 달라는 토벌 의뢰가 좋습니다. 토벌 의뢰는 목표 문장에 몬스터 이름을 목록 표기 그대로 넣으세요(예: "숲 트롤 토벌하기"). 그 몬스터를 전투로 이기면 게임이 자동으로 완료 처리합니다. 서브 퀘스트는 메인 줄거리의 비밀을 앞당겨 밝히지 않는 선에서, 보상·평판·인물과의 관계로 보답하세요.',
       'currentState.quests는 플레이어가 지금 진행 중인 목표(퀘스트) 목록이며 최대 currentState.maxQuests개까지 동시에 가질 수 있습니다. NPC에게 의뢰·부탁을 받아 플레이어가 수락했거나, 사건으로 새로 해야 할 일이 분명해졌을 때만 addQuests에 {"text":"구체적 대상과 할 일이 담긴 짧은 한 문장, 40자 이내","giver":"의뢰한 NPC의 정확한 이름(없으면 빈 문자열)"} 형태로 새 목표를 넣으세요. 플레이어가 수락하지 않은 제안은 넣지 말고, 기존 목표와 같은 일은 다시 넣지 마세요. 목록이 이미 꽉 찼으면 새 목표를 넣지 말고, 의뢰인이 제안하면 지금은 맡을 여유가 없다는 선택지를 줄 수 있습니다. 목표 하나는 일 하나입니다. 기존 목표 문장을 고쳐 쓰거나 내용을 덧붙여 늘리지 마세요(완료 처리 후 더 긴 같은 목표를 다시 넣는 것도 금지). 같은 목표가 진행돼 다음 단계가 생겨도 기존 목표는 그대로 두고 서술로만 보여 주세요. 새로 생긴 다른 일(다른 인물의 의뢰, 새 장소 조사 등)만 addQuests에 별도 항목으로 넣으세요. 예: (X) "부두 창고를 조사한다" → "부두 창고를 조사하고 밀수업자 레온을 찾아 장부를 빼앗는다" (O) 기존 항목 유지 + 새 항목 "밀수업자 레온의 장부를 손에 넣는다". 목표를 실제로 이뤄 냈으면 currentState.quests의 문장을 글자 그대로 completedQuests에, 실패·포기·무의미해졌으면 failedQuests에 넣으세요. 변화가 없으면 모두 빈 배열입니다. 퀘스트 완료 기본 보상(명성 +150, 의뢰인 호감도 +10)은 게임 코드가 자동으로 주므로, 완료 그 자체에 대해서는 reputationDelta나 의뢰인 relationshipUpdates를 따로 올리지 마세요(완료 과정에서 생긴 다른 일은 반영). 퀘스트를 완료하는 턴에는 의뢰인이나 그 일의 결과로 손에 들어오는 보수 장비 하나(무기·방어구·장신구)를 addItems에 {"name","kind","desc"} 객체로 넣고 장면에서 건네받는 모습을 묘사하세요. 등급은 게임 코드가 정하며, 넣지 않으면 게임이 대신 지급합니다. 최종 목표는 플레이어에게 보이지 않는 GM 전용 정보입니다. 최종 목표를 목록에 그대로 넣거나 서술에서 밝히지 말고 사건을 통해 자연스럽게 드러나게 하세요. 최종 목표가 single이면 구체적 승리 조건이 실제 충족된 경우에만 finalGoalCompleted:true를 반환하세요. progress이면 currentState.finalGoalSteps의 각 단계를 실제 달성한 경우에만 0부터 시작하는 해당 인덱스를 completedGoalSteps 배열에 넣으세요. 이미 완료한 단계는 반복할 필요 없습니다. 아직 달성하지 않은 단계는 절대 완료 처리하지 마세요. progress 모드에서는 finalGoalCompleted:true만으로 종료할 수 없고 모든 단계 완료 시에만 엔딩을 서술하세요.',
       'text·choices·gesture는 모두 자연스러운 한국어로만 쓰세요. 러시아어·일본어 등 다른 언어 단어를 섞지 마세요(세계관 고유명사는 예외).',
-      '다음 JSON 객체만 반환하세요: {"text":"GM의 한국어 묘사","hpDelta":0,"addItems":[],"removeItems":[],"addFlags":[],"imageKey":"","moveToPinId":"","check":null,"choices":[{"text":"1번 메인 따라가기 행동","target":"행동 대상"},{"text":"2번 메인을 다른 방식으로 접근하는 행동","target":"다른 대상"},{"text":"3번 다른 일을 하는 행동","target":"또 다른 대상"},{"text":"4번 도박·의외의 행동","target":"또 다른 대상"}],"presentNpcs":[],"npcVoices":[],"reputationDelta":0,"xpGain":"","trained":[],"ambush":"","relationshipUpdates":[],"addQuests":[],"completedQuests":[],"failedQuests":[],"completedGoalSteps":[],"finalGoalCompleted":false}',
+      '다음 JSON 객체만 반환하세요: {"text":"GM의 한국어 묘사","hpDelta":0,"addItems":[],"removeItems":[],"addFlags":[],"imageKey":"","moveToPinId":"","check":null,"choices":[{"text":"1번 메인 따라가기 행동","target":"행동 대상"},{"text":"2번 서브 퀘스트 행동(없으면 메인을 다른 방법으로)","target":"다른 대상"},{"text":"3번 도박·의외의 행동","target":"또 다른 대상"}],"presentNpcs":[],"npcVoices":[],"reputationDelta":0,"xpGain":"","trained":[],"ambush":"","relationshipUpdates":[],"addQuests":[],"completedQuests":[],"failedQuests":[],"completedGoalSteps":[],"finalGoalCompleted":false}',
       '새 게임 시작 시 플레이어에게 표시한 프롤로그가 있다면 이미 일어난 사실로 존중하고 이어서 진행하세요. 프롤로그를 다시 처음부터 설명하지 마세요. 플레이어의 의지나 행동을 임의 확정하지 마세요.',
       ...pacingRules,
       ...modeRules,
@@ -507,7 +509,7 @@ export async function POST(request: Request) {
           method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.9, response_format: { type: 'json_object' },
             messages: [
-              { role: 'system', content: '한국어 CRPG의 다음 행동 선택지 3개를 다시 씁니다. 기존 선택지는 같은 대상을 겹치게 노리거나, 플레이어가 방금 한 행동(alreadyDone)을 되풀이하거나, 같은 걸 계속 묻기만 해서 이야기가 제자리입니다. 세 선택지의 대상이 모두 다르게 하고, alreadyDone과 같은 주제를 다시 묻거나 하는 선택지는 금지입니다. 묻기·듣기 선택지는 최대 1개이고, 이미 들은 정보가 있으면 그 정보를 따라 실제로 움직이는 행동(그 장소로 간다, 흔적을 쫓는다, 그 사람을 찾아간다)을 내세요. 모든 선택지는 scene의 마지막 상황(누가 나타났는지, 무엇이 덮쳐 오는지, 무엇을 찾았는지)에 바로 이어져야 합니다. 1번은 mainQuest를 향해 지금 바로 움직이는 행동입니다. mainQuestDone이 true면 그 목표는 이번 장면에서 이미 끝났으니 1번은 nextMainQuest를 향하는 행동입니다. 플레이어는 이미 location에 있으니 그곳으로 가는 선택지는 금지입니다(그 안의 특정 건물·인물로 가는 건 가능). 역할 순서: 1번 메인 따라가기(mainQuest를 지금 바로 진척시키는 가장 곧은 행동, 다른 곳의 일이면 그곳으로 감), 2번 서브 스토리 따라가기(quests 중 메인이 아닌 퀘스트를 진척, 없으면 근처에서 새 일을 찾음), 3번 상황 벗어나기(자리 뜨기, 여관 휴식·회복, 정비, 근처 다른 장소). 1인칭 행동 문장, 각 80자 이내, 플레이어가 모르는 비밀을 쓰지 마세요. 다음 JSON만 반환: {"choices":[{"text":"","target":""},{"text":"","target":""},{"text":"","target":""}]}' },
+              { role: 'system', content: '한국어 CRPG의 다음 행동 선택지 3개를 다시 씁니다. 기존 선택지는 같은 대상을 겹치게 노리거나, 플레이어가 방금 한 행동(alreadyDone)을 되풀이하거나, 같은 걸 계속 묻기만 해서 이야기가 제자리입니다. 세 선택지의 대상이 모두 다르게 하고, alreadyDone과 같은 주제를 다시 묻거나 하는 선택지는 금지입니다. 묻기·듣기 선택지는 최대 1개이고, 이미 들은 정보가 있으면 그 정보를 따라 실제로 움직이는 행동(그 장소로 간다, 흔적을 쫓는다, 그 사람을 찾아간다)을 내세요. 모든 선택지는 scene의 마지막 상황(누가 나타났는지, 무엇이 덮쳐 오는지, 무엇을 찾았는지)에 바로 이어져야 합니다. 1번은 mainQuest를 향해 지금 바로 움직이는 행동입니다. mainQuestDone이 true면 그 목표는 이번 장면에서 이미 끝났으니 1번은 nextMainQuest를 향하는 행동입니다. 플레이어는 이미 location에 있으니 그곳으로 가는 선택지는 금지입니다(그 안의 특정 건물·인물로 가는 건 가능). 역할 순서: 1번 메인 따라가기(mainQuest를 지금 바로 진척시키는 가장 곧은 행동, 다른 곳의 일이면 그곳으로 감), 2번 서브 퀘스트 또는 메인의 다른 길(quests 중 메인이 아닌 퀘스트가 있으면 그것을 진척, 없으면 mainQuest를 1번과 다른 인물·경로·수단으로 진척), 3번 도박·의외의 행동(몰래 잠입, 뇌물·거래, 내기·허세, 엿듣기·미행, 정면 도발처럼 판을 흔들거나 상황을 벗어나는 대담하고 위험한 행동. 휴식·회복이나 그냥 다른 곳으로 떠나기는 안 됨). 1인칭 행동 문장, 각 80자 이내, 플레이어가 모르는 비밀을 쓰지 마세요. 다음 JSON만 반환: {"choices":[{"text":"","target":""},{"text":"","target":""},{"text":"","target":""}]}' },
               { role: 'user', content: JSON.stringify({ scene: String(data.text || '').slice(0, 1500), location: state.locationName || '', nearbyPlaces: Array.isArray(state.adjacentLocations) ? state.adjacentLocations.map((p: { name?: unknown }) => p?.name) : [], quests: state.quests || [], mainQuest: state.mainQuest || '', mainQuestDone: mainDoneNow, nextMainQuest: state.nextMainQuest || '', alreadyDone: recentActs, repetitive: choices }) },
             ] }),
           cache: 'no-store', signal: AbortSignal.timeout(20000),
@@ -519,6 +521,47 @@ export async function POST(request: Request) {
           if (texts.length === 3 && new Set(texts).size === 3 && !sameTarget(texts, targets) && !texts.some(rehash) && !texts.some(goesHere)) choices.splice(0, choices.length, ...texts);
         }
       } catch (err) { console.warn('선택지 다양화 실패', err); }
+    }
+    // Health comes back on its own each calm turn, so a choice that only goes to rest or recover wastes a slot.
+    {
+      const RESTING = /(휴식|쉬며|쉬면서|쉰다|쉬어|잠을 ?청|눈을 붙|숨을 돌리|체력을 ?회복|회복하러|회복한다|기력을 ?회복|상처를 ?돌보|치료(를|하러) ?받)/;
+      if (!mode && choices.length && (choices as string[]).some(c => RESTING.test(c))) {
+        const kept = (choices as string[]).filter(c => !RESTING.test(c));
+        if (kept.length) choices.splice(0, choices.length, ...kept);
+      }
+    }
+    // Choice 1 always leads somewhere on the main quest when the player stands where its next step happens: arriving at
+    // 진흙 골목 to crack down on the fences, three ways to leave (회색 탑, 철망치, rest) left the step itself unreachable.
+    {
+      const mq = String(state.mainQuest || ''), nb = (mainNext || {}) as { do?: unknown; at?: unknown; here?: unknown; who?: unknown };
+      const place = String(nb.at || '').split(',')[0].trim(), who = String(nb.who || '').trim();
+      if (!mode && !check && !ambush && mq && nb.here === true && choices.length) {
+        const keys = new Set([...contentWords(mq), ...contentWords(place), ...(who ? contentWords(who) : [])]);
+        const LEAVE = /(이동|향한다|간다|떠난다|돌아간다|들른다|들러|휴식|쉰다|쉬며)/;
+        const onMain = (c: string) => !LEAVE.test(c) && [...contentWords(c)].some(w => keys.has(w));
+        if (!(choices as string[]).some(onMain)) {
+          const stem = mq.replace(/\s*(하기|기)$/, '').trim();
+          const made = nb.do === 'search' && place ? `${place}에서 ${stem.includes(place) ? '단서를' : stem + '의 단서를'} 찾아 샅샅이 뒤진다.`
+            : nb.do === 'defeat' && who ? `${who}의 흔적을 쫓는다.`
+            : nb.do === 'talk' && who ? `${who}에게 다가가 말을 건다.`
+            : `${stem}에 나선다.`;
+          choices.splice(0, 1, made);
+        }
+      }
+    }
+    // Three choices always: a slot freed by dropping a rest choice is filled, first with a step toward the main quest
+    // (going to where it happens, or doing it here), then with a plain look around.
+    if (!mode && !check && !ambush && choices.length > 0 && choices.length < 3) {
+      const nb = (mainNext || {}) as { do?: unknown; at?: unknown; here?: unknown; who?: unknown };
+      const place = String(nb.at || '').split(',')[0].trim(), who = String(nb.who || '').trim();
+      const fin = (w: string) => { const c = w.charCodeAt(w.length - 1); return c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : 0; };
+      const ro = (w: string) => { const f = fin(w); return f && f !== 8 ? '으로' : '로'; }, eul = (w: string) => fin(w) ? '을' : '를';
+      const toMain = !place ? '' : nb.here === true
+        ? (nb.do === 'talk' && who ? `${who}에게 다가가 말을 건다.` : nb.do === 'defeat' && who ? `${who}의 흔적을 쫓는다.` : `${place}에서 단서를 찾아 샅샅이 뒤진다.`)
+        : (nb.do === 'talk' && who ? `${place}${ro(place)} 가서 ${who}${eul(who)} 만난다.` : `${place}${ro(place)} 향한다.`);
+      const GAMBLES = ['아무도 보지 않는 틈을 타 몰래 뒤를 캐 본다.', '판돈을 걸고 근처 사람에게 내기를 청해 정보를 얻어 낸다.', '수상한 자에게 먼저 시비를 걸어 반응을 떠본다.'];
+      const fillers = [toMain, '이곳 사람들에게 요즘 도는 소문을 묻는다.', GAMBLES[history.length % GAMBLES.length]].filter(Boolean);
+      for (const f of fillers) { if (choices.length >= 3) break; if (!(choices as string[]).some(c => c === f || contentWords(c).size && [...contentWords(f)].filter(w => contentWords(c).has(w)).length >= 2)) choices.push(f); }
     }
     // Suggested replies must be speech; narrated intents are dropped unless nothing else is left.
     const NARRATED = /(한다|묻는다|말한다|건넨다|요청한다|부탁한다|청한다|본다|듣는다)\.?$/;
@@ -621,6 +664,13 @@ export async function POST(request: Request) {
     // With the talk's outcome known (acceptHint), the line is always written for it; otherwise the GM's own is used.
     const acceptHint = typeof body.acceptHint === 'string' ? body.acceptHint.slice(0, 300) : '';
     let acceptLine = isDecision(rawAccept) && !acceptHint ? rawAccept : '';
+    // The outcome is the person hearing back: the player has done the job and reports it.
+    // A "맡겠습니다 … 곧 보고드리겠습니다" there reads as taking the job on, yet choosing it finishes the quest.
+    // Decided by the game from the step's order (a deed came before this talk), not from words in the outcome: "지원서를 받아
+    // 들고" in a first talk made the hero report a wolf hunt that hadn't happened.
+    const reporting = body.acceptReport === true;
+    const promiseOnly = (v: string) => /(맡겠|하겠습니다|하겠어요|드리겠|곧 보고|가겠습니다|처리하고 오겠)/.test(v) && !/(했습니다|했어요|찾았|마쳤|다녀왔|끝냈|쫓아냈|처리했|되찾았|가져왔|확인했|보고드립니다|보고합니다)/.test(v);
+    const recentDeeds = (Array.isArray(body.history) ? body.history : []).filter((h: unknown): h is string => typeof h === 'string' && /^(GM|시스템):/.test(h)).slice(-8).map((h: string) => h.slice(0, 200));
     // Missing or doubtful: one small call writes it as an answer to what the partner just said.
     const questNext = questTalk && Array.isArray(state.questBeats) ? (state.questBeats as { quest?: unknown; next?: { do?: unknown; who?: unknown } | null }[]).find(q => q?.next?.do === 'talk' && q.next.who === partner) : undefined;
     const acceptQuest = questNext ? String(questNext.quest || '') : body.holdTalk === true ? String(body.holdQuest || '').slice(0, 80) : '';
@@ -630,14 +680,16 @@ export async function POST(request: Request) {
           method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.7, response_format: { type: 'json_object' },
             messages: [
-              { role: 'system', content: `한국어 CRPG 대화입니다. 플레이어가 ${partner}에게 할 대사 한 문장을 씁니다: ${partner}가 방금 한 말에 답하면서, 퀘스트 일을 받아들여 매듭짓는 결정의 말. 질문·망설임·되묻기는 안 됩니다. whenChosen이 있으면 그 말을 고를 때 이어질 일이니, 그 일로 자연스럽게 이어지는 말을 쓰세요(보고를 받는 일이면 보고하는 말, 일을 맡기는 일이면 맡겠다는 말). 해요체나 하십시오체, 60자 이내, 따옴표 없이. 주인공의 출신·직업은 지어내지 마세요. 다음 JSON만 반환: {"line":"..."}` },
-              { role: 'user', content: JSON.stringify({ npcJustSaid: line, quest: acceptQuest, ...(acceptHint ? { whenChosen: acceptHint } : {}) }) },
+              { role: 'system', content: `한국어 CRPG 대화입니다. 플레이어가 ${partner}에게 할 대사 한 문장을 씁니다: ${partner}가 방금 한 말에 답하면서, 퀘스트 일을 받아들여 매듭짓는 결정의 말. 질문·망설임·되묻기는 안 됩니다. ${reporting ? `이번에는 보고하는 말입니다: 플레이어는 그 일을 이미 해냈으니, recentDeeds에 있는 실제로 한 일(찾은 것·쓰러뜨린 것)을 과거형으로 보고하세요(예: "진흙 골목 장물 창고를 덮쳐 문장이 새겨진 기사검을 찾아냈습니다."). "맡겠습니다"·"하겠습니다"·"곧 보고드리겠습니다"처럼 앞으로 할 일로 말하면 안 됩니다. ` : '플레이어는 아직 이 일을 하지 않았습니다: 해낸 것처럼 보고하거나 결과를 미리 말하지 말고, 받아들이거나 맡겠다는 말로 쓰세요. '} whenChosen이 있으면 그 말을 고를 때 이어질 일이니, 그 일로 자연스럽게 이어지는 말을 쓰세요(보고를 받는 일이면 보고하는 말, 일을 맡기는 일이면 맡겠다는 말). 해요체나 하십시오체, 60자 이내, 따옴표 없이. 상대가 출신·이름·목적·사정을 물었다면 그 물음에 hero(주인공 신분)와 opening(프롤로그)에 있는 내용으로 실제로 답한 뒤 결정을 말하세요. "명확합니다"·"말씀드린 대로입니다"처럼 답을 피하는 말은 안 됩니다. hero·opening에 없는 출신·직업은 지어내지 마세요. 다음 JSON만 반환: {"line":"..."}` },
+              { role: 'user', content: JSON.stringify({ npcJustSaid: line, quest: acceptQuest, hero: heroIdentity(String(body.prompt || '')), opening: String(body.prologue || '').slice(0, 600), ...(reporting ? { recentDeeds } : {}), ...(acceptHint ? { whenChosen: acceptHint } : {}) }) },
             ] }),
           cache: 'no-store', signal: AbortSignal.timeout(15000),
         });
         const made = String(JSON.parse((await gen.json())?.choices?.[0]?.message?.content || '{}')?.line || '').trim().replace(/^["“”'「『]+|["“”'」』]+$/g, '');
-        if (isDecision(made)) acceptLine = made;
+        if (isDecision(made) && !(reporting && promiseOnly(made))) acceptLine = made;
       } catch (err) { console.warn('수락 대사 생성 실패', err); }
+      // Still a promise where a report is due: a plain report of the quest itself.
+      if (reporting && (!acceptLine || promiseOnly(acceptLine))) acceptLine = `${acceptQuest.replace(/하기$/, '').trim()}, 마치고 돌아왔습니다. 보고드립니다.`.slice(0, 90);
     }
     const playerLine = mode === 'talk' && typeof data.playerLine === 'string' && !FOREIGN_SCRIPT.test(data.playerLine) ? data.playerLine.trim().replace(/^["“”'「『]+|["“”'」』]+$/g, '').slice(0, 300) : '';
     return NextResponse.json({ acceptLine, setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta,addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,finalGoalCompleted,completedGoalSteps,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,

@@ -4,7 +4,8 @@
 import { foeLevelRange } from './progression';
 
 // Art: public/_default_monsters/<genre>/<name>.png (Korean name), or <image>.png as a fallback.
-export type Foe = { name: string; image: string; power: number; desc: string; habitat: string[]; boss?: boolean };
+// trophy: what the player takes from the foe when it is an act's boss (거대 거미 → 거대 거미의 심장).
+export type Foe = { name: string; image: string; power: number; desc: string; trophy?: string; habitat: string[]; boss?: boolean };
 type Roster = { danger: RegExp; habitats: Record<string, RegExp>; foes: Foe[] };
 
 const ROSTERS: Record<string, Roster> = {
@@ -12,31 +13,31 @@ const ROSTERS: Record<string, Roster> = {
     danger: /숲|그림우드|폐허|묘지|성역|관리지|동굴|등대|섬|골목|밀동네|거점|해안|늪|광산|황무지|협곡/,
     habitats: { forest: /숲|그림우드|협곡/, undead: /묘지|폐허|등대|광산/, abyss: /심연|검은 문|성역|관리지/, coast: /섬|해안|동굴|등대|늪/, street: /골목|밀동네|거점/ },
     foes: [
-      { name: '굶주린 늑대 무리', image: 'wolf-pack', power: 2, desc: '숲 가장자리를 떠도는 굶주린 늑대 대여섯 마리', habitat: ['forest'] },
-      { name: '고블린 약탈대', image: 'goblin-raiders', power: 2, desc: '녹슨 칼과 활을 든 고블린 무리. 비겁하지만 수가 많다', habitat: ['forest', 'coast'] },
-      { name: '거대 거미', image: 'giant-spider', power: 3, desc: '사람 키만 한 독거미. 거미줄로 먹잇감을 묶는다', habitat: ['forest', 'undead'] },
-      { name: '다이어울프 우두머리', image: 'direwolf-alpha', power: 4, desc: '말만 한 덩치의 늑대 우두머리', habitat: ['forest'] },
-      { name: '숲 트롤', image: 'forest-troll', power: 5, desc: '상처가 금세 아무는 거대한 트롤', habitat: ['forest'] },
-      { name: '해골 병사', image: 'skeleton-soldier', power: 3, desc: '옛 왕조의 갑옷을 걸친 채 움직이는 해골', habitat: ['undead'] },
-      { name: '구울', image: 'ghoul', power: 4, desc: '시체를 뜯어먹는 굶주린 언데드', habitat: ['undead'] },
-      { name: '망령 기사', image: 'wraith-knight', power: 6, desc: '저주받은 검을 든 옛 기사의 망령', habitat: ['undead', 'abyss'] },
-      { name: '머맨 약탈자', image: 'merman-raider', power: 3, desc: '작살을 든 물고기 머리의 약탈자들', habitat: ['coast'] },
-      { name: '바다뱀', image: 'sea-serpent', power: 5, desc: '배 한 척을 휘감을 만한 거대한 바다뱀', habitat: ['coast'] },
-      { name: '심연의 하수인', image: 'abyss-minion', power: 4, desc: '검은 문 틈에서 기어 나온 일그러진 마물', habitat: ['abyss'] },
-      { name: '촉수 마물', image: 'tentacle-horror', power: 6, desc: '심연의 기운으로 부풀어 오른 촉수 덩어리', habitat: ['abyss'] },
-      { name: '심연의 사도 광신도', image: 'abyss-cultist', power: 3, desc: '단검과 저주를 휘두르는 사교 광신도들', habitat: ['abyss', 'street'] },
-      { name: '뒷골목 불량배', image: 'alley-thugs', power: 2, desc: '몽둥이를 든 뒷골목 패거리', habitat: ['street'] },
-      { name: '청부 암살자', image: 'assassin', power: 5, desc: '돈을 받고 목숨을 노리는 그림자 속 암살자', habitat: ['street'] },
-      { name: '와이번', image: 'wyvern', power: 7, desc: '독 꼬리를 가진 하늘의 포식자', habitat: ['forest', 'coast'] },
+      { name: '굶주린 늑대 무리', image: 'wolf-pack', power: 2, desc: '숲 가장자리를 떠도는 굶주린 늑대 대여섯 마리', trophy: '늑대 우두머리의 송곳니', habitat: ['forest'] },
+      { name: '고블린 약탈대', image: 'goblin-raiders', power: 2, desc: '녹슨 칼과 활을 든 고블린 무리. 비겁하지만 수가 많다', trophy: '고블린 약탈대장의 녹슨 귀걸이', habitat: ['forest', 'coast'] },
+      { name: '거대 거미', image: 'giant-spider', power: 3, desc: '사람 키만 한 독거미. 거미줄로 먹잇감을 묶는다', trophy: '거대 거미의 심장', habitat: ['forest', 'undead'] },
+      { name: '다이어울프 우두머리', image: 'direwolf-alpha', power: 4, desc: '말만 한 덩치의 늑대 우두머리', trophy: '다이어울프 우두머리의 송곳니', habitat: ['forest'] },
+      { name: '숲 트롤', image: 'forest-troll', power: 5, desc: '상처가 금세 아무는 거대한 트롤', trophy: '숲 트롤의 심장', habitat: ['forest'] },
+      { name: '해골 병사', image: 'skeleton-soldier', power: 3, desc: '옛 왕조의 갑옷을 걸친 채 움직이는 해골', trophy: '해골 병사의 금 간 두개골', habitat: ['undead'] },
+      { name: '구울', image: 'ghoul', power: 4, desc: '시체를 뜯어먹는 굶주린 언데드', trophy: '구울의 검은 손톱', habitat: ['undead'] },
+      { name: '망령 기사', image: 'wraith-knight', power: 6, desc: '저주받은 검을 든 옛 기사의 망령', trophy: '망령 기사의 깨진 투구', habitat: ['undead', 'abyss'] },
+      { name: '머맨 약탈자', image: 'merman-raider', power: 3, desc: '작살을 든 물고기 머리의 약탈자들', trophy: '머맨 약탈자의 삼지창 날', habitat: ['coast'] },
+      { name: '바다뱀', image: 'sea-serpent', power: 5, desc: '배 한 척을 휘감을 만한 거대한 바다뱀', trophy: '바다뱀의 푸른 비늘', habitat: ['coast'] },
+      { name: '심연의 하수인', image: 'abyss-minion', power: 4, desc: '검은 문 틈에서 기어 나온 일그러진 마물', trophy: '심연의 하수인의 검은 핵', habitat: ['abyss'] },
+      { name: '촉수 마물', image: 'tentacle-horror', power: 6, desc: '심연의 기운으로 부풀어 오른 촉수 덩어리', trophy: '촉수 마물의 눈', habitat: ['abyss'] },
+      { name: '심연의 사도 광신도', image: 'abyss-cultist', power: 3, desc: '단검과 저주를 휘두르는 사교 광신도들', trophy: '광신도의 사교 표식', habitat: ['abyss', 'street'] },
+      { name: '뒷골목 불량배', image: 'alley-thugs', power: 2, desc: '몽둥이를 든 뒷골목 패거리', trophy: '불량배 두목의 징 박힌 몽둥이', habitat: ['street'] },
+      { name: '청부 암살자', image: 'assassin', power: 5, desc: '돈을 받고 목숨을 노리는 그림자 속 암살자', trophy: '청부 암살자의 독 단검', habitat: ['street'] },
+      { name: '와이번', image: 'wyvern', power: 7, desc: '독 꼬리를 가진 하늘의 포식자', trophy: '와이번의 독침', habitat: ['forest', 'coast'] },
       { name: '고대 고룡', image: 'ancient-dragon', power: 10, desc: '수백 년을 산 거대한 용. 바다 밑에서 잠들어 있었다', habitat: [], boss: true },
       { name: '홍염의 패왕', image: 'crimson-overlord', power: 10, desc: '불타는 대검을 든 붉은 갑주의 마계 패왕. 누구의 밑에도 서지 않는다', habitat: [], boss: true },
       { name: '마왕', image: 'demon-king', power: 10, desc: '세상을 집어삼키려는 마의 군주', habitat: [], boss: true },
       // Act bosses of the chronicle mains; the scouts and the bandit chief also roam.
-      { name: '산적 두목', image: 'bandit-chief', power: 4, desc: '약탈대를 거느린 흉터투성이 산적 두목. 쇠사슬 도끼를 휘두른다', habitat: ['forest', 'street'] },
-      { name: '마왕군 척후대', image: 'demon-scouts', power: 5, desc: '검은 뿔 투구를 쓰고 늑대를 탄 마족 척후병들', habitat: ['forest', 'abyss'] },
-      { name: '마왕군 장군', image: 'demon-general', power: 8, desc: '검은 뿔 깃발을 든 마왕군의 장군. 거대한 언월도를 휘두른다', habitat: [], boss: true },
-      { name: '흑철 기사', image: 'black-iron-knight', power: 8, desc: '검은 강철 갑주로 얼굴까지 가린 대공의 비밀 친위대장', habitat: [], boss: true },
-      { name: '홍염 마인', image: 'crimson-fiend', power: 8, desc: '홍염의 패왕이 먼저 보낸 불꽃의 마인. 몸에서 불길이 솟는다', habitat: [], boss: true },
+      { name: '산적 두목', image: 'bandit-chief', power: 4, desc: '약탈대를 거느린 흉터투성이 산적 두목. 쇠사슬 도끼를 휘두른다', trophy: '산적 두목의 쇠사슬 도끼', habitat: ['forest', 'street'] },
+      { name: '마왕군 척후대', image: 'demon-scouts', power: 5, desc: '검은 뿔 투구를 쓰고 늑대를 탄 마족 척후병들', trophy: '마왕군 척후대의 검은 뿔 투구', habitat: ['forest', 'abyss'] },
+      { name: '마왕군 장군', image: 'demon-general', power: 8, desc: '검은 뿔 깃발을 든 마왕군의 장군. 거대한 언월도를 휘두른다', trophy: '마왕군 장군의 검은 뿔 깃발', habitat: [], boss: true },
+      { name: '흑철 기사', image: 'black-iron-knight', power: 8, desc: '검은 강철 갑주로 얼굴까지 가린 대공의 비밀 친위대장', trophy: '흑철 기사의 흑철 투구', habitat: [], boss: true },
+      { name: '홍염 마인', image: 'crimson-fiend', power: 8, desc: '홍염의 패왕이 먼저 보낸 불꽃의 마인. 몸에서 불길이 솟는다', trophy: '홍염 마인의 불씨 핵', habitat: [], boss: true },
     ],
   },
   wuxia: {
@@ -83,6 +84,8 @@ const ROSTERS: Record<string, Roster> = {
 
 const rosterOf = (genre: string) => ROSTERS[genre] || ROSTERS.fantasy;
 export const foesOf = (genre: string) => rosterOf(genre).foes;
+// The trophy for a beaten act boss: the roster's own, else a plain token named after it (a person beaten in a duel too).
+export const trophyOf = (genre: string, name: string) => findFoe(genre, name)?.trophy || `${name.trim()} 토벌 증표`;
 export const findFoe = (genre: string, name: string) => rosterOf(genre).foes.find(f => f.name === name.trim());
 // Built-in art for a foe; a missing file falls back to the skull icon on screen.
 export const foeImage = (genre: string, name: string) => { const foe = findFoe(genre, name); return foe ? `/api/default-monster/${ROSTERS[genre] ? genre : 'fantasy'}/${encodeURIComponent(foe.name)}` : undefined; };

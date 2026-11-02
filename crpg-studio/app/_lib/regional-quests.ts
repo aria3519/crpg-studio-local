@@ -13,6 +13,8 @@ export type RegionQuest = {
   id: string; genre: 'fantasy' | 'wuxia' | 'modern'; kind: 'story' | 'board';
   region: string[]; title: string; giver: string; hook: string;
   minRank?: number; minAct?: number; after?: string;
+  // reward: the item the giver hands over when the story ends; the game gives it, the GM only narrates it.
+  reward?: { name: string; kind: 'weapon' | 'armor' | 'accessory' | 'item'; grade: 0 | 1 | 2 | 3 | 4 | 5; desc: string };
   steps: RegionStep[];
 };
 
@@ -71,10 +73,11 @@ export const REGION_QUESTS: RegionQuest[] = [
         { do: 'defeat', foe: '고블린 약탈대', at: ['그림우드'], then: '숲 가장자리 바위굴의 고블린 약탈대를 소탕하자, 남은 고블린 족장이 무언가에 쫓겨 숲 안쪽에서 나왔다며 협상을 청한다' },
       ] }] },
   { id: 'lv-board-spider', genre: 'fantasy', kind: 'board', region: ['레븐홀트'], title: '질긴 거미줄', giver: '그리마 철망치', minRank: 1,
+    reward: { name: '거미줄 감김 단검', kind: 'weapon', grade: 2, desc: '그리마가 거대 거미의 질긴 실을 손잡이에 감아 벼린 단검. 손에 착 감겨 미끄러지지 않는다.' },
     hook: '의뢰: 그림우드 거대 거미의 질긴 실을 구해 오면 무기를 벼려 드림. — 대장간',
     steps: [{ q: '그림우드의 거대 거미를 잡아 질긴 실 구해 오기', beats: [
         { do: 'defeat', foe: '거대 거미', at: ['그림우드'], then: '숲 그늘 깊은 곳의 거대 거미를 쓰러뜨리고 사람 키만 한 거미줄에서 질긴 실을 감아 거둔다' },
-        { do: 'talk', npc: '그리마 철망치', at: ['대장간', '철망치 씨족 본거지'], then: '그리마가 거미 실을 손끝으로 튕겨 보고 흡족하게 웃으며 무기를 벼려 주겠다고 한다' },
+        { do: 'talk', npc: '그리마 철망치', at: ['대장간', '철망치 씨족 본거지'], then: '그리마가 거미 실을 손끝으로 튕겨 보고 흡족하게 웃더니, 그 실을 감아 벼린 거미줄 감김 단검을 당신 손에 쥐여 준다' },
       ] }] },
   { id: 'lv-board-troll', genre: 'fantasy', kind: 'board', region: ['레븐홀트'], title: '숲길의 트롤', giver: '에드리아 하르트', minRank: 2,
     hook: '의뢰: 북쪽 숲길을 막고 순찰병을 습격한 트롤 토벌. 변경 기사단 발주.',
@@ -211,13 +214,14 @@ export const REGION_QUESTS: RegionQuest[] = [
       ] },
     ] },
   { id: 'w-rune-hammer', genre: 'fantasy', kind: 'story', region: ['철망치', '대장간'], title: '잃어버린 룬 망치', giver: '그리마 철망치',
+    reward: { name: '철망치 룬 장검', kind: 'weapon', grade: 3, desc: '되찾은 룬 망치로 그리마가 벼린 장검. 칼날에 철망치 씨족의 룬이 새겨져 있다.' },
     hook: '대장간에서 그리마가 씨족의 룬 망치 없이는 제대로 된 칼을 벼릴 수 없다며 모루를 내리친다.',
     steps: [
       { q: '진흙 골목 노름판에서 룬 망치 되찾기', beats: [
         { do: 'talk', npc: '그리마 철망치', at: ['철망치 씨족 본거지', '대장간'], then: '씨족 젊은이들은 망치를 도둑맞았다고 믿지만, 엇갈리던 말 끝에 그리마가 레븐홀트 진흙 골목 노름판에서 망치를 걸고 졌다고 털어놓는다' },
         { do: 'search', at: ['진흙 골목'], then: '노름판 주인이 망치를 판돈으로 다시 걸 테니 이겨 보라고 하고, 판이 뒤집히자 노름판이 엎어진다' },
         { do: 'defeat', foe: '뒷골목 불량배', at: ['진흙 골목'], then: '덤벼든 노름판 불량배들을 물리치고 룬 망치를 되찾는다' },
-        { do: 'talk', npc: '그리마 철망치', at: ['철망치 씨족 본거지', '대장간'], then: '망치를 받아 든 그리마가 당신을 위해 칼 한 자루를 벼려 주겠다고 한다' },
+        { do: 'talk', npc: '그리마 철망치', at: ['철망치 씨족 본거지', '대장간'], then: '망치를 받아 든 그리마가 밤새 모루를 두드려, 씨족 룬이 새겨진 장검 한 자루를 당신 손에 쥐여 준다' },
       ] },
     ] },
   { id: 'w-shadow-woods', genre: 'fantasy', kind: 'story', region: ['그림자 숲'], title: '그림자 손의 배신자', giver: '카시아', minRank: 2,

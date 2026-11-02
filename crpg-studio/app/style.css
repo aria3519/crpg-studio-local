@@ -653,10 +653,6 @@
 .talkSuggestions button{display:inline-flex;align-items:center;gap:7px}
 .talkSuggestions .gmChoiceNumber{width:20px;height:20px;font-size:11px;background:#dbeafe;color:#1d4ed8}
 .miniMapPin.current{pointer-events:none}
-.gmChoicesHeading .gmReroll{display:inline-flex;align-items:center;gap:5px;margin-left:auto;border:1px solid #e5e9ef;background:#fff;border-radius:16px;padding:5px 10px;font-size:11px;font-weight:700;color:#5b6473;cursor:pointer}
-.gmChoicesHeading .gmReroll:hover{background:#f4f6f9;border-color:#cfd5de}
-.gmChoicesHeading span+.gmReroll{margin-left:8px}
-.gmChoicesHeading:has(.gmReroll) span{margin-left:auto}
 /* Visual-novel style talk: spotlight, idle breathing, gesture motions, typewriter */
 .sceneNpc{transition:opacity .35s,filter .35s,transform .35s}
 .sceneNpcBody{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
@@ -961,3 +957,38 @@ button.gearSlot:disabled{cursor:default}
 .characterCombat b{font-variant-numeric:tabular-nums;text-align:right}
 .characterCombat .characterCombatSkills{grid-column:1/-1;flex-direction:column;align-items:flex-start}
 .characterCombat .characterCombatSkills b{text-align:left;font-weight:600}
+/* Play map camera (mapCamera in page.tsx): the map is zoomed around the player and slides under a fixed marker.
+   Only places reachable from here are shown; pins and the marker keep their size. */
+.stageMapFrame.stageMapFollow{transform-origin:0 0;transition:transform .6s cubic-bezier(.3,.7,.3,1)}
+.stageMapFollow .miniMapPin{transform:translate(-50%,-50%) scale(calc(1 / var(--mapZoom,1)))}
+.stageMapFollow .miniMapPin.far{display:none}
+/* The marker: bigger, outlined and glowing so it stands out on any map, bobbing up and down. It uses the separate
+   translate/scale properties so the bob (translate) and the zoom counter-scale (scale) do not override each other. */
+.stageMapFollow .miniMapPlayer{width:58px;height:68px;transform:none;transform-origin:50% 95%;translate:-50% -95%;scale:calc(1 / var(--mapZoom,1));
+  filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 3px 5px rgba(0,0,0,.85)) drop-shadow(0 0 10px rgba(56,189,248,.9));
+  animation:stageMarkerBob 1.4s ease-in-out infinite}
+@keyframes stageMarkerBob{0%,100%{translate:-50% -95%}50%{translate:-50% -112%}}
+.stageMapFollow .miniMapPin.current i{width:18px;height:18px;background:#38bdf8;border-color:#fff;box-shadow:0 0 0 5px rgba(56,189,248,.35),0 0 14px rgba(56,189,248,.9);animation:stageHerePulse 1.4s ease-in-out infinite}
+@keyframes stageHerePulse{0%,100%{box-shadow:0 0 0 4px rgba(56,189,248,.4),0 0 12px rgba(56,189,248,.8)}50%{box-shadow:0 0 0 10px rgba(56,189,248,0),0 0 18px rgba(56,189,248,1)}}
+@media(prefers-reduced-motion:reduce){.stageMapFollow .miniMapPlayer,.stageMapFollow .miniMapPin.current i{animation:none}}
+.mapMissingPins{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 10px;padding:10px 14px;border:1px solid rgba(245,158,11,.55);border-radius:10px;background:rgba(245,158,11,.1);font-size:13px;line-height:1.5}
+.mapMissingPins strong{color:#f59e0b}
+/* Affection sign: up/positive green, down/negative red (beats the attitude tier colours). */
+.affPos,.relationshipDetails span b.affPos{color:#16a34a}
+.affNeg,.relationshipDetails span b.affNeg{color:#dc2626}
+.relationshipGauge i.pos{background:#22c55e}
+.relationshipGauge i.neg{background:#ef4444}
+[class*="attitude-"] b.affPos{color:#16a34a}
+[class*="attitude-"] b.affNeg{color:#dc2626}
+
+/* Recovery: a green +N floats up from the HP bar, the bar brightens, and the portrait gets a soft green light. */
+.characterVitals{position:relative}
+.healPop{position:absolute;right:4px;top:-4px;color:#16a34a;font-weight:800;font-size:15px;text-shadow:0 0 6px rgba(255,255,255,.9),0 0 10px rgba(34,197,94,.6);pointer-events:none;animation:healFloat 1.5s ease-out forwards}
+@keyframes healFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}15%{opacity:1;transform:translateY(0) scale(1.15)}100%{opacity:0;transform:translateY(-22px) scale(1)}}
+.vitalHeal .characterVitalTrack i{animation:healBar 1.3s ease-out}
+@keyframes healBar{0%{filter:brightness(1);box-shadow:none}30%{filter:brightness(1.35) saturate(1.3);box-shadow:0 0 10px 2px rgba(34,197,94,.75)}100%{filter:brightness(1);box-shadow:none}}
+.healGlow .characterPortrait{animation:healGlow 1.4s ease-out}
+@keyframes healGlow{0%{box-shadow:0 0 0 0 rgba(34,197,94,0)}35%{box-shadow:0 0 0 4px rgba(34,197,94,.45),0 0 18px 6px rgba(74,222,128,.55)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@media(prefers-reduced-motion:reduce){.healPop,.vitalHeal .characterVitalTrack i,.healGlow .characterPortrait{animation:none}}
+
+.wizardReroll{display:flex;align-items:center;gap:6px;margin:12px auto 0}

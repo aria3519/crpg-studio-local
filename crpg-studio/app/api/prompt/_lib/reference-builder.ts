@@ -5,6 +5,8 @@ type Choice={id:string;keyword:string;title?:string};
 const genres=Object.keys(reference) as Genre[];
 // Each main story is staged in a fixed city.
 const cityMap:Record<Genre,number[]>={'정통 무협':[2,0,1],'정통 판타지':[0,2,1],'현대 게이트·헌터':[0,0,2]};
+// A main may name its own city (mains[].city); older ones fall back to cityMap by position.
+const cityOf=(genre:Genre,main:object)=>{const src=reference[genre];const named=(main as {city?:string}).city;return src.cities.find(c=>c.name===named)||src.cities[cityMap[genre][(src.mains as object[]).indexOf(main)]]||src.cities[0];};
 const hash=(s:string)=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
 const rank=<T>(xs:T[],seed:number)=>xs.map((v,i)=>({v,s:hash(`${seed}:${i}`)})).sort((a,b)=>a.s-b.s).map(x=>x.v);
 const nameOf=(line:string)=>line.split(':')[0].trim();
@@ -79,12 +81,16 @@ function varied(items:string[],seed:number,count:number,main:string,city:Record<
  if(out.length<count)throw Error(`조건을 충족하는 재료 부족: ${out.length}/${count}`);
  return out;
 }
-export function buildReferencePrompt(input:{genre:string;gameName:string;gameDescription:string;choices:Choice[];goalMode?:string;mainName?:string;startName?:string}){
+// customMain: an AI-written main story (same line format as mains[].text, real place names instead of {slots}).
+export type CustomMain={name:string;text:string;city:string};
+export function buildReferencePrompt(input:{genre:string;gameName:string;gameDescription:string;choices:Choice[];goalMode?:string;mainName?:string;startName?:string;customMain?:CustomMain}){
  const genre=genres.find(k=>input.genre.includes(k));if(!genre)throw Error('지원하지 않는 장르입니다.');
  const src=reference[genre];const seed=hash([genre,input.gameName,input.gameDescription,input.mainName||'',input.startName||'',...input.choices.map(c=>c.keyword)].join('|'));
  // The creator's picks win; the seed only fills in what was not chosen.
- const main=src.mains.find(m=>m.name===input.mainName)||src.mains[seed%src.mains.length];const mainIndex=src.mains.indexOf(main);
- const city=src.cities[cityMap[genre][mainIndex]];const loc=locationMap(city.locations);
+ const custom=input.customMain;
+ const fixedMain=src.mains.find(m=>m.name===input.mainName)||src.mains[seed%src.mains.length];
+ const main:{name:string;text:string;exclusions?:string[]}=custom?{name:custom.name,text:custom.text,exclusions:[]}:fixedMain;
+ const city=custom?(src.cities.find(c=>c.name===custom.city)||src.cities[0]):cityOf(genre,fixedMain);const loc=locationMap(city.locations);
  const requiredNames=(main.text.match(/^필수 NPC:\s*(.+)$/m)?.[1]||'').split(',').map(x=>x.trim());
  const requiredFactions=(main.text.match(/^필요 세력:\s*(.+)$/m)?.[1]||'').split(',').map(x=>x.trim());
  const allFactions=src.factions.map(nameOf);
@@ -101,8 +107,9 @@ export function buildReferencePrompt(input:{genre:string;gameName:string;gameDes
   const candidates=rank(eligibleNpcs.filter(p=>factionOf(p,allFactions)===faction&&!picked.includes(p)),seed+7);
   if(candidates[0])picked.push(candidates[0]);
  }
- // Avoid NPCs explicitly required by other main stories unless also required here.
- const otherMainNames=new Set(src.mains.filter(m=>m!==main).flatMap(m=>(m.text.match(/^필수 NPC:\s*(.+)$/m)?.[1]||'').split(',').map(s=>s.trim())));
+ // Keep other stories' masterminds out of the extras unless this story needs them. With ten stories nearly every
+ // NPC is required by some story, so excluding all of them would leave no extras.
+ const otherMainNames=new Set(src.mains.filter(m=>m!==main).map(m=>(m.text.match(/^흑막:\s*(?:\[GM\]\s*)?([^.]+)\./m)?.[1]||'').trim()).filter(n=>n&&!requiredNames.includes(n)));
  const extras=rank(eligibleNpcs.filter(p=>!picked.includes(p)&&!otherMainNames.has(personName(p))&&(!factionOf(p,allFactions)||selectedNames.includes(factionOf(p,allFactions)!))),seed+9);
  for(const p of extras){if(picked.length>=10)break;picked.push(p);}
  // Never fabricate a filler NPC. A smaller cast is preferable to an inconsistent character.
@@ -163,7 +170,7 @@ export function referenceOptions(genreLabel:string){
  const plain=(text:string,loc:Record<string,string>)=>text.replace(/\{([a-zA-Z]+)\}/g,(_,key:string)=>loc[key]||generic[key]||'').replace(/\[GM\]\s*/g,'').replace(/\s*\('[^']*'\)/g,'').trim();
  // Start places depend on the story's city, so each story carries its own start summaries.
  const mains=src.mains.map((main,i)=>{
-  const city=src.cities[cityMap[genre][i]];const loc=locationMap(city.locations);
+  const city=cityOf(genre,main);const loc=locationMap(city.locations);
   const line=(prefix:string)=>plain(main.text.split('\n').find(l=>l.startsWith(prefix))?.slice(prefix.length)||'',loc);
   const starts=src.starts.map(s=>{const first=s.split('\n')[0];return {name:startName(s),summary:plain(first.slice(first.indexOf(':')+1),loc)};});
   return {name:main.name,city:city.name,hook:line('시작 계기:'),goal:line('최종 목표(최종 목표형):'),progressSteps:line('최종 목표(진행도형):').split('→').map(x=>x.trim()).filter(Boolean),starts};
@@ -175,10 +182,14 @@ export function referenceOptions(genreLabel:string){
 export function mainSections(genreLabel:string,mainName:string,goalMode?:string){
  const genre=genres.find(k=>genreLabel.includes(k));if(!genre)return null;
  const src=reference[genre];const main=src.mains.find(m=>m.name===mainName);if(!main)return null;
- const loc=locationMap(src.cities[cityMap[genre][src.mains.indexOf(main)]].locations);
+ const loc=locationMap(cityOf(genre,main).locations);
  let mainText='';
  try{mainText=materialize(main.text.split('\n').filter(x=>!x.startsWith('이 사건과 함께 쓰지 않을 재료')).join('\n'),loc);}catch{return null;}
+ return storySections(main.name,mainText,goalMode);
+}
+// The same parts for a story whose text is already resolved (an AI-written one saved in the game).
+export function storySections(name:string,mainText:string,goalMode?:string){
  const goalLines=mainText.split('\n').filter(l=>l.startsWith('최종 목표('));
- const goal=goalLines.find(l=>l.startsWith(goalMode==='progress'?'최종 목표(진행도형)':'최종 목표(최종 목표형)'))||goalLines[0]||main.name;
- return {main:`${main.name}\n${mainText.split('\n').filter(l=>!l.startsWith('최종 목표(')).join('\n')}`,goal:goal.replace(/^최종 목표\([^)]+\):\s*/,''),hook:mainText.match(/^시작 계기:\s*(.+)$/m)?.[1]||''};
+ const goal=goalLines.find(l=>l.startsWith(goalMode==='progress'?'최종 목표(진행도형)':'최종 목표(최종 목표형)'))||goalLines[0]||name;
+ return {main:`${name}\n${mainText.split('\n').filter(l=>!l.startsWith('최종 목표(')).join('\n')}`,goal:goal.replace(/^최종 목표\([^)]+\):\s*/,''),hook:mainText.match(/^시작 계기:\s*(.+)$/m)?.[1]||''};
 }

@@ -42,7 +42,10 @@ export const enemyStats = (level: number, boss = false): Omit<PowerTier, 'label'
   // The first levels are softer still, so a new hero can learn the ropes (×0.75 at Lv.1, full strength from Lv.10).
   const soft = Math.min(1, 0.725 + 0.0275 * l);
   const hp = Math.max(10, Math.round(ENEMY_ROUNDS * (1 + 0.004 * (l - 1)) * 0.6 * playerHit * soft * (boss ? BOSS_HP : 1)) - BONUS.armor.hp[g] * 2);
-  const damage = Math.max(2, Math.round((4 * playerHp / PLAYER_ROUNDS - 1) * soft * (boss ? BOSS_DAMAGE : 1)) - BONUS.weapon.damage[g]);
+  // A hit hurts much less in the first levels: a Lv.2 wolf took ~30% of the player's health per bite (two bites from
+  // full to 40) while dying in two blows itself. Now ×0.25 at Lv.1 rising to full by Lv.13 (~12 a bite at Lv.1, ~23 at Lv.5).
+  const hitSoft = Math.min(1, 0.25 + 0.0625 * (l - 1));
+  const damage = Math.max(2, Math.round((4 * playerHp / PLAYER_ROUNDS - 1) * hitSoft * (boss ? BOSS_DAMAGE : 1)) - BONUS.weapon.damage[g]);
   return { hp, dc: 9 + m.attack, atk: 2 + m.agility, damage };
 };
 
