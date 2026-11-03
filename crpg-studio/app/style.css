@@ -992,3 +992,15 @@ button.gearSlot:disabled{cursor:default}
 @media(prefers-reduced-motion:reduce){.healPop,.vitalHeal .characterVitalTrack i,.healGlow .characterPortrait{animation:none}}
 
 .wizardReroll{display:flex;align-items:center;gap:6px;margin:12px auto 0}
+/* play: screen transitions (entering play, moving, combat, talk) */
+.playPage{animation:playEnter .45s ease-out}
+@keyframes playEnter{from{opacity:0}}
+.sceneWipe{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+.sceneWipe-move::before{content:'';position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 200vmax #0b0d12;transform:translate(-50%,-50%) scale(0);animation:sceneIris .75s cubic-bezier(.6,0,.3,1) forwards}
+@keyframes sceneIris{to{transform:translate(-50%,-50%) scale(200)}}
+.sceneWipe-combat{background:linear-gradient(115deg,#0b0d12 0 47%,#dc2626 47% 53%,#0b0d12 53%);animation:sceneSlash .55s cubic-bezier(.7,0,.3,1) forwards}
+@keyframes sceneSlash{to{clip-path:inset(0 0 0 100%)}}
+.sceneWipe-talk::before,.sceneWipe-talk::after{content:'';position:absolute;left:0;right:0;height:50%;background:#0b0d12;animation:sceneShutter .55s cubic-bezier(.6,0,.3,1) forwards}
+.sceneWipe-talk::before{top:0;transform-origin:top}.sceneWipe-talk::after{bottom:0;transform-origin:bottom}
+@keyframes sceneShutter{to{transform:scaleY(0)}}
+@media(prefers-reduced-motion:reduce){.playPage{animation:none}.sceneWipe{display:none}}
