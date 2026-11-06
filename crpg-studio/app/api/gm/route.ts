@@ -11,6 +11,8 @@ const FOREIGN_SCRIPT = /[\u0400-\u04FF\u0600-\u06FF\u0E00-\u0E7F\u3040-\u30FF]/;
 export const maxDuration = 60;
 
 const VOICE_LENGTH = 200;
+// A medieval setting pulled the model toward translated-drama speech (~이오, ~하시오). Wuxia keeps its authored 하오체 characters, so it skips this.
+const NATURAL_SPEECH = '인물은 모두 오늘날 한국 사람이 실제로 입으로 하는 자연스러운 말로 이야기합니다. 세계관이 중세여도 번역극이나 사극처럼 말하지 않습니다.';
 // Words too generic to mean two choices share a target.
 const OBJECT_STOP = /^(정보|주변|상황|이야기|사람|사람들|길|것|무기|소문|단서|시간|자리|기회|도움|흔적|대화)$/;
 // Built-in NPC character sheets (personality, voice, likes/dislikes) live outside the 7000-char game prompt and are attached per NPC on stage.
@@ -25,7 +27,7 @@ function npcSheets(genre: string): Record<string, NpcSheet> {
   return sheetCache.get(genre) || {};
 }
 // One small request decides each new NPC's speech register and habits; the result is stored and reused for the whole playthrough.
-async function assignVoices(npcs: { name: string; profile: string }[], genre: string): Promise<{ name: string; style: string }[]> {
+async function assignVoices(npcs: { name: string; profile: string }[], genre: string, wuxia: boolean): Promise<{ name: string; style: string }[]> {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
@@ -33,8 +35,8 @@ async function assignVoices(npcs: { name: string; profile: string }[], genre: st
         messages: [
           { role: 'system', content: [
             '한국어 CRPG의 NPC마다 게임 내내 고정될 말투를 정합니다.',
-            'style 형식: "어체: <하십시오체|해요체|하오체|하게체|해체|해라체 중 하나만> | 어미: <자주 쓰는 어미 2~3개> | 버릇: <말버릇·자주 쓰는 표현> | 예: <그 인물다운 짧은 대사 하나>" 120자 이내.',
-            '성별·나이·신분·성격·장르에 맞추고, 인물끼리 서로 구분되게 하세요. 여성 인물은 profile에 근거가 없으면 하오체·하게체를 쓰지 마세요. 판타지·현대 판타지의 젊은 인물은 해요체·해체가 자연스럽고, 하오체는 무협이나 나이 든 권위자에게만 어울립니다.',
+            `style 형식: "어체: <${wuxia ? '하십시오체|해요체|하오체|하게체|해체|해라체' : '하십시오체|해요체|해체|해라체'} 중 하나만> | 어미: <자주 쓰는 어미 2~3개> | 버릇: <말버릇·자주 쓰는 표현> | 예: <그 인물다운 짧은 대사 하나>" 120자 이내.`,
+            wuxia ? '성별·나이·신분·성격에 맞추고, 인물끼리 서로 구분되게 하세요. 여성 인물은 profile에 근거가 없으면 하오체·하게체를 쓰지 마세요.' : `성별·나이·신분·성격에 맞추고, 인물끼리 서로 구분되게 하세요. 젊은 인물은 해요체·해체가 자연스럽습니다. ${NATURAL_SPEECH}`,
             '{"voices":[{"name":"정확한 이름","style":"..."}]} JSON만 반환하세요.',
           ].join('\n') },
           { role: 'user', content: JSON.stringify({ genre: genre.slice(0, 300), npcs }) },
@@ -82,21 +84,49 @@ const ADDRESS = ['경', '그대', '인간', '꼬맹이', '형씨', '아가', '�
 const ADDRESS_JOSA = ['', '은', '는', '이', '가', '의', '을', '를', '에게', '도', '여', '이여', '께서', '께', '님'];
 const addressesIn = (t: string) => { const words = t.split(/[\s,.!?…~"'“”]+/).filter(Boolean); return ADDRESS.filter(a => words.some(w => w.startsWith(a) && ADDRESS_JOSA.includes(w.slice(a.length)))); };
 const sentences = (t: string) => t.split(/(?<=[.!?…])\s+/).map(x => x.trim()).filter(Boolean);
+// Drama-style speech is judged per sentence end: the old any-word match fired on "유연하게 대처", and its rewrite then changed clean lines.
+const OLD_ENDING = /(?:(?<!십)시오|(?:겠|했|있|없|었|였|않|같|많|좋|맞|됐|왔|갔|봤|는|한|렸|졌)소|(?:하|이|되|가|주|보|마|리|니|지|치|키|기|려|대|내|해)오|소이다|구려|이외다|일세|이로다|하도다|전부요|무엇이요|누구요|(?:하|주|보|오)게|(?:하|이|되|드리)옵(?:니다|니까|소서)|하노라|겠노라|이니라|하느니라)[.!?…~,]*["”」']?$/;
+const OLD_CLAUSE = /이오니|하오니|사오니|하옵고|이옵고|하오나|이오나|사옵/;
+// A nickname marked "친해지면" in a sheet is earned: from a stranger, 핍's "대장" made no sense. It leaves the habits and the example lines alike.
+const CLOSE_AFFECTION = 20;
+const voiceFor = (speech: string, affection: number) => {
+  const pet = speech.match(/친해지면 상대를 '([^']+)'[^,|]*부름,?\s*/);
+  return !pet || affection >= CLOSE_AFFECTION ? speech : speech.replace(pet[0], '').split(`${pet[1]}, `).join('');
+};
+// Scenes have no check like the one talk lines get: "이번엔 네가 이겼어" came back in four scenes in a row. A quote already said is dropped.
+const QUOTED = /["“]([^"”]+)["”]/g;
+const dropRepeatedQuotes = (text: string, history: string[]) => {
+  const quotes = history.flatMap(h => [...h.matchAll(QUOTED)].map(m => m[1])), said = quotes.flatMap(sentences);
+  // Whole quotes too: "대장… 이번엔" splits at the dots where "대장, 이번엔" doesn't, so its sentences alone look new.
+  const kept = text.replace(QUOTED, (all, q: string) => { const lines = sentences(q); return quotes.some(y => repeats(q, y)) || (lines.length && lines.every(x => said.some(y => repeats(x, y)))) ? '' : all; }).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return kept.replace(/【[^】]*】/, '').trim() ? kept : text;
+};
+const oldSpeech = (t: string) => t.split(/(?<=[.!?…]["”」']?)\s+|\n+/).some(x => OLD_ENDING.test(x.trim()) || OLD_CLAUSE.test(x));
+// Plain endings only: ~니다 and ~(읍)시다 stay polite.
+const plainSpeech = (t: string) => sentences(t).some(x => /(?<![니시])(다|라|냐|자)[.!…]*$/.test(x.replace(/["'”’)\]]+$/, '')));
 // The player announcing what they'll do next ("직접 숲을 살펴봐야겠어", "처리하고 올게") closes the conversation.
 // Only clear "I'm off to do it" lines; generic ones like "하겠습니다" or "해 볼게" fired mid-conversation and cut talks short.
 const DECIDED = /(다녀올|다녀오겠|갔다 올|가 ?볼게|가 ?보겠|가야겠|가겠|가 ?봐야겠|살펴봐야겠|살펴보겠|알아봐야겠|알아보겠|조사해야겠|조사하겠|처리하고 올|해결하고 올|맡을게|맡겠|떠나겠|떠날게|출발하|그럼 이만|이만 가|나중에 봐|또 올게|해낼게|해내겠|해내고 올|물러나겠|물러갈게|접겠|접고|여기서 끝내|대화는 끝|끝내자|끝내죠|마무리하자|마무리하죠|여기까지|다시 보자|다시 봐|다시 만나|내일 보|쉬었다가|쉬러 가|돌아가겠|돌아갈게|확인하겠|확인해 볼게|찾아낼게|찾아내겠|찾아볼게|찾아보겠|하고 올게|확실히 할게|맡아 볼게|맡아볼게|다녀와서)/;
 // A question ("같이 가 볼래요?") is not a decision.
 const plainEnd = (t: string) => { const m = t.trim().replace(/[.!]+$/, '').match(/(.)다$/); if (!m) return false; const c = m[1].charCodeAt(0) - 0xac00; return m[1] === '는' || (c >= 0 && c < 11172 && c % 28 === 4); };
 const decidedLine = (action: string) => DECIDED.test(action) && !/[?？]\s*["”']?\s*$/.test(action.trim());
-async function retryTalkLine(partner: string, body: { action?: unknown }, history: string[], state: { npcProfiles?: unknown }, alreadySaid: string[] = []): Promise<string> {
+// What the player came to say. Without it the NPC knew only "the result must wait", had nothing to say before the player's
+// line and made up steps ("시험은 아직 끝나지 않았습니다"). The result itself stays out: given it, the NPC ran ahead and handed it over early.
+function talkBusinessOf(partner: string, body: { talkBusiness?: unknown }): string {
+  const line = String(body.talkBusiness || '').slice(0, 120);
+  return line ? `플레이어가 ${partner}에게 꺼낼 용건은 "${line}"입니다. ${partner}는 아직 그 말을 듣지 않았으니, 플레이어를 맞이하거나 용건을 물으며 그 말을 꺼내기 좋게 이야기를 여세요. 그 말을 들은 뒤 ${partner}가 어떻게 할지는 그 차례에 게임이 알려 줍니다.` : '';
+}
+async function retryTalkLine(partner: string, body: { action?: unknown; talkBusiness?: unknown }, history: string[], state: { npcProfiles?: unknown; questBeats?: unknown }, alreadySaid: string[] = []): Promise<string> {
   try {
     const profile = Array.isArray(state.npcProfiles) ? state.npcProfiles.find((p: { name?: unknown }) => p?.name === partner) : null;
+    // The quest has already advanced by now: a retry that doesn't know the beat invented its own test instead of the real one.
+    const mustSay = Array.isArray(state.questBeats) ? state.questBeats.flatMap((q: { happenNow?: unknown }) => Array.isArray(q?.happenNow) ? q.happenNow.map(String) : []).join(' / ').slice(0, 400) : '';
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.8, response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: `한국어 CRPG 메신저식 대화입니다. ${partner}가 플레이어의 말에 실제로 하는 대답만 씁니다. 지문 없이 대사만, 짧은 채팅 메시지 1~3개를 줄바꿈(\\n)으로 구분하세요. 말줄임표만 있는 대답은 금지이며 반드시 플레이어의 말에 구체적으로 반응하세요. alreadySaid에 있는 말과 같거나 비슷한 문장은 절대 다시 쓰지 말고, 아직 하지 않은 새 정보·감정·제안만 말하세요. 인물의 성격·말투·호감도 단계를 지키세요. {"line":"대사"} JSON만 반환하세요.` },
-          { role: 'user', content: JSON.stringify({ npc: profile || partner, recentHistory: history.slice(-10), alreadySaid, playerSaid: String(body.action || '').slice(0, 1000) }) },
+          { role: 'system', content: `한국어 CRPG 메신저식 대화입니다. ${partner}가 플레이어의 말에 실제로 하는 대답만 씁니다. 지문 없이 대사만, 짧은 채팅 메시지 1~3개를 줄바꿈(\\n)으로 구분하세요. 말줄임표만 있는 대답은 금지이며 반드시 플레이어의 말에 구체적으로 반응하세요. alreadySaid에 있는 말과 같거나 비슷한 문장은 절대 다시 쓰지 말고, 아직 하지 않은 새 정보·감정·제안만 말하세요. 인물의 성격·말투·호감도 단계를 지키세요. ${mustSay ? 'mustSay는 이번 대답에서 일어나는 일이니 그 내용(임무·장소·대상)을 구체적으로 말하세요. ' : ''}${talkBusinessOf(partner, body)} {"line":"대사"} JSON만 반환하세요.` },
+          { role: 'user', content: JSON.stringify({ npc: profile || partner, recentHistory: history.slice(-10), alreadySaid, playerSaid: String(body.action || '').slice(0, 1000), ...(mustSay ? { mustSay } : {}) }) },
         ] }),
       cache: 'no-store', signal: AbortSignal.timeout(20000),
     });
@@ -146,7 +176,7 @@ export async function POST(request: Request) {
     const partnerAffection = Number((Array.isArray(state.relationships) ? state.relationships : []).find((r: { name?: unknown }) => r?.name === partner)?.affection) || 0;
     const party: string[] = Array.isArray(state.party) ? state.party.filter((n: unknown): n is string => typeof n === 'string') : [];
     const playerVoice = [
-      `플레이어 대사의 말투: 세 대사 모두 같은 어체입니다. ${partnerAffection >= 40 || party.includes(partner) ? `${partner}와(과)는 가까운 사이라 편한 반말도 됩니다.` : `${partner}에게는 해요체(~요)로 말합니다. 반말·하게체(~하지, ~게)·하오체는 쓰지 마세요.`}`,
+      `플레이어 대사의 말투: 세 대사 모두 같은 어체입니다. ${partnerAffection >= 40 || party.includes(partner) ? `${partner}와(과)는 가까운 사이라 편한 반말도 됩니다.` : `${partner}에게는 해요체(~요)로 말하고 반말은 쓰지 마세요.`}`,
       `지금 플레이어의 동료: ${party.length ? party.join(', ') : '없음(혼자)'}. 없는 동료나 "우리 둘" 같은 일행을 전제하지 말고, ${partner}가 함께 간다고 정해지지 않았으면 같이 가자는 전제도 하지 마세요.`,
       '주인공의 출신·직업·특기·과거를 단정하는 말("그건 내 전문이야", "기사 출신이라서")은 금지입니다.',
     ].join(' ');
@@ -204,28 +234,42 @@ export async function POST(request: Request) {
       ...(recentFoes.length ? [`최근에 싸운 적(${recentFoes.slice(0, 3).join(', ')})은 이야기상 꼭 필요하지 않으면 다시 등장시키지 마세요. 습격(ambush)이나 장면에 나오는 적은 currentState.monsters의 다른 적에서 고르세요.`] : []),
       // Quest beats (app/_lib/quest-beats.ts): the game decides when each one happens; the GM narrates what it brings
       // this turn and sets the scene for the next one, without running ahead of it.
-      ...(Array.isArray(state.questBeats) ? (state.questBeats as { quest?: unknown; happenNow?: unknown; next?: { do?: unknown; goal?: unknown; at?: unknown; here?: unknown; who?: unknown } | null }[]).slice(0, 4).flatMap(q => {
+      ...(Array.isArray(state.questBeats) ? (state.questBeats as { quest?: unknown; kind?: unknown; happenNow?: unknown; next?: { do?: unknown; goal?: unknown; at?: unknown; here?: unknown; who?: unknown } | null }[]).slice(0, 4).flatMap(q => {
         const quest = String(q.quest || '').slice(0, 80), now = Array.isArray(q.happenNow) ? q.happenNow.map(String).filter(Boolean) : [], n = q.next;
         if (!quest) return [];
-        const lines = now.length ? [`퀘스트 "${quest}": 이번 장면에서 반드시 일어나는 일 — ${now.join(' / ').slice(0, 400)}. 이 일을 장면의 중심으로 분명하게 묘사하세요. 이 일은 이번 장면(대화라면 이번 대답) 안에서 이미 이루어진 것으로 쓰고, 같은 일을 다시 요구하거나 나중으로 미루지 마세요.`] : [];
+        // Without this the GM narrated "go there, fight, quest done" with no reason: the motive lives in the beats before.
+        const why = String((q as { why?: unknown }).why || '').slice(-500);
+        const lines = [
+          ...(why ? [`퀘스트 "${quest}"의 사연(여기까지 일어난 일): ${why}. 이 퀘스트와 이어지는 장면(일을 맡을 때, 그곳에 도착할 때, 적이 막아설 때, 싸움이 끝났을 때)에서는 플레이어가 왜 이 일을 하는지, 이 일이 어떤 사건과 이어지는지를 한두 문장으로 분명히 드러내세요(예: 이 해골들을 치워야 밀수꾼 창고에 닿을 수 있다). 적은 그 사건 속에서 그 자리에 있는 이유가 있는 존재로 그리세요.`] : []),
+          ...(now.length ? [`퀘스트 "${quest}": 이번 장면에서 반드시 일어나는 일 — ${now.join(' / ').slice(0, 400)}. 이 일을 장면의 중심으로 분명하게 묘사하세요. 이 일은 이번 장면(대화라면 이번 대답) 안에서 이미 이루어진 것으로 쓰고, 같은 일을 다시 요구하거나 나중으로 미루지 마세요.`] : []),
+        ];
         if (!n || mode === 'combat') return lines;
         const who = String(n.who || '').slice(0, 30), at = String(n.at || '').slice(0, 60), goal = String(n.goal || '').slice(0, 120);
-        if (mode === 'talk') return n.do === 'talk' && who === partner ? [...lines, `퀘스트 "${quest}"에서 ${partner}와(과) 매듭지을 일이 남았습니다. JSON에 acceptLine 문자열을 따로 넣으세요: 플레이어가 ${partner}의 말을 받아들여 이 일을 매듭짓는 한 문장(예: "네, 입단 지원서를 내겠습니다.", "그 늑대들, 제가 처리하고 오겠습니다.", "늑대는 모두 쫓아냈습니다. 보고드립니다."). 질문·망설임·되묻기는 안 됩니다. ${partner}가 방금 무언가를 물었다면(출신·이름·목적·사정) acceptLine이 먼저 그 물음에 실제 내용으로 답합니다: 제작자 프롬프트의 [시작 조건]에 적힌 주인공 신분과 프롤로그에서 일어난 일만 쓰고, "명확합니다"·"말씀드린 대로입니다"처럼 답을 피하는 말은 쓰지 않습니다(예: "레븐홀트로 오는 길에 문장을 맡은 떠돌이 모험가입니다. 입단 시험을 치르겠습니다."). choices에는 acceptLine과 다른 말(질문, 다른 방법, 거절)을 넣으세요. 대화는 플레이어가 acceptLine을 고를 때까지 이어지니 endTalk는 false로 두고, 그 전에는 이 일의 결과(물건을 건네줌·완성됨·보상·다음 일 맡김)를 이미 일어난 것처럼 쓰지 말고 아직 남은 일로만 말하게 하며, ${partner}의 말은 반드시 큰따옴표 대사로 쓰세요.`] : lines;
-        if (n.here === false) return [...lines, `퀘스트 "${quest}"의 다음 일은 ${at}에서 할 일(${goal})입니다. 지금 있는 곳에서는 그 일의 결과나 그곳의 단서를 꺼내지 말고, 선택지 하나는 ${at}(으)로 가는 행동으로 쓰세요.`];
+        if (mode === 'talk') return n.do === 'talk' && who === partner ? [...lines, `퀘스트 "${quest}"에서 ${partner}와(과) 매듭지을 일이 남았습니다. 그 일을 받아들이는 대사는 게임이 따로 만드니, choices에는 질문·다른 방법·거절을 넣으세요. 대화는 플레이어가 그 대사를 고를 때까지 이어지니 endTalk는 false로 두고, ${body.talkBusiness ? '' : '그 전에는 이 일의 결과(물건을 건네줌·완성됨·보상·다음 일 맡김)를 이미 일어난 것처럼 쓰지 말고 아직 남은 일로만 말하게 하며, '}${partner}의 말은 반드시 큰따옴표 대사로 쓰세요.`] : lines;
+        // The GM once moved 에드리아 from 북문 초소 into 옛 왕조 지하 묘지 to keep the main going: the beat's NPC stays put.
+        const stays = n.do === 'talk' && who ? ` ${who}은(는) ${at}에 있습니다. ${who}을(를) 다른 장소에 등장시키거나, 다른 곳에 있다고 쓰거나, 다른 곳에서 만나는 선택지를 만들지 마세요.` : '';
+        if (n.here === false && state.mainFar === true && q.kind === 'main') return [...lines, `메인 퀘스트 "${quest}"의 다음 일은 ${at}에서 할 일인데, 지금 위치에서 한 번에 갈 수 없을 만큼 멉니다. 이번 장면과 선택지는 지금 있는 지역에 맞추세요: 1번 선택지는 메인 따라가기 대신 이 지역에서 할 일(이 지역의 지역 이야기·의뢰를 한 걸음 진척, 또는 이 장소의 단서·인물·위험을 다루기)로 쓰고, ${at}(으)로 가는 선택지는 넣지 마세요. 메인 쪽 결과나 단서도 꺼내지 마세요.${stays}`];
+        if (n.here === false) return [...lines, `퀘스트 "${quest}"의 다음 일은 ${at}에서 할 일(${goal})입니다. 지금 있는 곳에서는 그 일의 결과나 그곳의 단서를 꺼내지 말고, 장면을 ${at}(으)로 옮기지도 말고, 선택지 하나는 ${at}(으)로 가는 행동으로 쓰세요.${stays}`];
+        // The game keeps someone the player just finished with off stage (page.tsx); the scene has to agree.
+        if (n.do === 'talk' && Array.isArray(state.handledNpcs) && state.handledNpcs.includes(who)) return [...lines, `${who}은(는) 플레이어와 볼일을 마치고 물러났습니다. 이번 장면에 ${who}을(를) 등장시키거나 말을 시키지 말고 presentNpcs에도 넣지 마세요. 선택지 하나는 ${who}에게 다시 말을 거는 행동으로 쓰세요.`];
         if (n.do === 'talk') return [...lines, `${who}이(가) 이 자리에 있습니다. 장면에 등장시키고 presentNpcs에 넣으세요. 퀘스트 "${quest}"는 플레이어가 ${who}에게 말을 걸어야 진행되니, ${who}가 그 결과를 먼저 말해 버리지 마세요.`];
         if (n.do === 'defeat') return [...lines, `이번 장면 끝에 ${who}이(가) 나타나 플레이어 앞을 막아섭니다(전투는 게임이 시작합니다). 등장하는 순간까지만 묘사하고 싸움의 결과는 쓰지 마세요. ambush는 비워 두세요.`];
         if (n.do === 'choose') return [...lines, `퀘스트 "${quest}": 플레이어가 결정해야 합니다(${goal}). 그 갈림길을 장면에서 분명히 보여 주세요. 선택지는 게임이 줍니다.`];
         return [...lines, `퀘스트 "${quest}"의 다음 일: ${goal}. 그 일이 일어나기 전에는 결과를 미리 묘사하지 마세요.`];
       }) : []),
       ...(mode === 'talk' && body.holdTalk === true && body.holdQuest ? [`이 대화는 끝나지 않고 이어집니다: 방금 일이 매듭지어진 뒤 ${partner}는 곧바로 다음 일(퀘스트 "${String(body.holdQuest).slice(0, 80)}")로 말을 이어 갑니다. 작별 인사를 하지 말고 endTalk는 false로 두세요.`] : []),
-      ...(Array.isArray(state.questBeats) && state.questBeats.length ? ['메인·지역 퀘스트(questBeats에 있는 것)의 진행·완료·다음 목표는 게임이 처리합니다. 이 퀘스트들을 completedQuests·failedQuests·addQuests에 넣지 말고, questBeats에 적힌 일이 실제로 일어나기 전에 그 결과(시험 통과, 자백, 적의 패배, 다음 임무)를 미리 묘사하지 마세요.'] : []),
+      ...(mode === 'talk' && talkBusinessOf(partner, body) ? [talkBusinessOf(partner, body)] : []),
+      ...(Array.isArray(state.questBeats) && state.questBeats.length ? [`메인·지역 퀘스트(questBeats에 있는 것)의 진행·완료·다음 목표는 게임이 처리합니다. 이 퀘스트들을 completedQuests·failedQuests·addQuests에 넣지 마세요.${mode === 'talk' && body.talkBusiness ? '' : ' questBeats에 적힌 일이 실제로 일어나기 전에 그 결과(시험 통과, 자백, 적의 패배, 다음 임무)를 미리 묘사하지 마세요.'}`] : []),
       ...(!mode && body.interfere === true ? ['방해 사건: 이번 장면에서 플레이어와 적대하는 세력(메인 사건의 흑막 쪽, 또는 플레이어가 척진 세력·인물)이 플레이어의 일을 방해합니다. 지금 상황과 장소에 맞는 것 하나만 고르세요: 미행·감시가 드러남, 협박 편지나 경고, 증인·거래 상대가 매수되거나 입막음당함, 가진 단서·물건을 도둑맞거나 망가짐, 나쁜 소문이 돌아 명성 하락(reputationDelta -20~-80), 가려던 곳의 출입이 막힘, 하수인 무리나 자객의 습격(ambush에 currentState.monsters 중 사람 무리·자객 계열 하나, boss:true는 금지). 흑막의 정체와 이름은 드러내지 말고 하수인·흔적·소문으로만 보이게 하세요. 방해는 진행을 막는 벽이 아니라 대가와 위험을 더하는 일이니, 이번 장면 choices 중 하나는 방해에 맞서거나 피하는 행동으로 넣으세요.'] : []),
       ...(askingLoop ? ['경고: 플레이어가 세 번 연속 묻기만 했고 이야기가 제자리입니다. 이번 장면에서는 대답을 늘이지 말고 사건을 일으키세요: 결정적인 단서 발견, 습격이나 사고, 새 인물 등장, 지금 바로 가 볼 장소 제시 중 하나. 선택지에 묻기·듣기 행동은 넣지 마세요.'] : []),
       ...(idleBeat ? [`경고: 최근 세 번의 행동 동안 이야기에 눈에 보이는 변화가 없었습니다(같은 곳을 맴돌며 들어가기·살피기·소리 듣기만 반복). 묘사를 늘이지 말고 mustHappen에 적힌 일을 이번 장면에서 반드시 일으키세요: ${IDLE_BEATS[idleBeat]} 선택지에는 같은 장소로 더 들어가기·주변 살피기·소리 듣기를 넣지 말고, 방금 터진 일에 대응하는 행동을 넣으세요.`] : []),
       ...(stalled ? ['경고: 최근 장면들이 준비·장비 이야기만 반복하며 제자리걸음 중입니다. 이번 장면에서는 준비 이야기를 하지 말고, 사건을 실제로 터뜨리거나 플레이어의 시도를 실행해 결과를 보여 주세요. 선택지에도 준비 행동을 넣지 마세요.'] : []),
     ];
     const modeRules = mode === 'talk' ? [
+      // 에드리아 closed a report with "이제 다음 행동은 무엇입니까?": the game master's question leaking into an NPC.
+      `${partner}는 게임 진행자가 아닙니다. "다음 행동은 무엇입니까?"·"어떻게 하시겠습니까?"·"무엇을 하시겠습니까?"처럼 플레이어에게 다음 행동을 고르라는 진행자식 질문으로 말을 끝내지 마세요. 묻는다면 ${partner}가 이야기 속에서 실제로 궁금해할 구체적인 것(본 것, 가진 물건, 누구에게 들었는지)만 묻거나, 명령·부탁·정보로 끝내세요.`,
       `지금은 플레이어가 ${partner}와(과) 직접 대화하는 대화 모드입니다. playerAction은 플레이어가 ${partner}에게 한 말입니다. 대화는 메신저 채팅처럼 대사만 오갑니다. 상황 설명·지문·행동 묘사는 쓰지 말고 text는 반드시 빈 문자열입니다. line에는 ${partner}가 하는 말만 따옴표·이름표 없이 쓰세요. 채팅 메시지처럼 짧게 1~3개로 나누고 메시지 사이는 줄바꿈(\\n)으로 구분하세요. 감정과 태도는 지문 대신 말투·어휘로 드러내세요. "..."이나 "…"만 있는 대답은 금지입니다. 과묵하거나 적대적인 인물도 짧더라도 실제 말로 반응해야 하며(예: "할 말 없어. 가."), 플레이어가 물은 내용에 답하거나 답하지 않는 이유를 말하세요. 표정이나 몸짓은 화면 연출용으로 gesture에 20자 안팎의 짧은 구절로만 쓰세요(예: 잠시 머뭇거리며). JSON에 line 필드를 꼭 포함하세요. 플레이어의 대사나 행동을 대신 쓰지 마세요. ${partner}의 성격·목표·비밀·관계를 지키고, 아직 밝힐 때가 아닌 비밀은 숨기거나 둘러대세요.`,
+      `${partner}는 플레이어의 가방 속을 들여다볼 수 없고, 직접 보거나 듣거나 전해 들은 것만 압니다. JSON의 howKnown 필드: 이번 대사에서 ${partner}가 플레이어가 이 대화에서 말하지 않은 플레이어의 일(가진 물건, 차림, 출신, 한 일)을 안다고 드러내거나, questBeats의 이번 일에 ${partner}가 무언가를 보거나 듣는 순간이 있으면, 그 순간을 플레이어가 볼 수 있게 현재형 서술 한 문장으로 쓰세요. 무엇을 어떻게 보거나 들었는지(눈에 띈 물건·차림, 건네받은 서류, 누구에게 들은 소문)가 구체적으로 드러나야 합니다. 그런 일이 없는 대답이면 빈 문자열입니다. 그 근거가 플레이어의 소지품이면 knownItem에 currentState.inventory의 이름을 그대로 쓰고, 아니면 빈 문자열입니다. 대화의 JSON은 {"knownItem":"","howKnown":"","text":"","line":"",...} 순서로 씁니다.`,
       `npcProfiles의 remembers는 각 인물이 플레이어에 대해 기억하는 내용(이전 대화의 요약)입니다. 그 인물이 등장하면 대화든 일반 장면이든 이 기억과 어긋나지 않게 행동하세요. recentHistory에 ${partner}가 이미 한 말은 다시 하지 마세요. 같은 경고·같은 소식을 표현만 바꿔 되풀이하는 것도 반복입니다. 매 대답은 아직 하지 않은 말이어야 합니다. 플레이어가 무엇을 하겠다고 정하면(가 보겠다, 처리하고 오겠다 등) 그 대답은 짧은 작별 한마디로 끝내세요. withThisNpc는 지금까지 플레이어와 ${partner} 사이에 있었던 일(이전 대화·약속·도움·싸움·거래)의 기록이고, storySoFar의 [인물 메모]와 [약속·거래·빚]도 함께 참고하세요. ${partner}는 그 일을 기억하는 사람처럼 말해야 합니다: 이미 나눈 이야기를 처음 듣는 척하거나 같은 설명을 반복하지 말고, 지난 약속·빚·도움·상처를 자연스럽게 언급하며, 플레이어가 이룬 일(퀘스트 완료, 명성)을 들었다면 그에 맞게 대하세요. [지난 대화]가 붙은 줄은 이미 끝나 매듭지어진 대화입니다: 그 일(받은 시험·맡긴 일)은 끝난 일로만 기억하고, 지금 대화의 주제로 다시 꺼내 칭찬·확인·재부여하지 마세요. 지금 대화의 주제는 플레이어의 말과 questBeats에서 ${partner}와 남은 일입니다.`,
       `대화 모드에서 choices에는 플레이어가 ${partner}에게 실제로 입 밖에 내는 말 그대로(구어체 직접 화법) 대사 3개를 따옴표 없이 넣으세요. 세 대사는 역할이 완전히 달라야 합니다: 1번 진행 — ${partner}가 방금 한 말(제안·부탁·정보·요구)을 받아들이거나 그 흐름대로 이야기를 앞으로 진행하는 말(수락, 다음에 할 일 확인, 바로 움직이겠다는 말). 2번 살짝 다른 방법 — 같은 화제에 응하되 방식을 바꾸는 말(조건 걸기, 보수 흥정, 다른 방법 제안, 의심하며 확인하기). 3번 거절 또는 상황에서 벗어나기 — 제안을 거절하거나 미루는 말, 또는 이 대화·상황에서 빠져나오는 말(다른 볼일을 대며 자리를 뜨기, 생각해 보겠다며 물러나기, 작별). 도발이나 허세, 새 질문이 아닙니다. 1번처럼 받아들이거나 출발하겠다는 말이면 안 됩니다. 셋 다 질문이거나 셋 다 같은 내용을 다르게 묻는 말이면 안 됩니다. ${playerVoice} '~라고 한다', '~을 묻는다', '~을 부탁한다' 같은 행동 서술은 금지입니다. 예: (X) 그 의뢰에 대해 자세히 알려 달라고 한다 → (O) 그 의뢰, 좀 더 자세히 알려 줄 수 있어요? playerAction이 이런 행동 서술이면 그 의도를 플레이어가 실제로 하는 말로 바꿔 playerLine에 넣고, 이미 대사이거나 다가가 말을 거는 행동뿐이면 playerLine은 빈 문자열입니다. check는 null, moveToPinId는 빈 문자열입니다. 관계나 호감도가 실제로 변했다면 relationshipUpdates에 반영하세요.`,
       `플레이어가 다음에 할 일이 정해지면(의뢰를 받거나 거절함, 갈 곳·만날 사람·건넬 물건이 정해짐, 약속이나 거래가 맺어짐) 더 끌지 말고 그 대답에서 바로 한두 마디로 마무리하고 endTalk:true를 반환하세요. 그러면 게임이 곧장 다음 장면으로 넘어갑니다. 플레이어가 대화 중에 자리를 뜨거나 다른 곳으로 가는 등 대화가 아닌 행동을 하면, line은 빈 문자열로 두고 text에 그 행동을 짧게 서술한 뒤 endTalk:true를 반환하세요. 그 서술을 NPC의 말처럼 쓰지 마세요. 대화는 짧게 끝납니다. NPC는 매 대답마다 새 정보·결정·조건 중 하나를 꼭 내놓고, 같은 이야기를 반복하거나 질문으로 되묻기만 하며 시간을 끌지 마세요. 대화에는 끝이 있습니다. 다음 중 하나가 되면 ${partner}가 자연스럽게 마무리하는 말을 하고 endTalk:true를 반환하세요: 의뢰·퀘스트를 맡기거나 플레이어가 수락·거절함, 거래·약속이 성사되거나 결렬됨, 플레이어가 물은 것을 다 들어 더 나눌 이야기가 없음, ${partner}가 더 말하기 싫어하거나(반감·적대) 볼일이 있어 자리를 떠야 함, 플레이어가 작별 인사를 함. 할 말이 없는데 같은 이야기를 되풀이하거나 "더 궁금한 게 있나요?"로 대화를 억지로 이어 가지 마세요. endTalk:true일 때 choices는 빈 배열입니다. 지금까지 플레이어가 이 대화에서 한 말은 ${talkTurns}번입니다.${lastReply ? ` 이번이 이 대화의 마지막 대답입니다.${decided ? ' 플레이어가 할 일을 정하고 떠나려 합니다.' : ''} ${partner}는 플레이어의 말에 짧게 답한 뒤 작별·당부·응원 같은 마무리 한마디로 끝내세요. 질문이나 새 화제를 꺼내 대답을 기다리게 하지 마세요. endTalk:true를 반환하세요.` : talkTurns >= 3 ? ` 대화가 길어지고 있습니다. 새로 줄 정보나 결정이 없다면 이번 대답에서 정리하고 endTalk:true를 반환하세요.` : ''}`,
@@ -254,13 +298,14 @@ export async function POST(request: Request) {
     for (const p of profiles) {
       const sheet = typeof p?.name === 'string' ? sheets[p.name] : undefined;
       if (!sheet) continue;
-      if (p.inScene || p.inParty || p.name === partner) (p as Profile & { sheet?: NpcSheet }).sheet = sheet;
+      const speech = voiceFor(sheet.speech || '', Number((p as { affection?: unknown }).affection) || 0);
+      if (p.inScene || p.inParty || p.name === partner) (p as Profile & { sheet?: NpcSheet }).sheet = { ...sheet, speech };
       // A hand-written voice outranks one improvised earlier in the playthrough.
-      if (sheet.speech) p.speechStyle = sheet.speech.slice(0, VOICE_LENGTH);
+      if (speech) p.speechStyle = speech.slice(0, VOICE_LENGTH);
     }
-    const sheetVoices = profiles.filter(p => typeof p?.name === 'string' && sheets[p.name as string]?.speech && p.speechStyle === sheets[p.name as string].speech?.slice(0, VOICE_LENGTH) && (p.inScene || p.inParty || p.name === partner)).map(p => ({ name: String(p.name), style: String(p.speechStyle) }));
+    const sheetVoices = profiles.filter(p => typeof p?.name === 'string' && sheets[p.name as string]?.speech && p.speechStyle === voiceFor(sheets[p.name as string].speech || '', Number((p as { affection?: unknown }).affection) || 0).slice(0, VOICE_LENGTH) && (p.inScene || p.inParty || p.name === partner)).map(p => ({ name: String(p.name), style: String(p.speechStyle) }));
     const voiceless = profiles.filter(p => typeof p?.name === 'string' && !String(p.speechStyle || '').trim() && (p.inScene || p.inParty || p.name === partner)).slice(0, 4);
-    const fixedVoices = [...sheetVoices, ...(voiceless.length ? await assignVoices(voiceless.map(p => ({ name: String(p.name), profile: String(p.profile || '') })), genreText) : [])];
+    const fixedVoices = [...sheetVoices, ...(voiceless.length ? await assignVoices(voiceless.map(p => ({ name: String(p.name), profile: String(p.profile || '') })), genreText, body.genre === 'wuxia') : [])];
     for (const v of fixedVoices) { const p = profiles.find(x => x.name === v.name); if (p) p.speechStyle = v.style; }
     const system = [
       '당신은 한국어 CRPG의 AI GM입니다. 플레이어의 대사·의지·중요 선택을 임의 확정하지 마세요.',
@@ -268,17 +313,19 @@ export async function POST(request: Request) {
       'addItems의 각 항목은 이름 문자열 또는 {"name":"아이템 이름","kind":"weapon|armor|accessory|item","desc":"한 문장 설명","skill":"고유 능력 이름(있을 때만)"} 객체입니다. 무기·방어구·장신구는 꼭 객체로 kind를 밝히고, 물약·열쇠·증표 같은 물건은 kind를 item으로 하세요. 등급(일반~신화)과 능력 수치는 게임 코드가 정하므로 이름에 등급을 붙이거나 수치를 지어내지 마세요. currentState.items에 각 소지품의 등급·종류·고유 능력이, equipped에 장착 중인 장비가 있으니 서술에 반영하세요.',
       '시작 소지품은 프롬프트의 명시적 시작 소지품 규칙과 게임 설정에서 직접 추가한 장비를 합쳐 구성합니다. currentState.inventory가 실제 소유 목록입니다. 이미 지급된 시작 아이템을 addItems로 중복 지급하지 마세요. 규칙 아이템의 능력과 제한은 ruleEquipment의 원문을 존중하세요.',
       '플레이어는 화면의 미니맵을 클릭해서만 장소를 이동합니다. moveToPinId는 항상 빈 문자열로 반환하고, choices에 다른 장소로 이동하는 행동을 넣지 마세요.',
+      // A player heading for 그림우드 was written back at 북문 초소, where the main story's next talk waited.
+      '플레이어가 playerAction에서 어딘가로 가겠다고 하면(…로 가서, …로 돌아가, …로 향해) 이번 장면은 그곳에서 일어납니다. 퀘스트의 다음 일이 다른 곳에 있어도 플레이어를 그곳으로 데려가거나 판정·전투의 결과로 다른 장소에 옮겨 놓지 마세요. 그곳에 갈 이유는 선택지로만 제시하세요.',
       'playerAction이 "시스템이 이동을 확정했습니다"로 시작하면 플레이어는 이미 currentState.locationName에 도착했습니다. 도착한 장소의 모습과 그곳의 분위기·인물을 묘사하고, currentState.event가 있으면 그 도착 이벤트를 진행하세요.',
       'currentState.sceneNpcs는 직전 장면에서 플레이어 곁에 있던 NPC입니다. 이번 장면이 끝날 때 플레이어와 같은 자리에 있어 화면에 보여야 하는 NPC 이름을 presentNpcs 배열로 반환하세요(최대 3명). currentState.knownNpcs에 있는 인물은 그 표기를 정확히 쓰세요. 대화가 끝나 떠났거나 플레이어가 장소를 옮겼다면 빼고, 아무도 없으면 빈 배열입니다. 볼일이 끝난 인물은 자연스럽게 자리를 떠난 것으로 보고 빼세요. 같은 인물을 이유 없이 장면마다 계속 남겨두지 마세요.',
       'currentState.npcProfiles는 인물별 설정입니다(inScene:true는 지금 장면에 있는 인물). 인물의 대사와 행동은 profile의 성별·나이·신분·성격·목표에 맞추세요. 과묵한 인물은 짧게, 수줍은 인물은 머뭇거리며, 호탕한 인물은 시원시원하게 말하는 식으로 성격이 말과 행동에 드러나야 하고, 모든 인물이 같은 말투로 말하면 안 됩니다.',
       'npcProfiles에 sheet가 있는 인물은 그 설정집을 따르세요: personality(성격의 겉과 속), likes/dislikes(플레이어 행동이 likes에 맞으면 호감도를 올리고 dislikes에 걸리면 깎으며 그 인물이 실제로 반응), firstAttitude(첫 만남 태도), relations(다른 인물에 대한 태도와 언급), asCompanion(동료일 때의 모습과 실망하는 지점). 설정집 내용을 대사로 줄줄 설명하지 말고 행동과 반응으로 보여 주세요.',
-      'speechStyle은 그 인물의 고정 말투입니다. "어체"에 적힌 한 가지 어체로만 말하고, 한 대답 안에서도 여러 턴에 걸쳐서도 절대 다른 어체를 섞지 마세요(예: 해요체 인물이 "~하오", "~소"를 쓰거나 하오체 인물이 "~요"를 쓰는 것 금지). speechStyle은 제작자 프롬프트의 "신분에 맞는 말투" 같은 지시보다 우선합니다(신분이 높거나 나이가 많다고 하오체·하게체로 바꾸지 마세요). recentHistory나 withThisNpc에 그 인물이 speechStyle과 다른 어체로 한 말이 있으면 그건 잘못 쓴 것이니 따라 하지 말고, 이번 대답부터 speechStyle의 어체로 말하세요. 같은 어체 안의 말버릇은 이어 가도 됩니다. 이 규칙은 대화 모드뿐 아니라 일반 서술 속 대사에도 똑같이 적용됩니다. 직원·행인처럼 npcProfiles에 없는 이름 없는 인물도 한 장면 안에서는 처음 쓴 어체를 유지하세요. speechStyle이 빈 인물이 이번 응답에서 처음 말을 하면 profile에 어울리는 말투를 정해 npcVoices에 {"name":"정확한 이름","style":"어체: 해요체 | 어미: ~요, ~죠 | 버릇: ... | 예: ..."}로 반환하고 그 말투로 말하게 하세요(예: 수줍은 19세 여성 견습생 → "조심스러운 존댓말, ~요 어미, 말끝을 자주 흐림"). 여성 인물은 profile에 거칠다·호탕하다 같은 근거가 없는 한 "~하게", "~일세", "~다, 이놈", "크하하" 같은 중년 남성 어투나 군대식 말투를 쓰지 마세요. 나이·신분이 높은 여성은 "~하오/~구려"보다 품위 있는 "~하지요/~하세요/~란다" 같은 말투가 자연스럽습니다.',
+      'speechStyle은 그 인물의 고정 말투입니다. "어체"에 적힌 한 가지 어체로, 한 대답 안에서도 여러 턴에 걸쳐서도 똑같이 말하고, 성격과 "버릇"이 어휘·말 길이·태도에 드러나게 하세요. "예:"의 대사가 그 인물의 실제 목소리입니다. speechStyle은 제작자 프롬프트의 "신분에 맞는 말투" 같은 지시보다 우선합니다. recentHistory나 withThisNpc에 그 인물이 speechStyle과 다른 어체로 한 말이 있으면 그건 잘못 쓴 것이니 따라 하지 말고, 이번 대답부터 speechStyle의 어체로 말하세요. 같은 어체 안의 말버릇은 이어 가도 됩니다. 이 규칙은 대화 모드뿐 아니라 일반 서술 속 대사에도 똑같이 적용됩니다. 직원·행인처럼 npcProfiles에 없는 이름 없는 인물도 한 장면 안에서는 처음 쓴 어체를 유지하세요. speechStyle이 빈 인물이 이번 응답에서 처음 말을 하면 profile에 어울리는 말투를 정해 npcVoices에 {"name":"정확한 이름","style":"어체: 해요체 | 어미: ~요, ~죠 | 버릇: ... | 예: ..."}로 반환하고 그 말투로 말하게 하세요(예: 수줍은 19세 여성 견습생 → "조심스러운 존댓말, ~요 어미, 말끝을 자주 흐림"). 여성 인물은 profile에 거칠다·호탕하다 같은 근거가 없는 한 "이놈", "크하하" 같은 거친 남성 어투나 군대식 말투를 쓰지 마세요. 나이·신분이 높은 여성은 "~하지요/~하세요/~란다" 같은 품위 있는 말투가 자연스럽습니다.',
       'currentState.reputation은 세상이 플레이어를 아는 명성 점수(시작 0, 상한 없음)이고 reputationRank는 그 등급입니다. 등급 기준: 무명 0~99, 신참 100~499, 알려진 자 500~1,999, 유명인 2,000~4,999, 영웅 5,000~14,999, 전설 15,000 이상 / 수상한 자 -100 이하, 악명 높음 -1,000 이하, 공포의 대상 -5,000 이하. 사람들이 보거나 소문이 날 만한 일을 했을 때만 reputationDelta로 바꾸세요. 규모 기준: 동네 사람들이 알 만한 작은 선행·말썽 ±10~50, 이름 있는 인물을 돕거나 공개 결투에서 이김 ±50~200, 마을·세력 단위의 공적(마물 무리 토벌, 납치된 사람 구출, 큰 음모 폭로) ±300~1,000, 도시나 나라 전체가 아는 위업(재앙을 막음, 전설적 괴물 처치, 왕국의 운명을 바꿈) ±2,000~5,000. 의뢰·퀘스트 완료 자체의 기본 명성(+150)은 게임 코드가 주므로, 그 의뢰가 특히 큰 공적이었을 때만 그 차이만큼 더 주세요. 아무도 모르는 일이나 평범한 행동은 0입니다. NPC들은 플레이어의 명성 등급을 알고 첫 태도와 대우에 반영합니다(신참은 반신반의, 유명인 이상은 존중·경계·부탁, 악명은 공포·적대·문전박대).',
       'currentState.level과 xp는 플레이어의 성장 단계입니다. 전투 승리와 퀘스트 완료 경험치는 게임 코드가 자동으로 줍니다. 그 밖에 실제로 성장할 만한 경험을 했을 때만 xpGain에 종류를 적으세요(숫자 아님): "minor"는 어려운 판정 성공·위험을 무릅쓴 탐험 같은 작은 성취, "deed"는 중요한 비밀 해명·큰 위기 극복 같은 의미 있는 성취, "event"는 특별 이벤트·장소 이벤트·돌발 사건을 끝까지 해결했을 때만입니다. 이벤트가 막 시작됐거나, 어딘가로 이동·도착했거나, 무언가를 발견만 한 턴은 event가 아닙니다(빈 문자열이나 minor). 평범한 이동·대화·거래는 빈 문자열입니다. 실제 양은 게임 코드가 레벨에 맞춰 정합니다. 플레이어의 레벨이 오를수록 그에 걸맞은 강한 적과 큰 사건을 내되, 약한 상대(마을 사람 등)를 갑자기 강하게 만들지는 마세요.',
       'currentState.trainableStats는 플레이어의 성장형 능력치입니다. 이번 playerAction이 실제로 어떤 능력치를 단련했다면 그 id를 trained 배열에 최대 2개 넣으세요(예: 마법서 연구·주문 연습→지능, 운기조식→내공, 잠입·추격·곡예→민첩, 무거운 짐 나르기·힘겨루기→근력, 설득·협상→매력류). 레벨이 오를 때 많이 단련한 능력치가 더 크게 오릅니다. 평범한 이동·잡담·구경은 빈 배열입니다. 전투와 주사위 판정은 게임 코드가 따로 반영하므로 넣지 마세요.',
       '제작자 프롬프트의 메인 사건은 막 순서대로만 드러납니다. 아직 시작되지 않은 막의 사건, 그 막에서야 밝혀지는 물건·정체·진실(예: 나중 막에서 발견될 유물), [GM] 표시 비밀은 플레이어가 그 단계에 이르기 전까지 서술·선택지·NPC 대사·퀘스트 어디에도 언급하지 마세요. 진행 정도는 recentHistory·storySoFar·historyFlags의 대사건 기록으로 판단합니다.',
       '서술에서 플레이어에게 다음에 할 일을 조언하거나 정리해 주지 마세요("~하는 것도 좋겠다", "그 뒤에는 ~로 이동해 ~를 추적할 수 있다" 금지). 장면만 보여 주고 판단은 선택지로 맡기세요.',
-      '이름 있는 인물은 currentState.npcProfiles나 currentState.knownNpcs에 있는 사람만 등장시키세요. 목록에 없는 새 인물에게 이름(예: 잭, 한스)을 붙여 만들어 내지 마세요. 새로 등장시키는 사람은 단역·행인·상인·경비병·적대 인물까지 모두 여성입니다. 남성 인물은 만들지 마세요(몬스터는 예외). 말투도 여성 인물답게 쓰세요: npcProfiles의 sheet에 speech가 있으면 그대로 따르고, 없으면 "~하오/~구려/~하게/~일세" 같은 노인 남성 어투와 "놈", "형씨", "껄껄" 같은 남성적인 표현은 쓰지 마세요. 장면에 필요한 단역은 "부두의 늙은 여선원", "여경비병"처럼 이름 없이 역할로만 묘사하고, presentNpcs·relationshipUpdates·의뢰인(giver)에 넣지 마세요. 의뢰나 중요한 정보는 가능하면 목록의 인물을 통해 주세요. 장면에 정보원·상인·의뢰인·증인·안내인·적대자처럼 역할이 있는 사람이 필요하면 새 사람을 만들지 말고, npcProfiles에서 그 역할에 어울리는 기존 인물(소속·직업·장소가 맞는 사람)을 등장시켜 맡기세요. 이름 없는 단역은 스쳐 지나가는 사람에게만 쓰세요.',
+      '이름 있는 인물은 currentState.npcProfiles나 currentState.knownNpcs에 있는 사람만 등장시키세요. 목록에 없는 새 인물에게 이름(예: 잭, 한스)을 붙여 만들어 내지 마세요. 새로 등장시키는 사람은 단역·행인·상인·경비병·적대 인물까지 모두 여성입니다. 남성 인물은 만들지 마세요(몬스터는 예외). 말투도 여성 인물답게 쓰세요: npcProfiles의 sheet에 speech가 있으면 그대로 따르고, 없으면 "놈", "형씨", "껄껄" 같은 남성적인 표현은 쓰지 마세요. 장면에 필요한 단역은 "부두의 늙은 여선원", "여경비병"처럼 이름 없이 역할로만 묘사하고, presentNpcs·relationshipUpdates·의뢰인(giver)에 넣지 마세요. 의뢰나 중요한 정보는 가능하면 목록의 인물을 통해 주세요. 장면에 정보원·상인·의뢰인·증인·안내인·적대자처럼 역할이 있는 사람이 필요하면 새 사람을 만들지 말고, npcProfiles에서 그 역할에 어울리는 기존 인물(소속·직업·장소가 맞는 사람)을 등장시켜 맡기세요. 이름 없는 단역은 스쳐 지나가는 사람에게만 쓰세요.',
       'currentState.monsters는 이 세계관에 존재하는 적대 몬스터·적대 무리 목록입니다. 몬스터는 처음부터 사람과 적대이며 NPC가 아닙니다: presentNpcs와 relationshipUpdates에 넣지 말고 대화 상대로 만들지 마세요. 목록에 없는 몬스터를 지어내거나 다른 세계관의 존재(무협에 고블린·드래곤, 판타지에 강시 등)를 등장시키지 마세요. 이야기상 습격이 자연스러울 때(위험한 곳에서 방심, 추적당함, 함정, 사건의 결과)만 ambush에 목록의 정확한 이름 하나를 넣으세요. 그러면 게임 코드가 곧바로 전투를 시작하니 서술은 습격 직전에서 멈추세요. boss:true인 존재는 메인 사건의 클라이맥스에서만 씁니다. 평범한 장면은 ambush를 빈 문자열로 두세요.',
       'currentState.party는 플레이어와 함께 다니는 동료 NPC입니다(npcProfiles에서 inParty:true). 동료는 장면을 옮겨도 늘 곁에 있으므로 presentNpcs에는 넣지 마세요. 서술에서 동료가 자기 성격과 말투로 가끔 한마디 거들거나 의견을 내고, 자기 목표·가치관에 반하는 플레이어 행동에는 반대하거나 실망하게 하세요(필요하면 relationshipUpdates로 호감도 반영). 전투에서는 동료도 함께 싸웁니다. 동료 합류·이탈은 게임 코드가 처리하니 서술로 동료를 새로 합류시키거나 떠나보내지 마세요.',
       'currentState.currentInteractionEvent가 존재하고 플레이어가 그 장소의 인물/물체와 상호작용하면 그 내용을 참고하세요.',
@@ -323,14 +370,24 @@ export async function POST(request: Request) {
     // The message is never cut mid-JSON: older history is dropped first so the action and memory always arrive whole.
     const { flags: _flags, locations: allLocations, ...stateRest } = state;
     const modelState = { ...stateRest, locations: Array.isArray(allLocations) ? allLocations.filter((p: { mapId?: string }) => p?.mapId === state.currentMapId).slice(0, 60) : [] };
-    const recent = [...history];
-    const withThisNpc = mode === 'talk' && Array.isArray(body.withThisNpc) ? body.withThisNpc.filter((x: unknown) => typeof x === 'string').slice(-30).map((x: string) => x.slice(0, 300)) : [];
+    const partnerStyle = String(profiles.find(p => p?.name === partner)?.speechStyle || '');
+    const keepsOldSpeech = /하오체|하게체/.test(partnerStyle);
+    // The model copies what the partner said before: one old line in a save's history took 에드리아 from 2% to 30%.
+    const spokeOld = (h: string) => mode === 'talk' && !keepsOldSpeech && h.startsWith(`${partner}: "`) && oldSpeech(h);
+    const recent = history.filter((h: string) => !spokeOld(h));
+    const withThisNpc = mode === 'talk' && Array.isArray(body.withThisNpc) ? body.withThisNpc.filter((x: unknown) => typeof x === 'string' && !spokeOld(x)).slice(-30).map((x: string) => x.slice(0, 300)) : [];
     const userContent = () => JSON.stringify({ playerAction: body.action, ...(idleBeat ? { mustHappen: idleBeat === 'ambush' && ambushFoe ? `${ambushFoe}이(가) 플레이어를 덮칩니다. ambush에 "${ambushFoe}"를 넣고 본문에도 이 이름 그대로 쓰세요. 습격 직전의 한순간만 짧게 쓰면 전투는 게임이 시작합니다.` : idleBeat === 'clue' && mainNext?.goal ? `플레이어가 다음에 할 일(${String(mainNext.goal).slice(0, 120)}${mainNext.at ? `, ${String(mainNext.at).slice(0, 60)}` : ''})로 곧장 이어지는 실마리를 지금 보여 주세요: 그 인물·장소를 가리키는 전갈, 흔적, 목격담. 그 일의 결과는 쓰지 마세요.` : IDLE_BEATS[idleBeat] + IDLE_HIDE } : {}), diceResult: body.diceResult || null, keyFacts, storySoFar, withThisNpc, recentHistory: recent, explicitGameState, currentState: modelState });
     while (userContent().length > 30000 && recent.length > 6) recent.shift();
+    // Measured on hard cases: the partner's own lines as an earlier exchange took old endings from 18% to 7%; rewording the rules changed nothing.
+    const voiceLines = mode === 'talk' ? [...(partnerStyle.split('예:')[1] || '').matchAll(/["“]([^"”]+)["”]/g)].map(m => m[1]).filter(l => keepsOldSpeech || !oldSpeech(l)) : [];
     const payload = { model: process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.7,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: system },
+        ...(voiceLines.length ? [
+          { role: 'user', content: JSON.stringify({ playerAction: `${partner}, 평소 말하는 대로 한마디 해 주세요.`, note: '이전 대화 기록' }) },
+          { role: 'assistant', content: JSON.stringify({ knownItem: '', howKnown: '', text: '', line: voiceLines.join('\n'), choices: [] }) },
+        ] : []),
         { role: 'user', content: userContent() },
       ],
     };
@@ -342,7 +399,19 @@ export async function POST(request: Request) {
     if (!response.ok) return NextResponse.json({ error: result?.error?.message || 'AI API 호출에 실패했습니다.' }, { status: 502 });
     const raw = result?.choices?.[0]?.message?.content;
     if (typeof raw !== 'string') throw new Error('AI 응답이 비어 있습니다.');
-    const data = JSON.parse(raw);
+    let data = JSON.parse(raw);
+    // Drama-style endings in a talk: the whole turn is written once more. Asking for a rewrite returned the lines unchanged (6 of 7 tries).
+    const oldInTalk = (d: { line?: unknown; text?: unknown }) => oldSpeech(`${d?.line || ''}\n${d?.text || ''}`);
+    if (mode === 'talk' && partnerStyle && !keepsOldSpeech && oldInTalk(data)) {
+      try {
+        const again = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload), cache: 'no-store', signal: AbortSignal.timeout(25000),
+        });
+        const second = JSON.parse((await again.json())?.choices?.[0]?.message?.content || '{}');
+        if ((second.line || second.text) && !oldInTalk(second)) data = second;
+      } catch (err) { console.warn('대화 다시 쓰기 실패', err); }
+    }
     const availableImages = Array.isArray(state.availableImages) ? state.availableImages.filter((v: unknown): v is string => typeof v === 'string').slice(0, 150) : [];
     const imageKey = typeof data.imageKey === 'string' && availableImages.includes(data.imageKey) ? data.imageKey : '';
     const locations = Array.isArray(state.locations) ? state.locations : [];
@@ -350,6 +419,7 @@ export async function POST(request: Request) {
     const allowed = Array.isArray(state.adjacentLocationIds) ? state.adjacentLocationIds : [];
     const moveToPinId = body.movementAllowed !== false && allowed.includes(candidate) && locations.some((p: { id?: string; mapId?: string }) => p.id === candidate && p.mapId === state.currentMapId) ? candidate : '';
     if (typeof data.text === 'string') data.text = data.text.split(/(\s+)/).filter((w: string) => !FOREIGN_SCRIPT.test(w)).join('').replace(/ {2,}/g, ' ');
+    if (!mode && typeof data.text === 'string') data.text = dropRepeatedQuotes(data.text, history);
     // Choices may come as {text, target}; the text is what the player sees, the target is only used to catch repeats.
     const choiceTargets: Record<string, string> = {};
     if (Array.isArray(data.choices)) data.choices = data.choices.map((v: unknown) => { if (v && typeof v === 'object') { const o = v as { text?: unknown; target?: unknown }; const t = String(o.text || ''); if (typeof o.target === 'string') choiceTargets[t.trim()] = o.target; return t; } return v; });
@@ -361,7 +431,13 @@ export async function POST(request: Request) {
     // By full name, or a telling word standing on its own (monsters.ts namesFoe); a boss only by its full name.
     const foeInScene = (t: string) => monsterNames.find((n: string) => t.includes(n)) || monsterNames.find((n: string) => !(state.monsters || []).find((m: { name?: unknown; boss?: unknown }) => m?.name === n && m?.boss) && namesFoe(t, n));
     const sceneText = String(data.text || '');
-    const ambush = mode ? '' : toMonster(data.ambush) || (Array.isArray(data.presentNpcs) ? data.presentNpcs.map(toMonster).find(Boolean) || '' : '') || (!(data.check && typeof data.check === 'object') && ATTACK.test(sceneText) ? foeInScene(sceneText) || ambushFoe : '');
+    // Fighting a roster monster is a battle, not a dice check: a 근력 check once "제압했다" the wolf pack a quest
+    // needed fought, and the same wolves had to be fought again later.
+    const FIGHT = /(상대하|싸우|싸운|공격|처치|물리치|쫓아내|토벌|사냥|제압|맞서)/;
+    const action = String(body.action || '');
+    const fightFoe = !mode && data.check && typeof data.check === 'object' && FIGHT.test(action) ? foeInScene(action) || foeInScene(sceneText) : '';
+    if (fightFoe) data.check = null;
+    const ambush = mode ? '' : fightFoe || toMonster(data.ambush) || (Array.isArray(data.presentNpcs) ? data.presentNpcs.map(toMonster).find(Boolean) || '' : '') || (!(data.check && typeof data.check === 'object') && ATTACK.test(sceneText) ? foeInScene(sceneText) || ambushFoe : '');
     const trainableIds = Array.isArray(state.trainableStats) ? state.trainableStats.map((t: { id?: unknown }) => String(t?.id || '')) : [];
     const trained = !mode && Array.isArray(data.trained) ? data.trained.filter((id: unknown): id is string => typeof id === 'string' && trainableIds.includes(id)).slice(0, 2) : [];
     const xpGain = typeof data.xpGain === 'string' && ['minor', 'deed', 'event'].includes(data.xpGain) ? data.xpGain : '';
@@ -397,6 +473,12 @@ export async function POST(request: Request) {
     const enemy = mode === 'combat' && (tier || rawEnemy) ? (tier ? { ...POWER_TIERS[tier], power: tier } : { hp: Number(rawEnemy.hp), dc: Number(rawEnemy.dc), damage: Number(rawEnemy.damage) }) : null;
     if (mode === 'combat' && !itemUse) data.hpDelta = 0;
     const gesture = mode === 'talk' && typeof data.gesture === 'string' ? data.gesture.trim().slice(0, 60) : '';
+    const howKnownText = mode === 'talk' && typeof data.howKnown === 'string' ? data.howKnown.trim().slice(0, 120) : '';
+    // The item tag comes from the real inventory, so the model can't name something the player doesn't carry.
+    const carried: string[] = Array.isArray(state.inventory) ? state.inventory.filter((n: unknown): n is string => typeof n === 'string' && !!n.trim()) : [];
+    const namedItem = typeof data.knownItem === 'string' ? data.knownItem.trim() : '';
+    const knownItem = (namedItem && carried.find(n => n.includes(namedItem) || namedItem.includes(n))) || carried.find(n => howKnownText.includes(n));
+    const howKnown = howKnownText && knownItem ? `[소지품: ${knownItem}] ${howKnownText}` : howKnownText;
     // Talk: the reply becomes ordered parts (narration, speech, narration, speech...) so the chat shows them in turn.
     // Quoted text is speech even when the model mixes it into the narration; a speech repeated in line and text appears once.
     let line = '';
@@ -618,9 +700,8 @@ export async function POST(request: Request) {
     // speechStyle, the quoted lines are rewritten once to the speakers' own styles, narration untouched.
     // Old-voice endings at the end of a sentence: ~시오 (주시오, 하시오; not ~십시오), ~소 (했소, 냈소, 있소), ~하오/~이오,
     // ~구려, ~이외다, ~일세, and ~하게/~하네/~오게.
-    const OLD_VOICE = /((?<!십)시오|[가-힣]소|하오|이오|구려|이외다|일세|하게|하네|오게|주게|보게|가게)\s*[.!?…~]*\s*["”」]?(\s|$)/;
     const named = profiles.filter(p => typeof p?.name === 'string' && sceneText.includes(String(p.name)) && String(p.speechStyle || '').trim()).map(p => ({ name: String(p.name), speechStyle: String(p.speechStyle) }));
-    if (!mode && OLD_VOICE.test(sceneText) && !named.some(n => /하오체|하게체/.test(n.speechStyle))) {
+    if (!mode && oldSpeech(sceneText) &&!named.some(n => /하오체|하게체/.test(n.speechStyle))) {
       try {
         const fix = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
@@ -637,33 +718,35 @@ export async function POST(request: Request) {
     }
     // The same in a talk: the partner's lines (unquoted parts) slip into 하오체 too, as Edria did on the entrance test.
     // Unless the partner's own style is 하오체/하게체, those lines are rewritten once to that style.
-    const partnerStyle = String(profiles.find(p => p?.name === partner)?.speechStyle || '');
-    const oldLines = mode === 'talk' && partnerStyle && !/하오체|하게체/.test(partnerStyle) ? parts.map((p, i) => ({ p, i })).filter(({ p }) => OLD_VOICE.test(p.text)) : [];
+    // Plain ~다/~라 endings from a 하십시오체/해요체 partner too. Rewritten, not dropped: dropping "늑대 무리를 처리해 오라." left
+    // 에드리아 saying only "그곳에서 무리를 처치해 돌아오면…", and dropping every line made the retry invent another test.
+    const polite = /어체:\s*(하십시오체|해요체)/.test(partnerStyle);
+    const oldLines = mode === 'talk' && partnerStyle && !keepsOldSpeech ? parts.map((p, i) => ({ p, i })).filter(({ p }) => polite && plainSpeech(p.text)) : [];
     if (oldLines.length) {
       try {
         const fix = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.3, response_format: { type: 'json_object' },
             messages: [
-              { role: 'system', content: '한국어 CRPG 대화 글 목록입니다. 각 글에서 인물이 하는 말(따옴표가 없어도)을 speechStyle(어체·어미·버릇) 그대로 말하게 고치고, 서술 문장은 그대로 두세요. "~하오", "~이오", "~구려", "~하시오", "~소", "~일세", "~하게" 같은 옛 어투는 모두 그 어체로 바꿉니다(하십시오체면 ~습니다/~십시오, 해요체면 ~요, 해체면 반말). 뜻과 길이는 그대로 두세요. 다음 JSON만 반환: {"lines":["고친 대사1", ...]} (같은 개수, 같은 순서)' },
+              { role: 'system', content: '한국어 CRPG 대화 글 목록입니다. 각 글에서 인물이 하는 말(따옴표가 없어도)을 speechStyle(어체·어미·버릇) 그대로 말하게 고치고, 서술 문장은 그대로 두세요. "~다", "~라", "~냐", "~자" 같은 반말 끝맺음은 모두 그 어체로 바꿉니다(하십시오체면 ~습니다/~십시오, 해요체면 ~요, 해체면 반말). 뜻과 길이는 그대로 두세요. 다음 JSON만 반환: {"lines":["고친 대사1", ...]} (같은 개수, 같은 순서)' },
               { role: 'user', content: JSON.stringify({ speechStyle: partnerStyle, lines: oldLines.map(({ p }) => p.text) }) },
             ] }),
           cache: 'no-store', signal: AbortSignal.timeout(20000),
         });
         const fixed = JSON.parse((await fix.json())?.choices?.[0]?.message?.content || '{}')?.lines;
         if (Array.isArray(fixed) && fixed.length === oldLines.length && fixed.every(v => typeof v === 'string' && v.trim() && !FOREIGN_SCRIPT.test(v))) {
-          oldLines.forEach(({ i }, k) => { parts[i] = { ...parts[i], text: String(fixed[k]).trim() }; });
+          // A rewrite sometimes turned a clean plain line into 있사옵니다; that one keeps its original.
+          oldLines.forEach(({ i, p }, k) => { if (!oldSpeech(String(fixed[k]))) parts[i] ={ ...parts[i], text: String(fixed[k]).trim() }; });
           line = parts.filter(p => p.type === 'speech').map(p => p.text).join(' ');
         }
       } catch (err) { console.warn('대화 어체 교정 실패', err); }
     }
     if (mode === 'talk' && spokenChoices.length) choices.splice(0, choices.length, ...spokenChoices);
     // The line that settles a quest talk: a decision, never a question; a doubtful one falls back to the game's own.
-    const rawAccept = questTalk && typeof data.acceptLine === 'string' ? data.acceptLine.trim().replace(/^["“”'「『]+|["“”'」』]+$/g, '') : '';
-    const isDecision = (v: string) => !!v && v.length <= 90 && !/[?？]$/.test(v) && !/(묻|물어|알려 ?주|궁금|자세히|설명해|어떻게|무엇|뭔가요|뭐죠|인가요|일까요|할까요)/.test(v) && !FOREIGN_SCRIPT.test(v);
-    // With the talk's outcome known (acceptHint), the line is always written for it; otherwise the GM's own is used.
-    const acceptHint = typeof body.acceptHint === 'string' ? body.acceptHint.slice(0, 300) : '';
-    let acceptLine = isDecision(rawAccept) && !acceptHint ? rawAccept : '';
+    // 맡기겠: "시험을 맡기겠습니다" hands the job to the NPC, the opposite of taking it on.
+    const isDecision = (v: string) => !!v && v.length <= 90 && !/[?？]$/.test(v) && !/(묻|물어|알려 ?주|궁금|자세히|설명해|어떻게|무엇|뭔가요|뭐죠|인가요|일까요|할까요|맡기겠)/.test(v) && !FOREIGN_SCRIPT.test(v);
+    // Written below, never told the outcome: given the beat's text, the hero announced 늑대 and 장물아비 before 에드리아 had mentioned them.
+    let acceptLine = '';
     // The outcome is the person hearing back: the player has done the job and reports it.
     // A "맡겠습니다 … 곧 보고드리겠습니다" there reads as taking the job on, yet choosing it finishes the quest.
     // Decided by the game from the step's order (a deed came before this talk), not from words in the outcome: "지원서를 받아
@@ -674,14 +757,14 @@ export async function POST(request: Request) {
     // Missing or doubtful: one small call writes it as an answer to what the partner just said.
     const questNext = questTalk && Array.isArray(state.questBeats) ? (state.questBeats as { quest?: unknown; next?: { do?: unknown; who?: unknown } | null }[]).find(q => q?.next?.do === 'talk' && q.next.who === partner) : undefined;
     const acceptQuest = questNext ? String(questNext.quest || '') : body.holdTalk === true ? String(body.holdQuest || '').slice(0, 80) : '';
-    if (questTalk && !acceptLine && acceptQuest) {
+    if (questTalk && !acceptLine && acceptQuest && body.fixedAccept !== true) {
       try {
         const gen = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.7, response_format: { type: 'json_object' },
             messages: [
-              { role: 'system', content: `한국어 CRPG 대화입니다. 플레이어가 ${partner}에게 할 대사 한 문장을 씁니다: ${partner}가 방금 한 말에 답하면서, 퀘스트 일을 받아들여 매듭짓는 결정의 말. 질문·망설임·되묻기는 안 됩니다. ${reporting ? `이번에는 보고하는 말입니다: 플레이어는 그 일을 이미 해냈으니, recentDeeds에 있는 실제로 한 일(찾은 것·쓰러뜨린 것)을 과거형으로 보고하세요(예: "진흙 골목 장물 창고를 덮쳐 문장이 새겨진 기사검을 찾아냈습니다."). "맡겠습니다"·"하겠습니다"·"곧 보고드리겠습니다"처럼 앞으로 할 일로 말하면 안 됩니다. ` : '플레이어는 아직 이 일을 하지 않았습니다: 해낸 것처럼 보고하거나 결과를 미리 말하지 말고, 받아들이거나 맡겠다는 말로 쓰세요. '} whenChosen이 있으면 그 말을 고를 때 이어질 일이니, 그 일로 자연스럽게 이어지는 말을 쓰세요(보고를 받는 일이면 보고하는 말, 일을 맡기는 일이면 맡겠다는 말). 해요체나 하십시오체, 60자 이내, 따옴표 없이. 상대가 출신·이름·목적·사정을 물었다면 그 물음에 hero(주인공 신분)와 opening(프롤로그)에 있는 내용으로 실제로 답한 뒤 결정을 말하세요. "명확합니다"·"말씀드린 대로입니다"처럼 답을 피하는 말은 안 됩니다. hero·opening에 없는 출신·직업은 지어내지 마세요. 다음 JSON만 반환: {"line":"..."}` },
-              { role: 'user', content: JSON.stringify({ npcJustSaid: line, quest: acceptQuest, hero: heroIdentity(String(body.prompt || '')), opening: String(body.prologue || '').slice(0, 600), ...(reporting ? { recentDeeds } : {}), ...(acceptHint ? { whenChosen: acceptHint } : {}) }) },
+              { role: 'system', content: `한국어 CRPG 대화입니다. 플레이어가 ${partner}에게 할 대사 한 문장을 씁니다: ${partner}가 방금 한 말에 답하면서, 퀘스트 일을 받아들여 매듭짓는 결정의 말. 질문·망설임·되묻기는 안 됩니다. ${reporting ? `이번에는 보고하는 말입니다: 플레이어는 그 일을 이미 해냈으니, recentDeeds에 있는 실제로 한 일(찾은 것·쓰러뜨린 것)을 과거형으로 보고하세요. "맡겠습니다"·"하겠습니다"·"곧 보고드리겠습니다"처럼 앞으로 할 일로 말하면 안 됩니다. ` : '플레이어는 아직 이 일을 하지 않았습니다: 해낸 것처럼 보고하거나 결과를 미리 말하지 말고, 받아들이거나 맡겠다는 말로 쓰세요. 시험은 "치르겠습니다", 일은 "맡겠습니다"로 쓰고, 남에게 넘긴다는 뜻의 "맡기겠습니다"는 쓰지 마세요. '} 플레이어는 npcJustSaid·quest·hero·opening·recentDeeds에 나온 것만 압니다: 거기 없는 임무 내용·장소·인물·물건을 먼저 말하지 마세요. 해요체나 하십시오체, 60자 이내, 따옴표 없이. 상대가 출신·이름·목적·사정을 물었다면 그 물음에 hero(주인공 신분)와 opening(프롤로그)에 있는 내용으로 실제로 답한 뒤 결정을 말하세요. "명확합니다"·"말씀드린 대로입니다"처럼 답을 피하는 말은 안 됩니다. hero·opening에 없는 출신·직업은 지어내지 마세요. 다음 JSON만 반환: {"line":"..."}` },
+              { role: 'user', content: JSON.stringify({ npcJustSaid: line, quest: acceptQuest, hero: heroIdentity(String(body.prompt || '')), opening: String(body.prologue || '').slice(0, 600), ...(reporting ? { recentDeeds } : {}) }) },
             ] }),
           cache: 'no-store', signal: AbortSignal.timeout(15000),
         });
@@ -692,7 +775,7 @@ export async function POST(request: Request) {
       if (reporting && (!acceptLine || promiseOnly(acceptLine))) acceptLine = `${acceptQuest.replace(/하기$/, '').trim()}, 마치고 돌아왔습니다. 보고드립니다.`.slice(0, 90);
     }
     const playerLine = mode === 'talk' && typeof data.playerLine === 'string' && !FOREIGN_SCRIPT.test(data.playerLine) ? data.playerLine.trim().replace(/^["“”'「『]+|["“”'」』]+$/g, '').slice(0, 300) : '';
-    return NextResponse.json({ acceptLine, setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta,addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,finalGoalCompleted,completedGoalSteps,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
+    return NextResponse.json({ acceptLine, setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, howKnown, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta,addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,finalGoalCompleted,completedGoalSteps,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
       addItems: !check && Array.isArray(data.addItems) ? data.addItems.slice(0, 5) : [], removeItems: !check && Array.isArray(data.removeItems) ? data.removeItems.slice(0, 5) : [],
       addFlags: !check && Array.isArray(data.addFlags) ? data.addFlags.slice(0, 5) : [] });
   } catch (error) {

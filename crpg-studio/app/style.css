@@ -587,6 +587,9 @@
 .talkAvatar{flex-shrink:0;width:34px;height:34px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#dbeafe;color:#1d4ed8;font-size:14px;font-weight:800}
 .talkAvatar img{width:100%;height:100%;object-fit:cover;object-position:top}
 .talkBody{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:78%}
+.logActions{display:flex;align-items:center;gap:8px}
+.logExport{padding:4px 10px;font-size:12px;min-height:0}
+.talkCue{align-self:center;max-width:88%;color:#64748b;font-size:13px;line-height:1.5;text-align:center}
 .talkName{font-size:11px;font-weight:700;color:#475569}
 .talkName em{font-weight:400;font-style:italic;color:#8b94a3}
 .talkBubbleBox{padding:9px 13px;font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -732,10 +735,6 @@
 .battlePop.crit{font-size:36px;color:#fde047;-webkit-text-stroke:1px #b45309}
 .battlePop.miss{font-size:18px;color:#e2e8f0;-webkit-text-stroke:0}
 @keyframes battlePop{0%{opacity:0;transform:translate(-50%,10px) scale(.6)}20%{opacity:1;transform:translate(-50%,0) scale(1.15)}100%{opacity:0;transform:translate(-50%,-32px) scale(1)}}
-.battleVs{position:absolute;top:42%;left:50%;z-index:5;font-size:clamp(22px,4vw,36px);font-weight:900;letter-spacing:2px;color:#fff;white-space:nowrap;text-shadow:0 0 18px rgba(239,68,68,.95),0 3px 8px #000;opacity:0;animation:battleVs 1.5s ease-out;pointer-events:none}
-@keyframes battleVs{0%{opacity:0;transform:translate(-90%,-50%) scale(1.4)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}75%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(-10%,-50%)}}
-.battleFlash{position:absolute;inset:0;z-index:6;pointer-events:none;background:#fecaca;opacity:0;animation:battleFlash .5s ease-out}
-@keyframes battleFlash{0%{opacity:.85}100%{opacity:0}}
 /* studio: player portrait */
 .playerPortraitRow{display:flex;gap:14px;align-items:center;margin-top:10px}
 .playerPortraitPreview{width:110px;aspect-ratio:3/4;flex-shrink:0;border-radius:10px;background:linear-gradient(160deg,#eef2f7,#dfe5ee);display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
@@ -743,7 +742,7 @@
 .playerPortraitActions{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
 .playerPortraitActions .uploadBox{margin-top:0;cursor:pointer}
 @media(max-width:520px){.battleSide{width:44%}.battleHp span{max-width:44px}}
-@media(prefers-reduced-motion:reduce){.sceneBattleMode,.battleLungeRight,.battleLungeLeft,.battleHit,.battleCrit,.battleDodge,.battleSlash,.battleVs,.battleFlash{animation:none!important}.battlePop{animation:none;opacity:1}.battleDown{animation:none;opacity:.25}}
+@media(prefers-reduced-motion:reduce){.sceneBattleMode,.battleLungeRight,.battleLungeLeft,.battleHit,.battleCrit,.battleDodge,.battleSlash{animation:none!important}.battlePop{animation:none;opacity:1}.battleDown{animation:none;opacity:.25}}
 /* keep fighters inside their column so the health bars stay visible */
 .battleBody{align-items:stretch}
 .battleReact{height:100%}
@@ -991,16 +990,149 @@ button.gearSlot:disabled{cursor:default}
 @keyframes healGlow{0%{box-shadow:0 0 0 0 rgba(34,197,94,0)}35%{box-shadow:0 0 0 4px rgba(34,197,94,.45),0 0 18px 6px rgba(74,222,128,.55)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 @media(prefers-reduced-motion:reduce){.healPop,.vitalHeal .characterVitalTrack i,.healGlow .characterPortrait{animation:none}}
 
-.wizardReroll{display:flex;align-items:center;gap:6px;margin:12px auto 0}
-/* play: screen transitions (entering play, moving, combat, talk) */
-.playPage{animation:playEnter .45s ease-out}
-@keyframes playEnter{from{opacity:0}}
-.sceneWipe{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
-.sceneWipe-move::before{content:'';position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 200vmax #0b0d12;transform:translate(-50%,-50%) scale(0);animation:sceneIris .75s cubic-bezier(.6,0,.3,1) forwards}
-@keyframes sceneIris{to{transform:translate(-50%,-50%) scale(200)}}
-.sceneWipe-combat{background:linear-gradient(115deg,#0b0d12 0 47%,#dc2626 47% 53%,#0b0d12 53%);animation:sceneSlash .55s cubic-bezier(.7,0,.3,1) forwards}
-@keyframes sceneSlash{to{clip-path:inset(0 0 0 100%)}}
-.sceneWipe-talk::before,.sceneWipe-talk::after{content:'';position:absolute;left:0;right:0;height:50%;background:#0b0d12;animation:sceneShutter .55s cubic-bezier(.6,0,.3,1) forwards}
-.sceneWipe-talk::before{top:0;transform-origin:top}.sceneWipe-talk::after{bottom:0;transform-origin:bottom}
-@keyframes sceneShutter{to{transform:scaleY(0)}}
-@media(prefers-reduced-motion:reduce){.playPage{animation:none}.sceneWipe{display:none}}
+/* play: screen transitions (entering play, moving, combat, talk). Overlays never take clicks and hide themselves when done. */
+@keyframes wipeGone{to{visibility:hidden}}
+/* entering play, 2.4s: a title screen over the current place, the hero steps in, a bar fills, then a flash opens onto the game */
+.playIntro{position:fixed;inset:0;z-index:200;pointer-events:none;overflow:hidden;color:#fff;background:#070a18;animation:wipeGone var(--intro,2.4s) step-end forwards,introLeave .28s ease-in calc(var(--intro,2.4s) - .28s) forwards}
+.introWaiting{animation:none}
+.introSkippable{pointer-events:auto;cursor:pointer}
+.introArt{position:absolute;inset:0}
+.introArt img{width:100%;height:100%;object-fit:cover;filter:brightness(.62) saturate(1.2);animation:introZoom var(--intro,2.4s) ease-out both}
+.introArt::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,20,.94) 22%,rgba(5,7,20,.35) 62%,transparent),linear-gradient(0deg,rgba(5,7,20,.85),transparent 42%)}
+.introArtCover img{filter:blur(16px) brightness(.5) saturate(1.3)}
+.introCover{position:absolute;right:max(7%,calc(50% - 540px));top:0;bottom:0;height:82%;aspect-ratio:2/3;margin:auto 0;overflow:hidden;border:2px solid rgba(253,224,71,.85);border-radius:10px;background:#f3e8e5;box-shadow:0 0 34px rgba(253,224,71,.3),0 18px 46px rgba(0,0,0,.7);animation:introCoverIn .55s cubic-bezier(.16,1,.3,1) .22s both}
+.introCover img{display:block;width:100%;height:100%;object-fit:contain}
+.introCover::after{content:'';position:absolute;inset:-20% -60%;background:linear-gradient(105deg,transparent 44%,rgba(255,255,255,.5) 50%,transparent 56%);transform:translateX(-60%);animation:introCoverShine .9s ease-in-out .95s forwards}
+.introTitle{position:absolute;left:max(6%,calc(50% - 580px));top:50%;display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:min(50vw,560px);transform:translateY(-50%)}
+.introTitle small{padding:3px 14px;background:#fde047;color:#111827;font-size:clamp(12px,2vmin,16px);font-weight:900;letter-spacing:.24em;transform:skewX(-12deg);animation:introRise .4s cubic-bezier(.16,1,.3,1) .3s both}
+.introTitle b{font-size:clamp(34px,8vmin,76px);font-weight:900;line-height:1.16;word-break:keep-all;background:linear-gradient(105deg,#fff 42%,#fde047 50%,#fff 58%) 120% 0/320% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 0 rgba(0,0,0,.55)) drop-shadow(0 0 20px rgba(0,0,0,.5));animation:introRise .45s cubic-bezier(.16,1,.3,1) .38s both,introShine 1.1s ease-in-out .85s forwards}
+.introTitle span{max-width:100%;overflow:hidden;font-size:clamp(13px,2.3vmin,18px);font-weight:700;color:#e5e7eb;white-space:nowrap;text-overflow:ellipsis;text-shadow:0 1px 6px #000;animation:introRise .4s cubic-bezier(.16,1,.3,1) .52s both}
+.introTitle span+span{color:#fde047;animation-delay:.6s}
+.introBar{position:relative;width:min(100%,380px);height:5px;margin-top:10px;overflow:hidden;border-radius:3px;background:rgba(255,255,255,.2);animation:introRise .4s ease-out .62s both}
+.introBar::after{content:'';position:absolute;inset:0;border-radius:3px;background:linear-gradient(90deg,#f59e0b,#fde047);box-shadow:0 0 12px #fde047;transform:scaleX(0);transform-origin:left;animation:introFill calc(var(--intro,2.4s) - 1.15s) cubic-bezier(.5,0,.2,1) .72s forwards}
+.introFlash{position:absolute;inset:0;background:#fff;opacity:0;animation:introFlash .36s ease-out calc(var(--intro,2.4s) - .36s)}
+@keyframes introLeave{to{opacity:0}}
+@keyframes introZoom{from{transform:scale(1.14)}to{transform:scale(1.02)}}
+@keyframes introCoverIn{from{opacity:0;transform:translateX(16%) scale(1.08) rotate(2deg)}}
+@keyframes introCoverShine{to{transform:translateX(60%)}}
+@keyframes introRise{from{opacity:0;transform:translateX(-44px)}}
+@keyframes introShine{to{background-position:-40% 0}}
+@keyframes introFill{to{transform:scaleX(1)}}
+@keyframes introFlash{0%{opacity:0}35%{opacity:.85}100%{opacity:0}}
+@media(max-aspect-ratio:1/1){
+  .introArt::after{background:linear-gradient(0deg,rgba(5,7,20,.96) 26%,rgba(5,7,20,.2) 62%,transparent)}
+  .introCover{left:0;right:0;top:5%;bottom:auto;height:auto;width:min(68vw,56vh);margin:0 auto}
+  .introTitle{left:6%;top:auto;bottom:6%;width:88%;transform:none}
+}
+.sceneArrive{animation:sceneArrive 1.8s cubic-bezier(.2,.8,.2,1)}
+@keyframes sceneArrive{from{transform:scale(1.14);filter:brightness(.6) blur(3px)}}
+/* moving on the same map, 1.25s: the talk sweep, in cool colours, carrying a view of the new place and its name */
+.cutInPlace .cutInBand{background:linear-gradient(90deg,#042f4b,#0369a1 48%,#22d3ee)}
+.cutInBand img{position:absolute;inset:-8% 0;width:100%;height:116%;object-fit:cover;opacity:.9;-webkit-mask:linear-gradient(90deg,transparent 28%,#000 66%);mask:linear-gradient(90deg,transparent 28%,#000 66%);transform:skewY(5deg)}
+.cutInPlace .cutInPlate small{background:#67e8f9;color:#042f4b}
+.cutInPlace .cutInPlate b{text-shadow:0 3px 0 #042f4b,0 0 22px rgba(0,0,0,.7)}
+.cutInPlace .cutInPlate span{color:#a5f3fc}
+.cutInChevrons{position:absolute;right:max(7%,calc(50% - 560px));top:50%;margin-top:-.62em;font-size:clamp(46px,11vmin,110px);font-style:normal;font-weight:900;line-height:1.2;letter-spacing:-.14em;color:#fff;text-shadow:0 0 18px rgba(103,232,249,.9);animation:cutChevrons 1.25s linear both}
+@keyframes cutChevrons{0%,16%{opacity:0;transform:translateX(-90px)}32%{opacity:1;transform:translateX(0)}74%{opacity:1;transform:translateX(34px)}90%,100%{opacity:0;transform:translateX(150px)}}
+/* moving to another map, 1.9s: the new place wipes across the whole screen under a turning compass and a bar */
+.cutInMap{animation:wipeGone 1.9s step-end forwards}
+.cutInMapBg{position:absolute;inset:0;background:linear-gradient(120deg,#0b1730,#1e3a5f);animation:cutMapWipe 1.9s linear both}
+.cutInMapBg img{width:100%;height:100%;object-fit:cover;filter:brightness(.55) saturate(1.2);animation:introZoom 1.9s ease-out both}
+.cutInMapBg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(4,8,22,.25),rgba(4,8,22,.86) 78%)}
+.cutInMapBody{position:absolute;left:0;right:0;top:50%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 6%;text-align:center;transform:translateY(-50%);animation:cutMapBody 1.9s linear both}
+.cutInCompass{position:relative;width:clamp(58px,12vmin,104px);aspect-ratio:1;margin-bottom:6px;border:3px solid rgba(253,224,71,.9);border-radius:50%;background:repeating-conic-gradient(rgba(253,224,71,.85) 0 3deg,transparent 3deg 45deg);box-shadow:0 0 20px rgba(253,224,71,.45),inset 0 0 14px rgba(0,0,0,.55);animation:cutCompass 1.9s cubic-bezier(.2,.75,.2,1) both}
+.cutInCompass::before{content:'';position:absolute;inset:18%;background:linear-gradient(#ef4444 50%,#f8fafc 50%);clip-path:polygon(50% 0,64% 50%,50% 100%,36% 50%)}
+.cutInMapBody small{font-size:clamp(12px,2vmin,16px);font-weight:900;letter-spacing:.38em;color:#fde047}
+.cutInMapBody b{max-width:100%;font-size:clamp(34px,9vmin,84px);font-weight:900;line-height:1.16;word-break:keep-all;text-shadow:0 4px 0 rgba(0,0,0,.6),0 0 26px rgba(0,0,0,.6)}
+.cutInMapBody span{font-size:clamp(14px,2.8vmin,22px);font-weight:700;color:#e0f2fe;text-shadow:0 1px 6px #000}
+.cutInMapBody i:last-child{position:relative;width:min(62vw,340px);height:5px;margin-top:12px;overflow:hidden;border-radius:3px;background:rgba(255,255,255,.22)}
+.cutInMapBody i:last-child::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#f59e0b,#fde047);box-shadow:0 0 10px #fde047;transform:scaleX(0);transform-origin:left;animation:introFill 1.05s cubic-bezier(.5,0,.2,1) .3s forwards}
+@keyframes cutMapWipe{0%{clip-path:polygon(0 0,0 0,-24% 100%,-24% 100%)}14%,80%{clip-path:polygon(0 0,124% 0,100% 100%,-24% 100%)}100%{clip-path:polygon(124% 0,124% 0,100% 100%,100% 100%)}}
+@keyframes cutMapBody{0%,10%{opacity:0;transform:translateY(-50%) scale(1.12)}20%,76%{opacity:1;transform:translateY(-50%)}86%,100%{opacity:0;transform:translateY(-50%) scale(.96)}}
+@keyframes cutCompass{from{transform:rotate(-400deg)}to{transform:rotate(25deg)}}
+/* the story itself moved on (a new scene heading, same map pin): a small ribbon in the scene, nothing that takes over the screen */
+.sceneRibbon{position:absolute;left:0;top:23%;z-index:7;display:flex;flex-direction:column;max-width:78%;padding:6px 26px 6px 16px;pointer-events:none;background:linear-gradient(90deg,rgba(4,47,75,.95),rgba(3,105,161,.9) 75%,transparent);border-left:4px solid #67e8f9;color:#fff;animation:sceneRibbon 2.3s cubic-bezier(.2,.8,.2,1) both,wipeGone 2.3s step-end forwards}
+.sceneRibbon small{font-size:11px;font-weight:800;letter-spacing:.14em;color:#a5f3fc}
+.sceneRibbon b{overflow:hidden;font-size:clamp(15px,2.6vw,21px);font-weight:900;white-space:nowrap;text-overflow:ellipsis;text-shadow:0 2px 4px rgba(0,0,0,.6)}
+@keyframes sceneRibbon{0%{opacity:0;transform:translateX(-100%)}14%,82%{opacity:1;transform:none}100%{opacity:0;transform:translateX(-40%)}}
+/* cut-ins: entering a fight or a talk takes over the whole screen, mobile-game style, with the characters' own art.
+   Never takes clicks; hides itself when done. Portrait screens stack the fighters instead of facing them side by side. */
+.cutIn{position:fixed;inset:0;z-index:190;pointer-events:none;overflow:hidden;color:#fff}
+.cutIn i{display:block}
+.cutInHalftone{position:absolute;inset:0;background:radial-gradient(circle,rgba(255,255,255,.2) 1.5px,transparent 2px) 0 0/11px 11px;-webkit-mask:linear-gradient(90deg,transparent 15%,#000);mask:linear-gradient(90deg,transparent 15%,#000)}
+@keyframes cutSpeedSpin{to{transform:rotate(9deg)}}
+/* battle, 1.75s: flash and shake, both sides slam together, VS stamps, then they fly apart */
+.cutInBattle{--me:polygon(0 0,60% 0,40% 100%,0 100%);--foe:polygon(60% 0,100% 0,100% 100%,40% 100%);--seam:polygon(59.5% 0,60.5% 0,40.5% 100%,39.5% 100%);animation:wipeGone 1.75s step-end forwards,cutShake .45s .14s linear}
+.cutInSide{position:absolute;inset:0;overflow:hidden}
+.cutInMe{clip-path:var(--me);background:linear-gradient(115deg,#071445,#1d4ed8 62%,#38bdf8);animation:cutFromLeft .24s cubic-bezier(.16,1,.3,1) both,cutToLeft .3s cubic-bezier(.7,0,.84,0) 1.42s forwards}
+.cutInFoe{clip-path:var(--foe);background:linear-gradient(245deg,#2a040c,#b91c1c 60%,#fb7185);animation:cutFromRight .24s cubic-bezier(.16,1,.3,1) both,cutToRight .3s cubic-bezier(.7,0,.84,0) 1.42s forwards}
+.cutInFoe .cutInHalftone{transform:scaleX(-1)}
+.cutInSide img{position:absolute;bottom:-4%;height:100%;width:50%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 0 3px rgba(255,255,255,.9)) drop-shadow(0 10px 30px rgba(0,0,0,.65));animation:cutDrift 1.75s ease-out both}
+.cutInMe img{left:1%}
+.cutInFoe img{right:1%}
+.cutInBattle .cutInSpeed{position:absolute;inset:-40%;background:repeating-conic-gradient(rgba(255,255,255,.28) 0 1deg,transparent 1deg 9deg);-webkit-mask:radial-gradient(circle,transparent 30%,#000 66%);mask:radial-gradient(circle,transparent 30%,#000 66%);animation:cutSpeedSpin .12s steps(2) infinite,cutHold 1.75s linear both}
+.cutInSeam{position:absolute;inset:0;filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 26px #fde047);animation:cutSeam 1.75s linear both}
+.cutInSeam::before{content:'';position:absolute;inset:0;background:#fff;clip-path:var(--seam)}
+.cutInVs{position:absolute;left:50%;top:50%;display:grid;place-items:center;width:1.9em;height:1.9em;margin:-.95em 0 0 -.95em;font-size:clamp(64px,15vmin,150px);font-style:italic;font-weight:900;line-height:1;letter-spacing:-.04em;color:#fde047;text-shadow:0 .03em 0 #b45309,.03em .06em 0 #7c2d12,0 0 .3em rgba(0,0,0,.75);animation:cutVs 1.75s linear both}
+.cutInVs::before{content:'';position:absolute;inset:0;border:.07em solid #fff;border-radius:50%;opacity:0;animation:cutRing .5s .3s ease-out}
+.cutInTag{position:absolute;display:flex;flex-direction:column;max-width:66vw;padding:8px 28px;background:rgba(5,8,24,.88);transform:skewX(-12deg)}
+.cutInTag>*{transform:skewX(12deg)}
+.cutInTag small{font-size:clamp(11px,1.9vmin,15px);font-weight:800;letter-spacing:.12em;color:#fde047}
+.cutInTag b{overflow:hidden;font-size:clamp(20px,4.4vmin,40px);font-weight:900;line-height:1.25;white-space:nowrap;text-overflow:ellipsis}
+.cutInTagMe{left:0;bottom:11%;align-items:flex-start;padding-left:max(28px,4vw);border-right:5px solid #38bdf8;animation:cutFromLeft .32s cubic-bezier(.16,1,.3,1) .26s both,cutToLeft .26s ease-in 1.4s forwards}
+.cutInTagFoe{right:0;top:11%;align-items:flex-end;padding-right:max(28px,4vw);border-left:5px solid #fb7185;animation:cutFromRight .32s cubic-bezier(.16,1,.3,1) .26s both,cutToRight .26s ease-in 1.4s forwards}
+.cutInBanner{position:absolute;left:0;right:0;top:calc(50% + clamp(62px,14vmin,140px));padding:7px 0;background:linear-gradient(90deg,transparent,rgba(5,8,24,.92) 22%,rgba(5,8,24,.92) 78%,transparent);text-align:center;font-size:clamp(17px,3.4vmin,30px);font-style:italic;font-weight:900;letter-spacing:.24em;animation:cutBanner 1.75s linear both}
+.cutInFlash{position:absolute;inset:0;background:#fff;animation:cutFlash 1.75s linear both}
+.cutInBoss .cutInMe{background:linear-gradient(115deg,#05060f,#27272a 62%,#52525b)}
+.cutInBoss .cutInFoe{background:linear-gradient(245deg,#000,#7f1d1d 60%,#dc2626)}
+.cutInBoss .cutInBanner{padding:9px 0;background:repeating-linear-gradient(-45deg,#facc15 0 20px,#0a0a0a 20px 40px);color:#fff;text-shadow:0 0 6px #000,0 2px 0 #000,2px 0 0 #000,-2px 0 0 #000,0 -2px 0 #000;letter-spacing:.4em}
+@keyframes cutFromLeft{from{transform:translateX(-105%)}}
+@keyframes cutFromRight{from{transform:translateX(105%)}}
+@keyframes cutToLeft{to{transform:translateX(-105%)}}
+@keyframes cutToRight{to{transform:translateX(105%)}}
+@keyframes cutDrift{from{transform:scale(1.16)}18%{transform:scale(1.03)}to{transform:scale(1)}}
+@keyframes cutShake{20%{transform:translate(-9px,5px)}40%{transform:translate(8px,-6px)}60%{transform:translate(-6px,-3px)}80%{transform:translate(4px,4px)}}
+@keyframes cutHold{0%{opacity:0}9%,78%{opacity:1}88%,100%{opacity:0}}
+@keyframes cutSeam{0%,8%{opacity:0}13%,78%{opacity:1}84%,100%{opacity:0}}
+@keyframes cutVs{0%,15%{opacity:0;transform:scale(3.2) rotate(-10deg)}22%{opacity:1;transform:scale(.9) rotate(-5deg)}27%{transform:scale(1.1) rotate(-5deg)}32%,76%{opacity:1;transform:scale(1) rotate(-5deg)}84%,100%{opacity:0;transform:scale(1.7) rotate(-5deg)}}
+@keyframes cutRing{0%{opacity:1;transform:scale(.5)}100%{opacity:0;transform:scale(2.4)}}
+@keyframes cutBanner{0%,24%{opacity:0;transform:scaleX(.2)}31%,78%{opacity:1;transform:none}84%,100%{opacity:0;transform:scaleX(1.25)}}
+@keyframes cutFlash{0%{opacity:.95}15%{opacity:0}80%{opacity:0}84%{opacity:.6}100%{opacity:0}}
+@media(max-aspect-ratio:1/1){
+  .cutInBattle{--me:polygon(0 56%,100% 44%,100% 100%,0 100%);--foe:polygon(0 0,100% 0,100% 44%,0 56%);--seam:polygon(0 55.6%,100% 43.6%,100% 44.4%,0 56.4%)}
+  .cutInSide img{width:86%;height:43%}
+  .cutInMe img{left:-8%;bottom:0}
+  .cutInFoe img{right:-8%;top:1%;bottom:auto}
+  .cutInTagMe{bottom:5%}
+  .cutInTagFoe{top:5%}
+  .cutInBanner{top:auto;bottom:17%}
+}
+/* talk, 1.25s: a slanted band sweeps in with the person standing in front of it and their name plate, then all of it moves on */
+.cutInSweep{animation:wipeGone 1.25s step-end forwards}
+.cutInScrim{position:absolute;inset:0;background:rgba(5,6,18,.62);animation:cutScrim 1.25s linear both}
+.cutInBand{position:absolute;left:-12%;right:-12%;top:17%;bottom:17%;overflow:hidden;border-block:3px solid rgba(255,255,255,.85);background:linear-gradient(90deg,#1e1b4b,#6d28d9 52%,#e879f9);animation:cutBand 1.25s linear both}
+.cutInSweep .cutInSpeed{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.17) 0 2px,transparent 2px 19px);animation:cutLines .2s linear infinite}
+.cutInPortrait{position:absolute;right:max(3%,calc(50% - 600px));bottom:0;width:min(58vw,680px);height:96%;animation:cutPortrait 1.25s linear both}
+.cutInPortrait img{width:100%;height:100%;object-fit:contain;object-position:bottom;filter:drop-shadow(0 0 3px rgba(255,255,255,.95)) drop-shadow(0 12px 34px rgba(0,0,0,.65))}
+.cutInPlate{position:absolute;left:max(5%,calc(50% - 560px));top:50%;display:flex;flex-direction:column;align-items:flex-start;max-width:58vw;margin-top:-1.2em;font-size:clamp(30px,7vmin,68px);animation:cutPlate 1.25s linear both}
+.cutInPlate small{padding:2px 14px;background:#fde047;color:#1e1b4b;font-size:clamp(12px,2vmin,16px);font-weight:900;letter-spacing:.2em;transform:skewX(-12deg)}
+.cutInPlate b{max-width:100%;overflow:hidden;font-weight:900;line-height:1.3;white-space:nowrap;text-overflow:ellipsis;text-shadow:0 3px 0 #1e1b4b,0 0 22px rgba(0,0,0,.6)}
+.cutInPlate span{font-size:clamp(13px,2.2vmin,18px);font-weight:800;color:#fbcfe8}
+.cutInSpark{position:absolute;width:clamp(14px,3vmin,28px);aspect-ratio:1;background:#fff;clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%);opacity:0;animation:cutSpark .6s ease-out .22s}
+.cutInSpark:nth-of-type(1){left:44%;top:22%}
+.cutInSpark:nth-of-type(2){left:62%;top:74%;animation-delay:.34s}
+.cutInSpark:nth-of-type(3){left:16%;top:70%;animation-delay:.42s}
+.cutInSpark:nth-of-type(4){left:82%;top:24%;animation-delay:.28s}
+@keyframes cutScrim{0%{opacity:0}12%,76%{opacity:1}100%{opacity:0}}
+@keyframes cutBand{0%{opacity:1;transform:translateX(108%) skewY(-5deg)}20%{transform:translateX(-1.5%) skewY(-5deg)}26%,76%{opacity:1;transform:skewY(-5deg)}94%,100%{opacity:1;transform:translateX(-108%) skewY(-5deg)}}
+@keyframes cutLines{to{background-position:0 19px}}
+@keyframes cutPortrait{0%,6%{opacity:0;transform:translateX(34%)}24%{opacity:1;transform:translateX(-3%)}32%{transform:none}76%{opacity:1;transform:translateX(-1.5%)}92%,100%{opacity:0;transform:translateX(-30%)}}
+@keyframes cutPlate{0%,12%{opacity:0;transform:translateX(-46%) skewX(-8deg)}30%{opacity:1;transform:translateX(2%) skewX(-8deg)}36%,76%{opacity:1;transform:skewX(-8deg)}92%,100%{opacity:0;transform:translateX(-30%) skewX(-8deg)}}
+@keyframes cutSpark{0%{opacity:0;transform:scale(0) rotate(0)}40%{opacity:1;transform:scale(1.25) rotate(45deg)}100%{opacity:0;transform:scale(.3) rotate(90deg)}}
+@media(max-aspect-ratio:1/1){
+  .cutInBand{top:26%;bottom:26%}
+  .cutInPortrait{right:-6%;width:88vw;height:78%}
+  .cutInPlate{left:5%;top:auto;bottom:11%;margin:0;max-width:90vw}
+  .cutInPlace .cutInPlate{bottom:30%}
+}
+@media(prefers-reduced-motion:reduce){.playIntro,.cutIn,.sceneRibbon{display:none}.sceneArrive{animation:none}}
