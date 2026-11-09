@@ -89,8 +89,6 @@
 
 /* AI GM suggested actions: optional, free-text input always remains available */
 .gmChoices{display:flex;flex-direction:column;gap:8px;padding:12px 0;margin-top:8px;border-top:1px solid #edf0f4}
-.gmChoicesHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:#293345;margin-bottom:3px}
-.gmChoicesHeading span{font-size:11px;font-weight:400;color:#8c95a3}
 .gmChoiceButton{display:flex;align-items:center;text-align:left;gap:10px;width:100%;border:1px solid #e5e9ef;background:#fff;border-radius:10px;padding:11px 12px;color:#3b4658;font-size:13px;line-height:1.5;cursor:pointer;transition:background .15s,border-color .15s}
 .gmChoiceButton:hover,.gmChoiceButton:focus-visible{background:#fff5f5;border-color:#f2a7a7;outline:none}
 .gmChoiceButton>span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere}
@@ -120,6 +118,7 @@
 .storyMore{align-self:center;margin:4px auto 10px;font-size:12px}
 .storyLog .storyEntryText{white-space:pre-wrap}
 .storyLog .storyGM .storyEntryText,.storyLog .storyEvent .storyEntryText{white-space:normal}
+.storyFresh{cursor:pointer;border-radius:8px;animation:storyFresh 1.1s ease-in-out infinite}@keyframes storyFresh{0%,100%{background:transparent;box-shadow:0 0 0 0 rgba(234,179,8,0)}50%{background:rgba(250,204,21,.16);box-shadow:0 0 0 3px rgba(234,179,8,.45)}}.freshHint{display:inline-block;margin-left:4px;padding:2px 9px;border:2px solid #fff;border-radius:999px;background:linear-gradient(180deg,#ff6b6b,#e11d48);color:#fff;font-size:11px;font-weight:900;letter-spacing:.02em;line-height:1.3;white-space:nowrap;box-shadow:0 2px 6px rgba(225,29,72,.45);text-shadow:0 1px 0 rgba(0,0,0,.25);animation:freshBounce 1.1s ease-in-out infinite}@keyframes freshBounce{0%,100%{transform:translateY(0) scale(1)}30%{transform:translateY(-3px) scale(1.08)}60%{transform:translateY(0) scale(.97)}}@media (prefers-reduced-motion:reduce){.freshHint{animation:none}.storyFresh{animation:none;background:rgba(250,204,21,.16);box-shadow:0 0 0 3px rgba(234,179,8,.45)}}
 .storyHeading{display:inline-block;margin:0 0 6px;padding:2px 10px;border-radius:999px;background:#eef1f6;color:#4a5568;font-size:11.5px;font-weight:700;line-height:1.7}
 .storyNarration{margin:0 0 8px;color:#4b5563}
 .storySpeech{margin:4px 0 10px;padding:6px 12px;border-left:3px solid #c9a35a;background:#fdf8ee;border-radius:0 8px 8px 0;color:#2f2a20}
@@ -295,8 +294,8 @@
 .gameGrid .gameCard .gameCover img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center top;
 }
 .gameGrid .gameCard .gameInfo {
   flex: 0 0 112px;
@@ -466,27 +465,16 @@
 .miniMapHeading span{font-size:11px;color:#8b94a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .miniMap{position:relative;border-radius:9px;overflow:hidden;background:#f4f2f0;user-select:none}
 .miniMap>img:first-child{display:block;width:100%;height:auto;pointer-events:none}
-.miniMapPin{position:absolute;z-index:3;transform:translate(-50%,-50%);border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:2px}
-.miniMapPin i{display:block;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px #0007}
-.miniMapPin span{max-width:88px;padding:1px 5px;border-radius:4px;background:rgba(30,25,20,.82);color:#fff6de;font-size:10px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
-.miniMapPin.far{cursor:not-allowed}
-.miniMapPin.far i{background:#9aa1ab;opacity:.75}
-.miniMapPin.far span{display:none}
-.miniMapPin.near i{background:#f26861;box-shadow:0 0 0 4px rgba(242,104,97,.28),0 1px 4px #0007}
-.miniMapPin.near:hover i,.miniMapPin.near:focus-visible i{transform:scale(1.3)}
-.miniMapPin.near:focus-visible{outline:none}
-.miniMapPin.exit.near i{background:#7c5cff;box-shadow:0 0 0 4px rgba(124,92,255,.28),0 1px 4px #0007}
-.miniMapPin.current{cursor:default;z-index:4}
-.miniMapPin.current i{background:#22c55e;width:14px;height:14px}
-.miniMapPin.current span{background:#14532d;border:1px solid #fde68a}
-.miniMapPin[aria-disabled="true"].near{cursor:wait}
 .miniMapPlayer{position:absolute;z-index:5;width:34px;height:40px;object-fit:contain;transform:translate(-50%,-95%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));pointer-events:none}
 .miniMapHint{margin:8px 0 0;font-size:11px;color:#8b94a3}
 .sceneStage{position:relative;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#1f2430}
 .sceneBackground{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .sceneFallback{background:linear-gradient(160deg,#3a3f4f,#1f2430)}
-.sceneLocation{position:absolute;top:12px;left:12px;z-index:7;display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:4px 4px 4px 11px;border:1px solid rgba(255,255,255,.22);border-radius:20px;background:rgba(20,22,30,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:background .15s,border-color .15s}
-.sceneLocation>svg{flex:0 0 auto;color:#fca5a1}
+.sceneTopBar{position:absolute;top:12px;left:12px;right:12px;z-index:7;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;pointer-events:none}
+.sceneTopBar>*{pointer-events:auto}
+.questBoard .questBoardList{width:min(420px,calc(100vw - 48px));max-height:45vh;overflow-y:auto}
+.sceneLocation{display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:4px 4px 4px 11px;border:1px solid rgba(255,255,255,.22);border-radius:20px;background:rgba(20,22,30,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:background .15s,border-color .15s}
+.sceneLocation>svg{flex:0 0 auto;color:#f5c542}
 .sceneLocation>span{overflow:hidden;text-overflow:ellipsis}
 /* The trailing chip is the affordance: it reads as the clickable part of the location pill. */
 .sceneLocation>b{display:flex;align-items:center;gap:4px;flex:0 0 auto;padding:4px 10px;border-radius:14px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);font-size:11px;transition:background .15s}
@@ -524,10 +512,6 @@
 .pinBackgroundPreview{display:block;width:100%;max-height:180px;object-fit:cover;border-radius:9px;margin-top:10px;border:1px solid #e4e6ea}
 .pinBackgroundRemove{margin-top:8px}
 @media(max-width:520px){.sceneNpc{flex-basis:40%}}
-.gmChoiceCustom{display:flex;align-items:center;gap:10px;border:1px dashed #d5dae2;border-radius:10px;padding:8px 8px 8px 12px;background:#fafbfc}
-.gmChoiceCustom .gmChoiceNumber{background:#eef1f5;color:#6b7686}
-.gmChoiceCustom input{flex:1;min-width:0;border:1px solid #e4e6ea;border-radius:8px;padding:9px 11px;font-size:13px;background:#fff}
-.gmChoiceCustom .btn{padding:9px 12px}
 /* NPC encounter, talk mode, combat mode */
 .encounterPanel{border:1px solid #e5e9ef;border-radius:12px;padding:14px;background:#fff}
 .encounterPanel p{margin:0 0 12px;font-size:14px;color:#3b4658}
@@ -552,6 +536,7 @@
 .talkSuggestions button{text-align:left;border:1px solid #dbe7f7;background:#fff;border-radius:10px;padding:9px 12px;font-size:13px;color:#2c4a75;cursor:pointer}
 .talkSuggestions button:hover{background:#eff6ff;border-color:#93c5fd}
 .talkInput{display:flex;gap:8px}
+.talkEndButton{width:100%;justify-content:center}
 .talkInput input{flex:1;min-width:0;border:1px solid #cfe0f5;border-radius:9px;padding:10px 12px;font-size:13px;background:#fff}
 .combatBars{display:flex;flex-direction:column;gap:8px}
 .combatBar{display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:9px;font-size:12px}
@@ -645,7 +630,6 @@
 .battleLines li.lose{font-weight:800;color:#475569;background:#f1f5f9}
 .talkSuggestions button{display:inline-flex;align-items:center;gap:7px}
 .talkSuggestions .gmChoiceNumber{width:20px;height:20px;font-size:11px;background:#dbeafe;color:#1d4ed8}
-.miniMapPin.current{pointer-events:none}
 /* Visual-novel style talk: spotlight, idle breathing, gesture motions, typewriter */
 .sceneNpc{transition:opacity .35s,filter .35s,transform .35s}
 .sceneNpcBody{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
@@ -737,7 +721,7 @@
 .battleBody{align-items:stretch}
 .battleReact{height:100%}
 .battleHp{position:relative;z-index:4}
-.sceneBattleMode .sceneLocation{display:none}
+.sceneBattleMode .sceneTopBar{display:none}
 /* Narration inside a conversation reads like stage directions, not speech */
 .talkScene{margin:2px 8%;padding:6px 10px;text-align:center;font-size:12.5px;line-height:1.7;font-style:italic;color:#64748b;border-top:1px dashed #d6e2f1;border-bottom:1px dashed #d6e2f1;white-space:pre-wrap;overflow-wrap:anywhere}
 .talkThreadLog .talkScene{margin:2px 0;font-size:12px}
@@ -812,13 +796,15 @@
 .partyLeaveLink{border:0;background:none;padding:0;color:#9ca3af;font:inherit;font-size:11px;text-decoration:underline;cursor:pointer}
 .partyLeaveLink:hover{color:#6b7280}
 /* Companions fight beside the player in the battle stage. */
-.battleAllyRow{position:absolute;left:-6%;bottom:4%;z-index:2;display:flex;flex-direction:column;gap:6px}
-.battleAlly{margin:0;display:flex;flex-direction:column;align-items:center;gap:2px}
-.battleAlly img,.battleAlly>svg{width:54px;height:66px;object-fit:cover;object-position:50% 12%;border-radius:10px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
-.battleAlly figcaption{max-width:64px;padding:0 2px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.8);font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Companions stand full-body at the player's front-left, a little smaller; the player steps right to make room. */
+.battleAllyRow{position:absolute;left:-10%;bottom:0;height:60%;z-index:2;display:flex;flex-direction:row;align-items:flex-end;pointer-events:none}
+.battlePlayer:has(.battleAllyRow) .battleBody{position:relative;left:14%}
+.battleAlly{margin:0;height:100%;display:flex;flex-direction:column-reverse;justify-content:flex-end;align-items:center;gap:2px}.battleAlly+.battleAlly{margin-left:-40px}
+.battleAlly img{height:calc(100% - 16px);width:auto;max-width:none;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55)) }.battleAlly>svg{width:54px;height:66px;color:#fff}
+.battleAlly figcaption{max-width:110px;padding:0 2px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 2px rgba(0,0,0,.8);font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .battleAllyHit img{animation:allyStrike .55s ease-out .25s}
 @keyframes allyStrike{0%{transform:translateX(0)}40%{transform:translateX(26px) scale(1.08)}100%{transform:translateX(0)}}
-@media(max-width:520px){.battleAlly img,.battleAlly>svg{width:40px;height:50px}}
+@media(max-width:520px){.battleAllyRow{height:60%}.battleAlly>svg{width:40px;height:50px}}
 @media (prefers-reduced-motion:reduce){.battleAllyHit img{animation:none}}
 .relationshipDetails .partyJoined{color:#fff;font-size:11.5px}
 .npcLevelTag{margin-left:6px;padding:0 6px;border-radius:5px;background:#ece8fb;color:#5b3fb8;font-size:10.5px;font-style:normal;font-weight:800;vertical-align:middle}
@@ -907,12 +893,6 @@ button.gearSlot:disabled{cursor:default}
 .repBurst.itemBurst b{font-size:26px}
 .itemBurstSkill{font-weight:600!important;color:#7c2d12;max-width:320px;text-align:center}
 .repBurst.awakenBurst{background:linear-gradient(#fffbea,#fde68a);border-color:#eab308;color:#713f12}.repBurst.awakenBurst svg,.repBurst.awakenBurst b{color:#ca8a04}
-.gmChoiceTest{margin-top:14px;opacity:.75;border-color:#e6d3b3;background:#fffaf2}.gmChoiceTest:focus-within{opacity:1}.gmChoiceTestTag{font-size:11px;font-weight:700;color:#a8762a;background:#fbecd2;border-radius:6px;padding:3px 7px;white-space:nowrap}
-.equipOffer p{margin:0 0 10px;font-size:14px;line-height:1.5}
-.equipOfferCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;text-align:left}
-.equipOfferCards small{font-size:11px;font-weight:700;color:#6b5b45}
-.equipOfferCards .itemCard{margin-top:4px}
-.equipOfferButtons{display:flex;gap:8px;justify-content:center;margin-top:12px}
 .diceRollModal{min-width:min(340px,calc(100vw - 32px))}
 .diceRollModal h2{display:flex;align-items:center;justify-content:center;gap:8px}
 .diceNeed{display:flex;justify-content:center;gap:14px;font-size:13px;color:#596477}.diceNeed b{font-size:16px;color:#d9505d}
@@ -949,17 +929,14 @@ button.gearSlot:disabled{cursor:default}
 /* Play map camera (mapCamera in page.tsx): the map is zoomed around the player and slides under a fixed marker.
    Only places reachable from here are shown; pins and the marker keep their size. */
 .stageMapFrame.stageMapFollow{transform-origin:0 0;transition:transform .6s cubic-bezier(.3,.7,.3,1)}
-.stageMapFollow .miniMapPin{transform:translate(-50%,-50%) scale(calc(1 / var(--mapZoom,1)))}
-.stageMapFollow .miniMapPin.far{display:none}
 /* The marker: bigger, outlined and glowing so it stands out on any map, bobbing up and down. It uses the separate
    translate/scale properties so the bob (translate) and the zoom counter-scale (scale) do not override each other. */
 .stageMapFollow .miniMapPlayer{width:58px;height:68px;transform:none;transform-origin:50% 95%;translate:-50% -95%;scale:calc(1 / var(--mapZoom,1));
   filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 3px 5px rgba(0,0,0,.85)) drop-shadow(0 0 10px rgba(56,189,248,.9));
   animation:stageMarkerBob 1.4s ease-in-out infinite}
 @keyframes stageMarkerBob{0%,100%{translate:-50% -95%}50%{translate:-50% -112%}}
-.stageMapFollow .miniMapPin.current i{width:18px;height:18px;background:#38bdf8;border-color:#fff;box-shadow:0 0 0 5px rgba(56,189,248,.35),0 0 14px rgba(56,189,248,.9);animation:stageHerePulse 1.4s ease-in-out infinite}
 @keyframes stageHerePulse{0%,100%{box-shadow:0 0 0 4px rgba(56,189,248,.4),0 0 12px rgba(56,189,248,.8)}50%{box-shadow:0 0 0 10px rgba(56,189,248,0),0 0 18px rgba(56,189,248,1)}}
-@media(prefers-reduced-motion:reduce){.stageMapFollow .miniMapPlayer,.stageMapFollow .miniMapPin.current i{animation:none}}
+@media(prefers-reduced-motion:reduce){.stageMapFollow .miniMapPlayer{animation:none}}
 .mapMissingPins{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 10px;padding:10px 14px;border:1px solid rgba(245,158,11,.55);border-radius:10px;background:rgba(245,158,11,.1);font-size:13px;line-height:1.5}
 .mapMissingPins strong{color:#f59e0b}
 /* Affection sign: up/positive green, down/negative red (beats the attitude tier colours). */
@@ -990,8 +967,8 @@ button.gearSlot:disabled{cursor:default}
 .introArt img{width:100%;height:100%;object-fit:cover;filter:brightness(.62) saturate(1.2);animation:introZoom var(--intro,2.4s) ease-out both}
 .introArt::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,20,.94) 22%,rgba(5,7,20,.35) 62%,transparent),linear-gradient(0deg,rgba(5,7,20,.85),transparent 42%)}
 .introArtCover img{filter:blur(16px) brightness(.5) saturate(1.3)}
-.introCover{position:absolute;right:max(7%,calc(50% - 540px));top:0;bottom:0;height:82%;aspect-ratio:2/3;margin:auto 0;overflow:hidden;border:2px solid rgba(253,224,71,.85);border-radius:10px;background:#f3e8e5;box-shadow:0 0 34px rgba(253,224,71,.3),0 18px 46px rgba(0,0,0,.7);animation:introCoverIn .55s cubic-bezier(.16,1,.3,1) .22s both}
-.introCover img{display:block;width:100%;height:100%;object-fit:contain}
+.introCover{position:absolute;right:max(7%,calc(50% - 540px));top:0;bottom:0;height:82%;width:fit-content;max-width:46vw;margin:auto 0;overflow:hidden;border:2px solid rgba(253,224,71,.85);border-radius:10px;background:#f3e8e5;box-shadow:0 0 34px rgba(253,224,71,.3),0 18px 46px rgba(0,0,0,.7);animation:introCoverIn .55s cubic-bezier(.16,1,.3,1) .22s both}
+.introCover img{display:block;height:100%;width:auto;max-width:100%;object-fit:cover}
 .introCover::after{content:'';position:absolute;inset:-20% -60%;background:linear-gradient(105deg,transparent 44%,rgba(255,255,255,.5) 50%,transparent 56%);transform:translateX(-60%);animation:introCoverShine .9s ease-in-out .95s forwards}
 .introTitle{position:absolute;left:max(6%,calc(50% - 580px));top:50%;display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:min(50vw,560px);transform:translateY(-50%)}
 .introTitle small{padding:3px 14px;background:#fde047;color:#111827;font-size:clamp(12px,2vmin,16px);font-weight:900;letter-spacing:.24em;transform:skewX(-12deg);animation:introRise .4s cubic-bezier(.16,1,.3,1) .3s both}
@@ -1011,7 +988,7 @@ button.gearSlot:disabled{cursor:default}
 @keyframes introFlash{0%{opacity:0}35%{opacity:.85}100%{opacity:0}}
 @media(max-aspect-ratio:1/1){
   .introArt::after{background:linear-gradient(0deg,rgba(5,7,20,.96) 26%,rgba(5,7,20,.2) 62%,transparent)}
-  .introCover{left:0;right:0;top:5%;bottom:auto;height:auto;width:min(68vw,56vh);margin:0 auto}
+  .introCover{left:0;right:0;top:5%;bottom:auto;height:auto;width:min(68vw,56vh);max-width:none;margin:0 auto}.introCover img{width:100%;height:auto;max-height:56vh}
   .introTitle{left:6%;top:auto;bottom:6%;width:88%;transform:none}
 }
 .sceneArrive{animation:sceneArrive 1.8s cubic-bezier(.2,.8,.2,1)}
@@ -1172,29 +1149,49 @@ button.gearSlot:disabled{cursor:default}
 .sceneBody>*{flex:none}
 .sceneBody:has(>.talkPanel){overflow:hidden}
 .sceneStage.sceneMapMode+.sceneBody{flex-basis:110px}
-.sceneTextTop{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;margin-bottom:2px}
-.sceneTextTop h2{display:flex;align-items:center;gap:6px;margin:0;font-size:14px}
-.sceneTextTop h2 svg{color:#f26861}
-.sceneTextTop>div{display:flex;gap:6px;margin-left:auto}
-.sceneTextBtn{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid #e2e4e8;border-radius:7px;background:#fff;color:#444b56;font-size:11px;cursor:pointer}
-.sceneTextBtn:hover{background:#f4f6f9}
-.sceneTextBtn .flipped{transform:rotate(180deg)}
-.sceneProse.folded{max-height:3.4em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 40%,transparent);mask-image:linear-gradient(#000 40%,transparent)}
-.scenePast{max-height:30vh;overflow-y:auto;margin-bottom:10px;padding:4px 10px 4px 0;border-bottom:1px solid #edf0f4}
-.sceneMine{margin:6px 0;padding-left:10px;border-left:3px solid #ee7770;font-size:13px;color:#6b4743}
-.sceneText .storyNarration{margin:0 0 3px;font-size:13px;line-height:1.55}
-.sceneText .storySpeech{margin:2px 0 4px;padding:3px 10px;font-size:13px;line-height:1.5}
-.sceneText .storyHeading{margin:0 0 3px}
-.playScenePanel .gmChoices{gap:4px;padding:6px 0 0;border-top:1px solid #edf0f4}
-.gmChoicesHeading{margin:0;font-size:12px}.gmChoicesHeading strong{display:flex;align-items:center;gap:5px}.gmChoicesHeading strong svg{color:#f26861}
+.playScenePanel .gmChoices{gap:4px;padding:6px 0 0;border-top:0}
 .playPage .gmChoiceButton{gap:8px;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:600;line-height:1.35}
 .playPage .gmChoiceButton .gmChoiceNumber{width:20px;height:20px;font-size:11px}
 .playPage .gmChoiceButton>.gmChoiceOwnTag{flex:none;padding:1px 8px;border:1px solid #e5e9ef;border-radius:6px;font-size:12px;font-weight:700}
 .playPage .gmChoiceOwn input{font-size:13px;font-weight:500}
+/* Visual-novel layout: the stage always takes the whole height (never resizes); choices, encounters and talks float over its bottom. NPCs stand behind the box, z-index 5 keeps it above them and below the top bar (7). The open map hides the box so its pins stay reachable. */
+@media(min-width:1101px){
+  .playBoard{--bodyH:0px}
+  .playScenePanel{position:relative}
+  /* The stage fills the panel down to its bottom, so the floating boxes never hang below the art. */
+  .sceneStage{flex:1 1 auto}
+  .sceneBody{position:absolute;z-index:5;left:50%;bottom:14px;transform:translateX(-50%);width:min(760px,82%);max-height:60%;padding:0;border:0;background:transparent}
+  /* The talk box sits where the choices do and grows with the conversation, up to 46% of the stage. */
+  .sceneBody:has(>.talkPanel){max-height:46%}
+  .sceneBody>.talkPanel{flex:0 1 auto;border-radius:12px}
+  .playPage .sceneBody .talkPanel .talkThread{flex:0 1 auto}
+  .sceneBody:has(>.encounterPanel){bottom:18%}
+  .sceneStage.sceneMapMode+.sceneBody{display:none}
+  /* Characters stand higher so the floating choices and talk box cover their legs, not their faces. */
+  .sceneNpcs{bottom:24%;height:66%}
+  .sceneNpcs.sceneTalking{bottom:34%;height:56%}
+  .sceneThreat{bottom:22%;height:76%}
+  /* Choices over the art: dark glass like the map button, white text, a glowing edge on hover. */
+  .playPage .sceneBody .gmChoices{gap:8px;padding:8px 16px}
+  .playPage .sceneBody .gmChoiceButton{gap:12px;padding:11px 16px;border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(18,20,28,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#f4f5f8;font-size:15.5px;font-weight:600;line-height:1.45;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:background .15s,border-color .15s,box-shadow .15s}
+  .playPage .sceneBody .gmChoiceButton:hover,.playPage .sceneBody .gmChoiceButton:focus-within{background:rgba(28,30,42,.82);border-color:#f5c542;box-shadow:0 0 0 1px rgba(245,197,66,.5),0 0 16px rgba(245,197,66,.4)}
+  .playPage .sceneBody .gmChoiceNumber{width:26px;height:26px;font-size:13px;background:#f5c542;color:#2a2108}
+  .playPage .sceneBody .gmChoiceButton>svg{color:rgba(255,255,255,.55)}
+  .playPage .sceneBody .gmChoiceButton>.gmChoiceOwnTag{border-color:rgba(255,255,255,.3);color:#f5c542}
+  .playPage .sceneBody .gmChoiceOwn input{font-size:15px;color:#fff}
+  .playPage .sceneBody .gmChoiceOwn input::placeholder{color:rgba(255,255,255,.55)}
+}
 .playPage .encounterPanel{padding:8px 10px}.playPage .encounterPanel p{margin:0 0 6px;font-size:13px}
-.playPage .encounterActions{gap:6px}.playPage .encounterAction{flex-direction:row;justify-content:center;padding:8px;font-size:13px}.playPage .encounterAction svg{width:17px;height:17px}
+.playPage .encounterActions{gap:10px}.playPage .encounterAction{flex-direction:row;justify-content:center;gap:9px;padding:14px 10px;font-size:16px;box-shadow:0 3px 10px rgba(0,0,0,.25)}.playPage .encounterAction svg{width:22px;height:22px}
+/* Meeting an NPC: only the three buttons float over the stage, no panel behind them. */
+.playPage .encounterPanel{padding:8px;border:0;background:transparent}
+/* Its buttons share the dark glass of the action choices; icons keep their own hue, brightened for the dark. */
+.playPage .encounterPanel .encounterAction{border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(18,20,28,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#f4f5f8;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:background .15s,border-color .15s,box-shadow .15s}
+.playPage .encounterPanel .encounterAction:hover:not(:disabled),.playPage .encounterPanel .encounterAction:focus-visible{background:rgba(28,30,42,.82);border-color:#f5c542;color:#fff;box-shadow:0 0 0 1px rgba(245,197,66,.5),0 0 16px rgba(245,197,66,.4);outline:none}
+.playPage .encounterPanel .encounterFlee svg{color:#86efac}.playPage .encounterPanel .encounterTalk svg{color:#93c5fd}.playPage .encounterPanel .encounterFight svg{color:#fca5a5}.playPage .encounterPanel .encounterIgnore svg{color:#cbd5e1}
 .playPage .combatPanel{gap:4px;padding:8px 10px}.playPage .talkPanel{gap:6px;padding:8px 10px}
 .diceCheckPanel,.diceCheckResult{margin:0}
+.diceCheckActions{display:flex;gap:8px;flex-wrap:wrap}
 .playPage .talkPanel{flex:1 1 0;min-height:0}
 .playPage .talkPanel .talkThread{flex:1 1 0;max-height:none;min-height:110px}
 .playPage .playLogPanel{grid-area:side;min-height:0;padding:12px;gap:10px}
@@ -1204,9 +1201,15 @@ button.gearSlot:disabled{cursor:default}
 /* The talk box is short and scrolls to the newest line, so how the NPC knows stays pinned on top instead of scrolling away. */
 .playPage .talkPanel .talkThread .talkCue{position:sticky;top:0;z-index:1;flex:none;align-self:stretch;max-width:none;padding:5px 12px;text-align:left;border:1px solid #e2c98f;border-radius:9px;background:#fff8e6;color:#7a5a12;font-weight:600}
 .sideTabs button,.characterTabs button{position:relative}
-.newDot{position:absolute;top:4px;right:6px;width:9px;height:9px;border:1.5px solid #fff;border-radius:50%;background:#ef4444;animation:newDotPulse 1.5s ease-out infinite}
-@keyframes newDotPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.55)}70%,100%{box-shadow:0 0 0 7px rgba(239,68,68,0)}}
-@media(prefers-reduced-motion:reduce){.newDot{animation:none}}
+/* The dot pops in, then beats like a heart while a ring ripples out from it. */
+.newDot{position:absolute;top:-5px;right:-5px;width:17px;height:17px;display:grid;place-items:center;border:1.5px solid #fff;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff9a8f,#ef4444 60%,#c81e1e);box-shadow:0 0 7px rgba(239,68,68,.85);animation:newDotPop .45s cubic-bezier(.34,1.8,.64,1) both,newDotBeat 1.6s ease-in-out .45s infinite}
+.newDot::after{content:"";position:absolute;inset:-1.5px;border:2px solid #ef4444;border-radius:50%;animation:newDotRing 1.6s ease-out .45s infinite}
+.newDot::before{content:"!";color:#fff;font:900 11px/1 Arial,sans-serif;font-style:normal}
+@keyframes newDotPop{0%{transform:scale(0)}100%{transform:scale(1)}}
+@keyframes newDotBeat{0%,60%,100%{transform:scale(1)}15%{transform:scale(1.3)}30%{transform:scale(.95)}45%{transform:scale(1.15)}}
+@keyframes newDotRing{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.8);opacity:0}}
+@media(prefers-reduced-motion:reduce){.newDot,.newDot::after{animation:none}}
+.sceneLocation{position:relative}
 .sideTabs button.active{background:#ffe8e7;color:#cf4c55}
 .sideInfo,.sideLog{flex:1;min-height:0}
 .sideInfo{overflow-y:auto;padding-right:4px}
@@ -1232,3 +1235,39 @@ details[open]>summary .storyPreview{display:none}
   .playScenePanel{overflow:visible;container-type:normal}.sceneStage{flex:none;aspect-ratio:var(--sceneRatio,1.78)}.sceneBody,.sceneBody:has(>.talkPanel),.sceneStage.sceneMapMode+.sceneBody{flex:none;overflow:visible}.playPage .talkPanel .talkThread{flex:none;max-height:340px}.playPage .playChatPanel .chatLog.storyLog{max-height:480px}
 }
 @media(max-width:520px){.statusWho,.statusVital{flex:1 1 40%}.playPage .gmChoiceButton>.gmChoiceOwnTag{display:none}}
+/* Hovered choices and encounter buttons grow a little. The 8px+ padding around them keeps the growth from adding a scrollbar. */
+.playPage .sceneBody .gmChoiceButton,.playPage .encounterPanel .encounterAction{transition:background .15s,border-color .15s,box-shadow .15s,transform .18s cubic-bezier(.34,1.56,.64,1)}
+.playPage .sceneBody .gmChoiceButton:hover,.playPage .encounterPanel .encounterAction:hover:not(:disabled){transform:scale(1.03)}
+@media(prefers-reduced-motion:reduce){.playPage .sceneBody .gmChoiceButton,.playPage .encounterPanel .encounterAction{transition:none}.playPage .sceneBody .gmChoiceButton:hover,.playPage .encounterPanel .encounterAction:hover:not(:disabled){transform:none}}
+/* The foe's card under a fight/flee choice: the same dark glass as the buttons. */
+.playPage .threatPanel .foeCard{margin:0 0 8px;padding:8px 10px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(18,20,28,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.playPage .threatPanel .foeDesc{color:#e5e7eb}
+.playPage .threatPanel .foeStats span{background:rgba(255,255,255,.1);color:#cbd5e1}
+.playPage .threatPanel .foeStats span:not([class*=grade]) b{color:#fff}
+.playPage .threatPanel .foeSkill{background:rgba(124,45,18,.55);border-color:rgba(253,186,116,.5);color:#fed7aa}
+/* Name tags sit above the figure, as plain text on the art (no box). */
+.sceneNpc figcaption,.sceneThreat figcaption{order:-1;margin:0 0 4px;padding:0 4px;background:transparent;border-radius:0;color:#fff;font-size:17px;font-weight:800;letter-spacing:.02em;text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7)}
+.sceneThreat figcaption{color:#fecaca}
+/* The board button is as wide as its own text; the location button's width cap (100% - 24px) cut it to "의뢰…". */
+.questBoard>.sceneLocation{max-width:none}
+/* While talking or fighting the board stays in place, dimmed, with its count. */
+.questBoard>.sceneLocation:disabled{opacity:.55}.questBoard>.sceneLocation:disabled>b{display:flex}
+/* Foes' name tags are red; an NPC's follows their affection tier (attitudeTier tones). */
+.sceneThreat figcaption{color:#ff4d4d}
+.sceneNpc figcaption.nameTag-hostile{color:#ff4d4d}
+.sceneNpc figcaption.nameTag-cold{color:#a5b4fc}
+.sceneNpc figcaption.nameTag-neutral{color:#fff}
+.sceneNpc figcaption.nameTag-warm{color:#fde68a}
+.sceneNpc figcaption.nameTag-trust{color:#86efac}
+
+/* Companions on the stage: tap to talk; "!" when a quest step waits on them. */
+.partyStrip{position:absolute;left:20px;top:76px;z-index:8;display:flex;gap:10px}
+.partyTalk{display:flex;flex-direction:column;align-items:center;gap:3px;padding:0;border:0;background:none;color:#fff;font-size:11px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.partyTalk small{display:flex;align-items:center;gap:3px;max-width:84px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px}
+.partyTalkFace{position:relative;display:grid;place-items:center;width:50px;height:50px;border-radius:50%;border:2px solid #fff;background:rgba(15,18,28,.7);box-shadow:0 3px 10px rgba(0,0,0,.5);overflow:visible}
+.partyStrip .partyTalkFace img{display:block;width:46px;height:46px;max-width:none;max-height:none;border-radius:50%;object-fit:cover;object-position:50% 14%}
+.partyTalk:hover .partyTalkFace,.partyTalk:focus-visible .partyTalkFace{border-color:#facc15;transform:scale(1.06)}
+.partyTalkDue{position:absolute;top:-5px;right:-5px;display:inline-grid;place-items:center;width:19px;height:19px;border:2px solid #fff;border-radius:50%;background:linear-gradient(180deg,#ff6b6b,#e11d48);color:#fff;font-size:12px;font-style:normal;font-weight:900;line-height:1;animation:freshBounce 1.1s ease-in-out infinite}
+.partyTalkLink{display:inline-flex;align-items:center;gap:3px;position:relative;margin-left:auto;padding:3px 9px;border:1px solid #cfe0f5;border-radius:999px;background:#fff;color:#2563eb;font-size:11px;font-weight:700}
+.partyTalkLink .partyTalkDue{position:static;width:16px;height:16px;font-size:10px;margin-left:2px}
+@media (prefers-reduced-motion:reduce){.partyTalkDue{animation:none}}

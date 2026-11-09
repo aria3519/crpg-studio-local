@@ -112,11 +112,11 @@ export const isDangerous = (genre: string, place: string) => rosterOf(genre).dan
 // Random ambush on arrival: only non-boss foes that live there, and nothing far beyond the player's level.
 // recent: foes fought lately (newest first); they are skipped while anything else fits, so fights don't repeat.
 export const ENCOUNTER_CHANCE = 0.4;
-export const pickEncounter = (genre: string, place: string, playerLevel: number, rand = Math.random, recent: string[] = []): Foe | undefined => {
+export const pickEncounter = (genre: string, place: string, playerLevel: number, rand = Math.random, recent: string[] = [], banned: string[] = []): Foe | undefined => {
   const roster = rosterOf(genre);
   const tags = Object.entries(roster.habitats).filter(([, re]) => re.test(place)).map(([tag]) => tag);
-  const local = roster.foes.filter(f => !f.boss && f.habitat.some(h => tags.includes(h)));
-  const pool = local.length ? local : roster.foes.filter(f => !f.boss && f.power <= 3);
+  const local = roster.foes.filter(f => !f.boss && !banned.includes(f.name) && f.habitat.some(h => tags.includes(h)));
+  const pool = local.length ? local : roster.foes.filter(f => !f.boss && !banned.includes(f.name) && f.power <= 3);
   // Foes whose level range starts at most a few levels above the player (they are met near the player's level, see
   // encounterLevel); those whose range covers the player are the most common.
   const gapOf = (f: Foe) => { const [min, max] = foeLevelRange(f.power, f.boss); return playerLevel < min ? min - playerLevel : playerLevel > max ? playerLevel - max : 0; };

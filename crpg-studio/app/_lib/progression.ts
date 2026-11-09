@@ -27,9 +27,11 @@ export const levelBonus = (level: number) => {
   const l = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)));
   return { hp: Math.round(100 * (Math.pow(1.028, l - 1) - 1)), hit: 0, damage: Math.round(4 * (Math.pow(1.03, l - 1) - 1)), dodge: 0 };
 };
-// The modifiers of the player a level brings: fighting stat 13 at Lv.1 growing a point a level, agility 11 growing half.
+// The modifiers of the player a level brings: fighting stat 13 at Lv.1, agility 11 growing half a point a level.
+// The fighting stat grows 2.5 a level: growStats hands out 3 points a level and the most-used stat takes at least half
+// (a fighter's strength went 15 → 40 by Lv.10, and foes built for a point a level died in two blows).
 const statMod = (score: number) => Math.floor((score - 10) / 2);
-export const expectedMods = (level: number) => ({ attack: statMod(13 + (level - 1)), agility: statMod(11 + Math.floor((level - 1) / 2)) });
+export const expectedMods = (level: number) => ({ attack: statMod(13 + Math.round(2.5 * (level - 1))), agility: statMod(11 + Math.floor((level - 1) / 2)) });
 
 // Rounds an even fight takes: the player needs ENEMY_ROUNDS to fell an ordinary foe (a little more at high level),
 // the foe PLAYER_ROUNDS to fell the player. Bosses carry more health and hit harder.
