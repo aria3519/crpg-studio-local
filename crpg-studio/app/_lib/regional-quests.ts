@@ -130,7 +130,7 @@ export const REGION_QUESTS: RegionQuest[] = [
   { id: 'as-board-thugs', genre: 'fantasy', kind: 'board', region: ['아스테라'], title: '대시장 뒷골목 정리', giver: '카시아',
     hook: '의뢰: 대시장 뒷골목에서 상인들을 뜯는 패거리 정리. 의뢰인 이름은 묻지 말 것.',
     steps: [{ q: '왕도 대시장 뒷골목 불량배 소탕하기', beats: [
-        { do: 'defeat', foe: '뒷골목 불량배', at: ['왕도 대시장'], then: '자릿세를 걷던 몽둥이 패거리가 흩어지고, 셔터를 내렸던 노점들이 다시 문을 연다' },
+        { do: 'defeat', foe: '뒷골목 불량배', at: ['왕도 대시장'], then: '자릿세를 걷던 몽둥이 패거리가 흩어지고, 덧문을 내렸던 노점들이 다시 문을 연다' },
       ] }] },
   { id: 'as-board-familiar', genre: 'fantasy', kind: 'board', region: ['아스테라'], title: '사라진 사역마', giver: '리오네 아스크',
     hook: '의뢰: 검은 고양이 사역마를 찾아 주실 분. 다치지 않게 데려오면 사례함. — 마탑 3서클 리오네',

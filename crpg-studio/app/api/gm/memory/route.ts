@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       '이와 별도로, newLogEntries에서 이야기 끝까지 영향을 줄 중요한 사실만 골라 pinned 배열에 새로 넣으세요: 막·대사건의 결과, 인물의 죽음·배신·합류·적대, 밝혀진 흑막·비밀, 플레이어의 큰 결정과 맺은 약속, 얻거나 잃은 중요한 물건, 세력과의 관계 변화. 한 줄에 사실 하나, 100자 이내. alreadyPinned에 이미 있는 사실은 다시 쓰지 말고, 사소한 일이면 빈 배열로 두세요. alreadyPinned의 사실은 영구 보존되므로 summary에서는 짧게 줄여도 됩니다.',
       'summary는 전체 6000자 이내. 다음 JSON 객체만 반환하세요: {"summary":"갱신된 장기 기억","pinned":["새 핵심 사실"]}',
     ].join('\n\n');
-    const payload = { model: process.env.OPENAI_MEMORY_MODEL || process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.2,
+    const payload = { model: process.env.OPENAI_MEMORY_MODEL || process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini',
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: system },

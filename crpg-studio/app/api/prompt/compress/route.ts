@@ -13,7 +13,7 @@ export async function POST(request:Request){
   let feedback='';
   let prompt='';
   for(let attempt=0;attempt<2;attempt++){
-  const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_PROMPT_MODEL||process.env.OPENAI_GM_MODEL||'gpt-4.1-mini',temperature:0.25,max_completion_tokens:12500,response_format:{type:'json_object'},messages:[{role:'system',content:instructions},{role:'user',content:JSON.stringify({genre:String(body.genre||'').slice(0,150),original,sectionTitles:sections.map(s=>s.title),revisionFeedback:feedback})}] }),signal:AbortSignal.timeout(110000),cache:'no-store'});
+  const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_PROMPT_MODEL||process.env.OPENAI_GM_MODEL||'gpt-4.1-mini',max_completion_tokens:12500,response_format:{type:'json_object'},messages:[{role:'system',content:instructions},{role:'user',content:JSON.stringify({genre:String(body.genre||'').slice(0,150),original,sectionTitles:sections.map(s=>s.title),revisionFeedback:feedback})}] }),signal:AbortSignal.timeout(110000),cache:'no-store'});
   const result=await response.json();
   if(!response.ok)return NextResponse.json({error:result?.error?.message||'AI 압축 호출 실패'},{status:502});
   const parsed=JSON.parse(result?.choices?.[0]?.message?.content||'{}');

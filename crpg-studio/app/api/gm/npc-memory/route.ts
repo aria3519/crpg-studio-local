@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     ].join('\n');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: process.env.OPENAI_MEMORY_MODEL || process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', temperature: 0.2, response_format: { type: 'json_object' },
+      body: JSON.stringify({ model: process.env.OPENAI_MEMORY_MODEL || process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini', response_format: { type: 'json_object' },
         messages: [{ role: 'system', content: system }, { role: 'user', content: JSON.stringify({ previousMemory: previous, newRecords: lines }) }] }),
       cache: 'no-store', signal: AbortSignal.timeout(25000),
     });

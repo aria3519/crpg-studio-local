@@ -1,0 +1,310 @@
+{
+ "hand-written: quiet scene with three choices": {
+  "newLog": [
+   "GM: 【모험가 길드 레븐홀트 지부 · 낮】\n\n브리아가 장부를 덮고 당신을 훑어본다.\n\n\"새 얼굴이군.\""
+  ],
+  "hp": 100,
+  "gold": 0,
+  "reputation": 0,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지"
+  ],
+  "threat": null,
+  "people": [
+   "브리아 길드 지부장 5"
+  ],
+  "sceneNpcs": [
+   "브리아"
+  ],
+  "choices": [
+   "장부를 슬쩍 들여다본다.",
+   "늑대 의뢰를 맡겠다고 한다.",
+   "길드를 나선다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": false
+ },
+ "hand-written: gold, reputation and an item": {
+  "newLog": [
+   "GM: 【모험가 길드 레븐홀트 지부 · 낮】\n\n브리아가 은화 서른 닢과 낡은 지도를 내민다.",
+   "시스템: 명성 +40 (40 · 무명)",
+   "시스템: 골드 +30 (보유 30)",
+   "시스템: 획득 — 낡은 지도",
+   "시스템: 경험치 +43 (성장)"
+  ],
+  "hp": 100,
+  "gold": 30,
+  "reputation": 40,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지",
+   "낡은 지도"
+  ],
+  "level": 1,
+  "xp": 43,
+  "threat": null,
+  "people": [],
+  "sceneNpcs": [],
+  "choices": [
+   "지도를 펼친다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": false
+ },
+ "hand-written: hurt, and a new person who is in the text": {
+  "newLog": [
+   "GM: 【모험가 길드 레븐홀트 지부 · 낮】\n\n주먹이 옆구리에 꽂힌다. 그 틈에 넬이 화살로 불량배의 소매를 벽에 박는다.",
+   "시스템: HP 100 → 80"
+  ],
+  "hp": 80,
+  "gold": 0,
+  "reputation": 0,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지"
+  ],
+  "threat": null,
+  "people": [
+   "넬 구해 준 궁수 10"
+  ],
+  "sceneNpcs": [
+   "넬"
+  ],
+  "choices": [
+   "넬에게 고맙다고 한다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": false
+ },
+ "hand-written: a goal finished and a new one added": {
+  "newLog": [
+   "GM: 【모험가 길드 레븐홀트 지부 · 낮】\n\n에드리아가 고개를 끄덕인다. \"합격이다. 다음은 진흙 골목이다.\"",
+   "시스템: 목표 완료 — 기사단장 에드리아의 입단 시험 통과하기",
+   "시스템: 명성 +150 (150 · 신참)",
+   "시스템: 골드 +50 (보유 50)",
+   "시스템: 새 목표 — 진흙 골목의 장물아비 찾기",
+   "시스템: 경험치 +115 (퀘스트 완료)",
+   "시스템: 레벨 업! Lv.1 → Lv.2 · 최대 HP 100 → 103 · HP·마나 모두 회복",
+   "시스템: 성장: 근력 +1, 지능 +1, 마나 +3",
+   "시스템: 획득 — [일반] 무딘 기사 흉갑"
+  ],
+  "hp": 103,
+  "gold": 50,
+  "reputation": 150,
+  "quests": [
+   "진흙 골목의 장물아비 찾기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지",
+   "무딘 기사 흉갑"
+  ],
+  "level": 2,
+  "xp": 55,
+  "threat": null,
+  "people": [
+   "에드리아 하르트 기사단장 10"
+  ],
+  "sceneNpcs": [],
+  "choices": [
+   "진흙 골목으로 간다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": {
+   "quests": [
+    {
+     "name": "기사단장 에드리아의 입단 시험 통과하기",
+     "giver": "",
+     "main": false
+    }
+   ],
+   "xp": 115,
+   "reputation": 150,
+   "total": 150,
+   "items": [
+    "무딘 기사 흉갑"
+   ],
+   "levelFrom": 1,
+   "levelTo": 2
+  },
+  "levelBurst": null,
+  "major": true
+ },
+ "hand-written: paying more than the purse holds": {
+  "newLog": [
+   "GM: 【모험가 길드 레븐홀트 지부 · 낮】\n\n핍이 동전을 세며 웃는다."
+  ],
+  "hp": 100,
+  "gold": 0,
+  "reputation": 0,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지"
+  ],
+  "threat": null,
+  "people": [],
+  "sceneNpcs": [],
+  "choices": [
+   "정보를 묻는다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": false
+ },
+ "hand-written: drinking a potion": {
+  "newLog": [
+   "GM: 【모험가 길드 레븐홀트 지부 · 낮】\n\n쓴맛과 함께 상처가 아문다.",
+   "시스템: 사용 — 하급 치유 물약 · HP 40 → 70",
+   "시스템: 따뜻한 국물 한 모금에 기운이 조금 돌아왔습니다 · HP 70 → 76"
+  ],
+  "hp": 76,
+  "gold": 0,
+  "reputation": 0,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "잿빛 갈매기 인장 반지"
+  ],
+  "threat": null,
+  "people": [],
+  "sceneNpcs": [],
+  "choices": [
+   "다시 길을 나선다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": false
+ },
+ "hand-written: a monster named in town brings no ambush": {
+  "newLog": [
+   "GM: 【모험가 길드 레븐홀트 지부 · 낮】\n\n멀리서 늑대 울음이 들린다."
+  ],
+  "hp": 100,
+  "gold": 0,
+  "reputation": 0,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지"
+  ],
+  "threat": null,
+  "people": [],
+  "sceneNpcs": [],
+  "choices": [
+   "성문으로 간다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": false
+ },
+ "hand-written: the scene stops where a talk begins (encounter panel, purpose kept)": {
+  "newLog": [
+   "GM: 【북문 초소 · 낮】\n\n차례가 오자 당신은 에드리아 하르트 앞에 선다. 그녀가 당신의 낡은 검을 내려다본다."
+  ],
+  "hp": 100,
+  "gold": 0,
+  "reputation": 0,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지"
+  ],
+  "threat": null,
+  "people": [],
+  "sceneNpcs": [
+   "에드리아 하르트"
+  ],
+  "choices": [
+   "레븐홀트 주변을 살펴본다.",
+   "주변 사람에게 이 지역에 대해 물어본다.",
+   "현재 장소에서 할 수 있는 일을 알아본다.",
+   "아무도 하지 않을 법한 엉뚱한 방법으로 주변의 단서를 찾아본다."
+  ],
+  "talkPurpose": {
+   "npc": "에드리아 하르트",
+   "action": "에드리아에게 입단 시험을 신청한다."
+  },
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": false
+ },
+ "hand-written: a typed action off the choices makes the director read the turn": {
+  "newLog": [
+   "GM: 【북문 초소 · 낮】\n\n당신은 성벽 계단을 오른다."
+  ],
+  "hp": 100,
+  "gold": 0,
+  "reputation": 0,
+  "quests": [
+   "기사단장 에드리아의 입단 시험 통과하기"
+  ],
+  "inventory": [
+   "낡은 롱소드",
+   "하급 치유 물약",
+   "잿빛 갈매기 인장 반지"
+  ],
+  "threat": null,
+  "people": [],
+  "sceneNpcs": [],
+  "choices": [
+   "내려간다."
+  ],
+  "talkPurpose": null,
+  "notice": null,
+  "repBurst": null,
+  "questClear": null,
+  "levelBurst": null,
+  "major": true
+ }
+}

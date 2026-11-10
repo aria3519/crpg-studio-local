@@ -114,7 +114,6 @@
 .storySystem .storyEntryLabel{color:#7d8998}
 .storyEvent{padding:12px 15px;margin:8px 0;border-left:3px solid #8e9fbe;background:#f6f8fc;border-radius:0 8px 8px 0;font-size:13px;line-height:1.8}
 .storyEvent .storyEntryLabel{color:#607494}
-.storyLoading{color:#87909e;font-style:italic}
 .storyMore{align-self:center;margin:4px auto 10px;font-size:12px}
 .storyLog .storyEntryText{white-space:pre-wrap}
 .storyLog .storyGM .storyEntryText,.storyLog .storyEvent .storyEntryText{white-space:normal}
@@ -472,7 +471,6 @@
 .sceneFallback{background:linear-gradient(160deg,#3a3f4f,#1f2430)}
 .sceneTopBar{position:absolute;top:12px;left:12px;right:12px;z-index:7;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;pointer-events:none}
 .sceneTopBar>*{pointer-events:auto}
-.questBoard .questBoardList{width:min(420px,calc(100vw - 48px));max-height:45vh;overflow-y:auto}
 .sceneLocation{display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:4px 4px 4px 11px;border:1px solid rgba(255,255,255,.22);border-radius:20px;background:rgba(20,22,30,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;font:inherit;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:background .15s,border-color .15s}
 .sceneLocation>svg{flex:0 0 auto;color:#f5c542}
 .sceneLocation>span{overflow:hidden;text-overflow:ellipsis}
@@ -501,14 +499,6 @@
 .gmChoiceButton.gmChoiceWild .gmChoiceNumber{background:#ede7ff;color:#6d4fd8}
 .gmChoiceTag{flex-shrink:0;font-style:normal;font-size:10px;font-weight:700;color:#6d4fd8;background:#ede7ff;border-radius:10px;padding:3px 7px}
 .sceneInteract{align-self:flex-start}
-.questBoard{display:flex;flex-direction:column;gap:8px;align-self:stretch}
-.questBoardList{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid #e3d7bd;border-radius:10px;background:#fbf7ee}
-.questBoardItem{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #eee4cf}
-.questBoardItem strong{display:block;font-size:13px}
-.questBoardItem small{font-size:11px;color:#8a94a6}
-.questBoardItem p{margin:4px 0 0;font-size:12px;line-height:1.5;color:#4b5563}
-.questBoardItem .btn{flex-shrink:0}
-.questBoardFull{margin:0;font-size:12px;color:#b45309}
 .pinBackgroundPreview{display:block;width:100%;max-height:180px;object-fit:cover;border-radius:9px;margin-top:10px;border:1px solid #e4e6ea}
 .pinBackgroundRemove{margin-top:8px}
 @media(max-width:520px){.sceneNpc{flex-basis:40%}}
@@ -678,7 +668,7 @@
 .battleBody,.battleReact{flex:1;min-height:0;width:100%;display:flex;align-items:flex-end;justify-content:center;transform-origin:50% 100%}
 .battleBody img,.battleReact img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.6))}
 .battleHp{width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center;margin-bottom:6px;padding:4px 8px;border-radius:8px;background:rgba(10,12,18,.62);color:#fff;font-size:11px;font-weight:700}
-.battleHp span{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.battleHp span{white-space:nowrap}
 .battleHp div{height:8px;border-radius:8px;background:rgba(255,255,255,.18);overflow:hidden}
 .battleHp i{display:block;height:100%;border-radius:8px;transition:width .4s}
 .battlePlayer .battleHp i{background:linear-gradient(90deg,#f87171,#dc2626)}
@@ -715,7 +705,7 @@
 .playerPortraitPreview img{max-width:100%;max-height:100%;object-fit:contain}
 .playerPortraitActions{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
 .playerPortraitActions .uploadBox{margin-top:0;cursor:pointer}
-@media(max-width:520px){.battleSide{width:44%}.battleHp span{max-width:44px}}
+@media(max-width:520px){.battleSide{width:44%}}
 @media(prefers-reduced-motion:reduce){.sceneBattleMode,.battleLungeRight,.battleLungeLeft,.battleHit,.battleCrit,.battleDodge,.battleSlash{animation:none!important}.battlePop{animation:none;opacity:1}.battleDown{animation:none;opacity:.25}}
 /* keep fighters inside their column so the health bars stay visible */
 .battleBody{align-items:stretch}
@@ -735,6 +725,8 @@
 .questCard p{margin:0;grid-column:2;font-size:12.5px;font-weight:600;line-height:1.5;color:#3b2a14;overflow-wrap:anywhere}
 .questCard small{grid-column:2;font-size:10.5px;color:#a07a45}
 .questBadge{grid-row:1/3;align-self:center;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#d4952b;color:#fff;font-size:10.5px;font-weight:800;white-space:nowrap}
+.questLog .questCard{grid-template-columns:1fr}.questLog .questCard p,.questLog .questCard small{grid-column:1}
+.questLog .questOpen{border-left-color:#c9b48e;background:#fffdf8;box-shadow:none}
 .questEmpty{display:block;padding:8px 11px;border:1px dashed #e3d3b5;border-left:1px dashed #e3d3b5;background:none;box-shadow:none;color:#c3ad88;font-size:11.5px;text-align:center}
 /* Party invites from the relationship list; the join bar is hidden, only the answer is shown. */
 .partyButton{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:4px 10px;border:1px solid #c7d7f0;border-radius:7px;background:#f3f7fd;color:#2f5aa0;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
@@ -775,6 +767,9 @@
 @keyframes partyChanceFill{from{width:0}}
 .characterReputation em{font-style:normal;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:6px;background:#c27a1a;color:#fff}
 .characterReputation.infamy em{background:#b4232c}
+.characterReputation.gold{border-color:#e8d48a;background:#fdf8dc;color:#6b5410}
+.characterReputation.gold svg{color:#c9a213}
+.characterReputation.gold b{color:#9c7a00}
 /* Big reputation swings (300+) get a centered fanfare that fades out by itself. */
 .repBurst{position:fixed;left:50%;top:38%;z-index:45;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:20px 34px;border-radius:18px;background:linear-gradient(#fffaf0,#fbe7c4);border:2px solid #e3b65f;box-shadow:0 18px 50px rgba(122,75,18,.35);color:#7a4b12;cursor:pointer;animation:repBurst 3.2s ease-out forwards}
 .repBurst svg{color:#c27a1a}
@@ -1195,6 +1190,7 @@ button.gearSlot:disabled{cursor:default}
 .playPage .talkPanel{flex:1 1 0;min-height:0}
 .playPage .talkPanel .talkThread{flex:1 1 0;max-height:none;min-height:110px}
 .playPage .playLogPanel{grid-area:side;min-height:0;padding:12px;gap:10px}
+.currentGoal{flex:none;margin:0 0 10px;padding:8px 12px;border-radius:9px;background:#fbf1df;color:#3b2a14;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.currentGoal b{color:#7a4b12}
 .sideTabs{flex:none;display:flex;gap:6px;padding-bottom:10px;border-bottom:1px solid #e9edf2}
 .sideTabs button{flex:1;padding:9px 6px;border:0;border-radius:9px;background:#f4f6f9;color:#596579;font-size:14px;font-weight:700;cursor:pointer}
 .sideTabs button:hover{background:#eceff3}
@@ -1202,7 +1198,7 @@ button.gearSlot:disabled{cursor:default}
 .playPage .talkPanel .talkThread .talkCue{position:sticky;top:0;z-index:1;flex:none;align-self:stretch;max-width:none;padding:5px 12px;text-align:left;border:1px solid #e2c98f;border-radius:9px;background:#fff8e6;color:#7a5a12;font-weight:600}
 .sideTabs button,.characterTabs button{position:relative}
 /* The dot pops in, then beats like a heart while a ring ripples out from it. */
-.newDot{position:absolute;top:-5px;right:-5px;width:17px;height:17px;display:grid;place-items:center;border:1.5px solid #fff;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff9a8f,#ef4444 60%,#c81e1e);box-shadow:0 0 7px rgba(239,68,68,.85);animation:newDotPop .45s cubic-bezier(.34,1.8,.64,1) both,newDotBeat 1.6s ease-in-out .45s infinite}
+.newDot{position:absolute;z-index:2;top:-5px;right:-5px;width:17px;height:17px;display:grid;place-items:center;border:1.5px solid #fff;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff9a8f,#ef4444 60%,#c81e1e);box-shadow:0 0 7px rgba(239,68,68,.85);animation:newDotPop .45s cubic-bezier(.34,1.8,.64,1) both,newDotBeat 1.6s ease-in-out .45s infinite}
 .newDot::after{content:"";position:absolute;inset:-1.5px;border:2px solid #ef4444;border-radius:50%;animation:newDotRing 1.6s ease-out .45s infinite}
 .newDot::before{content:"!";color:#fff;font:900 11px/1 Arial,sans-serif;font-style:normal}
 @keyframes newDotPop{0%{transform:scale(0)}100%{transform:scale(1)}}
@@ -1248,10 +1244,6 @@ details[open]>summary .storyPreview{display:none}
 /* Name tags sit above the figure, as plain text on the art (no box). */
 .sceneNpc figcaption,.sceneThreat figcaption{order:-1;margin:0 0 4px;padding:0 4px;background:transparent;border-radius:0;color:#fff;font-size:17px;font-weight:800;letter-spacing:.02em;text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.7)}
 .sceneThreat figcaption{color:#fecaca}
-/* The board button is as wide as its own text; the location button's width cap (100% - 24px) cut it to "의뢰…". */
-.questBoard>.sceneLocation{max-width:none}
-/* While talking or fighting the board stays in place, dimmed, with its count. */
-.questBoard>.sceneLocation:disabled{opacity:.55}.questBoard>.sceneLocation:disabled>b{display:flex}
 /* Foes' name tags are red; an NPC's follows their affection tier (attitudeTier tones). */
 .sceneThreat figcaption{color:#ff4d4d}
 .sceneNpc figcaption.nameTag-hostile{color:#ff4d4d}
@@ -1271,3 +1263,38 @@ details[open]>summary .storyPreview{display:none}
 .partyTalkLink{display:inline-flex;align-items:center;gap:3px;position:relative;margin-left:auto;padding:3px 9px;border:1px solid #cfe0f5;border-radius:999px;background:#fff;color:#2563eb;font-size:11px;font-weight:700}
 .partyTalkLink .partyTalkDue{position:static;width:16px;height:16px;font-size:10px;margin-left:2px}
 @media (prefers-reduced-motion:reduce){.partyTalkDue{animation:none}}
+.busySeconds{font-variant-numeric:tabular-nums;opacity:.7;margin-left:4px}
+/* Visual-novel reader for a new scene (ref/진행기록 예시.jpg): one paragraph at a time over the stage, ▽ to go on. */
+.vnBox{position:absolute;z-index:8;left:0;right:0;bottom:0;padding:44px 6% 48px;background:linear-gradient(180deg,rgba(8,10,16,0) 0%,rgba(8,10,16,.74) 22%,rgba(8,10,16,.9) 100%);color:#f5f6f8}
+.vnBox.vnReady{cursor:pointer}
+.vnBox:focus-visible{outline:2px solid #fde68a;outline-offset:-4px}
+.vnName{font-weight:800;font-size:17px;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.35)}
+.vnText{margin:0;font-size:15.5px;line-height:1.75;white-space:pre-wrap;min-height:7em}
+.vnNext{position:absolute;right:5%;bottom:18px;font-size:16px;animation:vnBlink 1.2s ease-in-out infinite}
+.vnCount{position:absolute;right:calc(5% + 28px);bottom:20px;font-size:11px;opacity:.7}
+.vnSkip{position:absolute;right:5%;top:40px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer}
+.sceneBodyReading{display:none !important}
+@keyframes vnBlink{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(3px)}}
+@media(max-width:520px){.vnBox{padding:28px 5% 36px}.vnName{font-size:15px}.vnText{font-size:14px;min-height:6em}}
+@media(prefers-reduced-motion:reduce){.vnNext{animation:none}}
+.vnNext.vnWait{opacity:.25;animation:none}
+/* Map pins: nearby places are buttons that move there (restored). */
+.miniMapPin{position:absolute;z-index:3;transform:translate(-50%,-50%);border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.miniMapPin i{display:block;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px #0007}
+.miniMapPin span{max-width:88px;padding:1px 5px;border-radius:4px;background:rgba(30,25,20,.82);color:#fff6de;font-size:10px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.miniMapPin.far{cursor:not-allowed}
+.miniMapPin.far i{background:#9aa1ab;opacity:.75}
+.miniMapPin.far span{display:none}
+.miniMapPin.near{cursor:pointer}
+.miniMapPin.near i{background:#f26861;box-shadow:0 0 0 4px rgba(242,104,97,.28),0 1px 4px #0007}
+.miniMapPin.near:hover i,.miniMapPin.near:focus-visible i{transform:scale(1.3)}
+.miniMapPin.near:focus-visible{outline:none}
+.miniMapPin.exit.near i{background:#7c5cff;box-shadow:0 0 0 4px rgba(124,92,255,.28),0 1px 4px #0007}
+.miniMapPin.current{cursor:default;z-index:4;pointer-events:none}
+.miniMapPin.current i{background:#22c55e;width:14px;height:14px}
+.miniMapPin.current span{background:#14532d;border:1px solid #fde68a}
+.miniMapPin[aria-disabled="true"].near{cursor:wait}
+.stageMapFollow .miniMapPin{transform:translate(-50%,-50%) scale(calc(1 / var(--mapZoom,1)))}
+.stageMapFollow .miniMapPin.far{display:none}
+.stageMapFollow .miniMapPin.current i{display:none}
+.diceGain{font-style:normal;font-weight:700;margin-left:4px;opacity:.85;white-space:nowrap}

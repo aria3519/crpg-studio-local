@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "module": "commonjs", "moduleResolution": "node", "target": "es2022", "lib": ["es2022", "dom"],
+    "outDir": "../.test-build", "rootDir": "..", "strict": true, "skipLibCheck": true,
+    "resolveJsonModule": true, "esModuleInterop": true, "types": ["node"]
+  },
+  "files": ["turn.test.ts"]
+}
