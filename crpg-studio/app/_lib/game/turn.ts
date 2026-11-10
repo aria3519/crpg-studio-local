@@ -35,6 +35,9 @@ export function applyReply(game: Game, current: Session, data: any, message: str
   // A roll's numbers are the game's, by its weight; what the writer and the bookkeeper wrote is the story, not the payout.
   const rollPay = diceResult ? checkStakes(diceResult.weight || weightOf(diceResult.dc) || 'normal', current.level || 1, maxHpOf(game, current)) : undefined;
   const rollWon = !!rollPay && !!diceResult?.success;
+  // A failed roll costs, it doesn't finish anything: the bookkeeper closed the entrance exam as done (with its full reward)
+  // on the turn the hero was struck out of it. The goal stays open for another try or another way.
+  if (diceResult && !diceResult.success) data.completedQuests = [];
   if (diceResult && rollPay) { data.goldDelta = 0; data.reputationDelta = 0; data.xpGain = undefined; data.hpDelta = diceResult.success ? 0 : -rollPay.hurt; }
     const delta = Number(data.hpDelta);
     let hp = Number.isFinite(delta) ? Math.max(0, Math.min(maxHpOf(game, current), current.hp + Math.max(-maxHpOf(game, current), Math.min(maxHpOf(game, current), Math.trunc(delta))))) : current.hp;

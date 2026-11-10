@@ -67,7 +67,7 @@ test('weights set DC and pay', () => {
   const g = { ...games[0], wizardMain: '잿빛 문장의 기사' } as Game;
   assert.equal(questWeight(g, '기사단장 에드리아의 입단 시험 통과하기'), 'big');
   assert.equal(questWeight(g, '북문 초소 근무와 보고 절차 확인하기'), 'small');
-  assert.equal(checkDc('small', 1), 8);
+  assert.equal(checkDc('small', 1), 4);
   assert.ok(checkDc('decisive', 99) <= 20);
   assert.ok(checkStakes('decisive', 5, 150).xp > checkStakes('small', 5, 150).xp * 5);
 });
@@ -91,4 +91,12 @@ test('gear refits HP', () => {
   assert.ok(maxHpOf(g, worn) > maxHpOf(g, bare));
   assert.equal(refitHp(g, full, worn), maxHpOf(g, worn));
   assert.equal(refitHp(g, { ...bare, hp: 10 }, worn), 10);
+});
+
+// A failed roll never completes a goal (the exam was marked passed, with its reward, on the turn the hero failed it).
+test('a lost roll finishes no goal', () => {
+  const t0 = turns.find(x => Array.isArray(x.data.completedQuests) && (x.data.completedQuests as unknown[]).length) || turns[0], g = gameOf(t0.gameId);
+  const dice = { ability: 'str', label: '검술 증명', dc: 6, weight: 'normal' as const, die: 1, modifier: 2, total: 3, success: false, critical: '대실패' };
+  const r = applyReply(g, structuredClone(t0.session), structuredClone(t0.data), t0.message, { diceResult: dice });
+  assert.ok(!r.session.log.some(l => l.startsWith('시스템: 목표 완료')));
 });

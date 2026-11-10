@@ -446,7 +446,8 @@ export const QUEST_REPUTATION = 150, QUEST_AFFECTION = 10, QUEST_GOLD = 50;
 // early on are easy and pay little, and the turning points are hard and pay a lot (a straw dummy was a coin flip that paid nothing).
 export type Weight = 'small' | 'normal' | 'big' | 'decisive';
 export const WEIGHT_LABEL: Record<Weight, string> = { small: '작음', normal: '보통', big: '큼', decisive: '결정적' };
-const WEIGHT_DC: Record<Weight, number> = { small: 8, normal: 11, big: 14, decisive: 16 };
+// Early on most rolls should pass (user: "초반엔 왠만하면 통과"): at Lv.1 with +2, small 95%, normal 85%, big 70%, decisive 55%.
+const WEIGHT_DC: Record<Weight, number> = { small: 4, normal: 6, big: 9, decisive: 12 };
 // A weight word (or its label), or an old-style DC number mapped to the nearest weight.
 export const weightOf = (v: unknown): Weight | undefined => {
   const t = String(v ?? '').trim(), w = (Object.keys(WEIGHT_LABEL) as Weight[]).find(k => k === t || t.startsWith(WEIGHT_LABEL[k]));
@@ -454,8 +455,8 @@ export const weightOf = (v: unknown): Weight | undefined => {
   const n = Number(t.match(/\d+/)?.[0]);
   return !n ? undefined : n <= 10 ? 'small' : n <= 13 ? 'normal' : n <= 16 ? 'big' : 'decisive';
 };
-// One DC step per 4 levels on top of the weight, never past 20.
-export const checkDc = (w: Weight, level: number) => Math.min(20, WEIGHT_DC[w] + Math.floor((Math.max(1, level) - 1) / 4));
+// One DC step per 3 levels on top of the weight, never past 20: the turning points late in the story get hard.
+export const checkDc = (w: Weight, level: number) => Math.min(20, WEIGHT_DC[w] + Math.floor((Math.max(1, level) - 1) / 3));
 // xp: share of the level (with earlyBoost); gold: per (level + 1); rep: flat; gear: reward odds (none for small things); hurt: share of max HP a failed roll costs.
 type Stake = { xp: number; gold: number; rep: number; gear: 'main' | 'event' | 'side' | null; hurt: number };
 const CHECK_STAKES: Record<Weight, Stake> = {
