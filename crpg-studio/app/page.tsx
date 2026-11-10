@@ -760,11 +760,13 @@ export default function Home() {
   const [awakenBurst, setAwakenBurst] = useState<{ level: number; key: number } | null>(null);
   useEffect(() => { if (awakenBurst) { const t = setTimeout(() => setAwakenBurst(null), 4200); return () => clearTimeout(t); } }, [awakenBurst]);
   const [levelBurst, setLevelBurst] = useState<{ level: number; key: number } | null>(null);
-  useEffect(() => { if (levelBurst) { const t = setTimeout(() => setLevelBurst(null), 3200); return () => clearTimeout(t); } }, [levelBurst]);
-  useEffect(() => { if (repBurst) { const t = setTimeout(() => setRepBurst(null), 3200); return () => clearTimeout(t); } }, [repBurst]);
+  // Reward pop-ups wait until the new scene has been read (user: the result and its scene first, then the fanfare).
+  const holdBursts = busy || vnPages.length > 0;
+  useEffect(() => { if (levelBurst && !holdBursts) { const t = setTimeout(() => setLevelBurst(null), 3200); return () => clearTimeout(t); } }, [levelBurst, holdBursts]);
+  useEffect(() => { if (repBurst && !holdBursts) { const t = setTimeout(() => setRepBurst(null), 3200); return () => clearTimeout(t); } }, [repBurst, holdBursts]);
   // Gear the last beaten enemy was carrying; the GM names it in the next reply and its grade is fixed here.
   const [itemBurst, setItemBurst] = useState<{ name: string; info: ItemInfo; more: number; key: number } | null>(null);
-  useEffect(() => { if (itemBurst) { const t = setTimeout(() => setItemBurst(null), 4200); return () => clearTimeout(t); } }, [itemBurst]);
+  useEffect(() => { if (itemBurst && !holdBursts) { const t = setTimeout(() => setItemBurst(null), 4200); return () => clearTimeout(t); } }, [itemBurst, holdBursts]);
   // The quest-clear window: what was finished this turn and everything it paid out.
   // The player's own action, typed as the last choice (apart from the creator's test command).
   const [ownAction, setOwnAction] = useState('');
@@ -1841,8 +1843,6 @@ export default function Home() {
     <div className={`sceneBody${reading ? ' sceneBodyReading' : ''}`}>
     {session.pendingCheck && <div className="diceCheckPanel"><div className="diceCheckTop"><strong><Dices size={18}/> {session.pendingCheck.label} 판정</strong><span>{WEIGHT_LABEL[session.pendingCheck.weight || weightOf(session.pendingCheck.dc) || 'normal']} · DC {session.pendingCheck.dc}</span></div><p>{session.pendingCheck.reason}</p>{(() => { const b = checkBonus(session.pendingCheck), need = Math.max(2, Math.min(20, session.pendingCheck.dc - b.modifier)); return <p className="diceBonus">{b.statName} {b.score} → {b.modifier ? <b>보정 {b.modifier > 0 ? '+' : '−'}{Math.abs(b.modifier)}</b> : <b>보정 없음</b>} · 주사위 <b>{need}</b> 이상이면 성공</p>; })()}{(() => { const c = session.pendingCheck, pay = checkStakes(c.weight || weightOf(c.dc) || 'normal', session.level || 1, maxHpOf(game, session)); const win = [pay.xp && `경험치 +${pay.xp}`, pay.gold && `골드 +${pay.gold}`, pay.rep && `명성 +${pay.rep}`, pay.gear && '장비'].filter(Boolean).join(' · ');
       return <ul className="diceStakes"><li className="win"><b>성공</b> {c.success}{win && <em className="diceGain"> {win}</em>}</li><li className="lose"><b>실패</b> {c.failure}{pay.hurt > 0 && <em className="diceGain"> HP -{pay.hurt}</em>}</li></ul>; })()}<div className="diceCheckActions"><button type="button" className="btn primary" disabled={busy} onClick={() => void roll()}><Dices size={17}/> D20 굴리기</button><button type="button" className="btn" disabled={busy || !!diceRoll} onClick={skipCheck}>굴리지 않는다</button></div></div>}
-    {/* The result box stays only while its scene is written; the log keeps the roll after that. */}
-    {session.lastCheck && !session.pendingCheck && busy && <div className="diceCheckResult"><strong>{session.lastCheck.label} · {session.lastCheck.critical || (session.lastCheck.success ? '성공' : '실패')}</strong><span>D20 {session.lastCheck.die} {session.lastCheck.modifier >= 0 ? '+' : '-'} {Math.abs(session.lastCheck.modifier)} = {session.lastCheck.total} / DC {session.lastCheck.dc}</span></div>}
     {session.mode === 'combat' && session.combat ? <div className="combatPanel">
       <div className="combatHeader"><strong><Swords size={16}/> 전투 · {session.combat.npc}</strong><span>{session.combat.round <= 1 ? '준비' : `${session.combat.round - 1}합`}</span></div>
       <p className="combatAuto">{session.combat.result ? '전투가 끝났습니다.' : session.combat.round < 1 || busy ? '상대를 살피는 중...' : '자동 전투 진행 중 — 오른쪽 진행 기록에서 상황을 확인하세요.'}</p>
@@ -1887,7 +1887,7 @@ export default function Home() {
     <div className="battleResultStats"><span>입힌 피해 <b>{session.combat.totalDealt || 0}</b></span><span>받은 피해 <b>{session.combat.totalTaken || 0}</b></span><span>남은 HP <b>{session.hp}/{maxHpOf(game, session)}</b></span></div>
     <button type="button" className="btn primary" disabled={busy} autoFocus onClick={() => void finishBattle()}>확인</button>
   </div></div>}
-  {levelBurst && <div key={levelBurst.key} className="repBurst levelBurst" role="status" onClick={() => setLevelBurst(null)}>
+  {levelBurst && !holdBursts && <div key={levelBurst.key} className="repBurst levelBurst" role="status" onClick={() => setLevelBurst(null)}>
     <Sparkles size={34}/>
     <strong>레벨 업!</strong>
     <b>Lv.{levelBurst.level}</b>
@@ -1899,14 +1899,14 @@ export default function Home() {
     <b>Lv.{awakenBurst.level}</b>
     <span>쓰러진 자리에서 다시 일어섰습니다. 전투가 이어집니다.</span>
   </div>}
-  {itemBurst && <div key={itemBurst.key} className={`repBurst itemBurst grade${itemBurst.info.grade}`} role="status" onClick={() => setItemBurst(null)}>
+  {itemBurst && !holdBursts && <div key={itemBurst.key} className={`repBurst itemBurst grade${itemBurst.info.grade}`} role="status" onClick={() => setItemBurst(null)}>
     <Sparkles size={34}/>
     <strong>{GRADE_LABELS[itemBurst.info.grade]} 장비 획득!</strong>
     <b>{itemBurst.name}</b>{itemBurst.more > 0 && <span>외 {itemBurst.more}개</span>}
     <span>{[KIND_LABELS[itemBurst.info.kind], bonusText(itemBurst.info, itemBurst.name)].filter(Boolean).join(' · ')}</span>
     {itemBurst.info.skill && <span className="itemBurstSkill">{skillText(itemBurst.info)}</span>}
   </div>}
-  {repBurst && <div key={repBurst.key} className={`repBurst${repBurst.delta < 0 ? ' infamy' : ''}`} role="status" onClick={() => setRepBurst(null)}>
+  {repBurst && !holdBursts && <div key={repBurst.key} className={`repBurst${repBurst.delta < 0 ? ' infamy' : ''}`} role="status" onClick={() => setRepBurst(null)}>
     <Award size={34}/>
     <strong>{repBurst.delta > 0 ? '명성 대폭 상승!' : '명성 급락!'}</strong>
     <b>{formatReputation(repBurst.delta)}</b>
@@ -1925,7 +1925,7 @@ export default function Home() {
     {diceRoll.done && <div className="diceVerdict"><strong>{r.critical || (r.success ? '성공!' : '실패')}</strong>{(r.success ? r.onSuccess : r.onFailure) && <span>{r.success ? r.onSuccess : r.onFailure}</span>}</div>}
     <button type="button" className="btn primary" disabled={!diceRoll.done || busy} autoFocus onClick={() => void confirmRoll()}>{diceRoll.done ? '확인' : '굴리는 중…'}</button>
   </div></div>; })()}
-  {questClear && session.mode !== 'talk' && <div key={questClear.key} className="battleResultBackdrop" role="dialog" aria-modal="true" aria-labelledby="quest-clear-title" onClick={() => setQuestClear(null)}><div className="battleResultModal questClear" onClick={e => e.stopPropagation()}>
+  {questClear && session.mode !== 'talk' && !holdBursts && <div key={questClear.key} className="battleResultBackdrop" role="dialog" aria-modal="true" aria-labelledby="quest-clear-title" onClick={() => setQuestClear(null)}><div className="battleResultModal questClear" onClick={e => e.stopPropagation()}>
     <span className="battleResultIcon"><Trophy size={30}/></span>
     <h2 id="quest-clear-title">퀘스트 클리어!</h2>
     <ul className="questClearList">{questClear.quests.map(q => <li key={q.name} className={q.main ? 'main' : ''}><Check size={14}/><span>{q.main && <em className="questMainTag">메인</em>}{q.name}{q.giver && <small>의뢰인 {q.giver}</small>}</span></li>)}</ul>
