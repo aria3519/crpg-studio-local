@@ -2,7 +2,7 @@
 // on the player next (a monster, a hostile NPC). Pure: no React, no network. The play screen applies the result and
 // shows the effects; tests replay recorded replies through it (tests/turn.test.ts).
 import { TRAVEL_VERB } from '../travel';
-import { storyNpcsAfter, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, getGameGoal, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, defaultActions, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
+import { storyNpcsAfter, storyFoes, foeLevel, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, getGameGoal, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, defaultActions, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
 import { GRADE_LABELS, KIND_LABELS, SKILLS, infoOf, gearOf, bonusText, skillText, enemyGear, gradeForTier, dropChance, rollGrade, rollSkill, randomGearKind, gearName, POTIONS, healShareOf, enemySkill, enemySkillText, type EnemySkill, type Grade, type ItemInfo, type ItemKind, type Equipped } from '../items';
 import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, type Foe } from '../monsters';
 import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, battleXp, questXp, mainQuestXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from '../progression';
@@ -212,10 +212,14 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const aftermath = AFTERMATH.test(message);
     // Turns that can change what comes next are read by the director at once: the player did something no choice offered,
     // a roll decided something, a goal moved, or someone's attitude crossed into another tier. Fights below count too.
+    const met = grown.session.ambushNext;
+    if (met) grown.session = { ...grown.session, ambushNext: undefined };
     const offPlan = !current.mode && current.typed === true;
     const tierMoved = relationships.some(p => { const b = (current.relationships || []).find(r => r.id === p.id); return !!b && attitudeTier(b.affection).label !== attitudeTier(p.affection).label; });
     const settled = grown.session, major = data.majorScene === true || offPlan || !!diceResult || tierMoved || deserters.length > 0 || questLog.done.length + questLog.failed.length + questLog.added.length > 0;
     if (!grown.session.mode && !grown.session.goalCompleted && !grown.session.dead) {
+      // A foe met on the move blocks the way only after the arrival scene is read (user: no fight straight off the map).
+      if (met) return { ...fx, settled, major: true, session: { ...grown.session, threat: met, log: [...grown.session.log, `시스템: 습격! ${met.npc}${josa(met.npc, '이')} 앞을 막아섭니다.`] } };
       const genre = defaultMapGenre(game);
       // A monster the GM set on the player, or an NPC who hates the player, means a fight with no talking first.
       // A foe no quest asked for has to be fair for the player's level (its range starting at most 4 levels above, as
@@ -223,13 +227,15 @@ export function applyReply(game: Game, current: Session, data: any, message: str
       // brought a Lv.33 망령 기사 to a Lv.3 alley scene.
       const placeNow = regionWhere(game, grown.session), lvNow = grown.session.level || 1;
       const askedFoe = !aftermath && typeof data.ambush === 'string' && isDangerous(genre, placeNow) ? findFoe(genre, data.ambush) : undefined;
+      // The current goal's foe is fought as written; a later story step's foe is swapped like an unfair one.
+      const { now: goalFoes, later } = storyFoes(game, grown.session);
       const asked = askedFoe;
-      const fairFoe = asked && foeLevelRange(asked.power, !!asked.boss)[0] > lvNow + 4 ? pickEncounter(genre, placeNow, lvNow, Math.random, grown.session.recentFoes) : asked;
+      const fairFoe = asked && !goalFoes.includes(asked.name) && (later.includes(asked.name) || foeLevelRange(asked.power, !!asked.boss)[0] > lvNow + 4) ? pickEncounter(genre, placeNow, lvNow, Math.random, grown.session.recentFoes, later) : asked;
       const ambush = fairFoe || (debug ? debugFoe(game, current, message) : undefined);
       // An NPC the player just fought or fled from keeps away for CLASH_GAP actions: the GM kept putting 핍 back in the
       // scene, so she blocked the way again every turn.
       const hostile = (grown.session.sceneNpcs || []).find(n => !(grown.session.party || []).includes(n) && playerActs(grown.session) - (grown.session.clashed?.[n] ?? -CLASH_GAP) >= CLASH_GAP && ((grown.session.relationships || []).find(r => r.name.trim() === n.trim())?.affection ?? 0) <= HOSTILE_AFFECTION);
-      if (ambush) return { ...fx, settled, major: true, session: { ...grown.session, threat: { npc: ambush.name, monster: true, level: encounterLevel(ambush.power, !!ambush.boss, grown.session.level || 1) }, log: [...grown.session.log, `시스템: 습격! ${ambush.name}${josa(ambush.name, '이')} 앞을 막아섭니다.`] } };
+      if (ambush) return { ...fx, settled, major: true, session: { ...grown.session, threat: { npc: ambush.name, monster: true, level: foeLevel(game, grown.session, ambush) }, log: [...grown.session.log, `시스템: 습격! ${ambush.name}${josa(ambush.name, '이')} 앞을 막아섭니다.`] } };
       if (hostile) return { ...fx, settled, major: true, session: { ...grown.session, threat: { npc: hostile, monster: false }, log: [...grown.session.log, `시스템: ${hostile}${josa(hostile, '이')} 적의를 드러내며 앞을 막아섭니다.`] } };
     }
   return { ...fx, session: grown.session, settled, major };

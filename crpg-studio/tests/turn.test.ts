@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply, type TurnContext } from '../app/_lib/game/turn';
-import { maxHpOf, refitHp, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, checkDc, checkStakes, type Game, type Session } from '../app/_lib/game/core';
+import { maxHpOf, refitHp, storyFoes, writerFoes, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, checkDc, checkStakes, type Game, type Session } from '../app/_lib/game/core';
 
 const root = path.join(__dirname, '..', '..');
 const fixtures = path.join(root, 'tests', 'fixtures', 'turns.jsonl');
@@ -133,6 +133,32 @@ test('a lost roll finishes no goal', () => {
   assert.ok(!r.session.log.some(l => l.startsWith('시스템: 목표 완료')));
 });
 
+test('later story foes stay off stage; the current goal\'s foe is fought as written', () => {
+  const t0 = turns.find(x => x.name.includes('다이어울프'));
+  assert.ok(t0, 'fixture missing');
+  const g = gameOf(t0.gameId), early = structuredClone(t0.session);
+  const { now, later } = storyFoes(g, early);
+  assert.ok(later.includes('다이어울프 우두머리') && later.includes('고블린 약탈대'), `later: ${later}`);
+  assert.ok(!writerFoes(g, early).some(f => f.name === '다이어울프 우두머리'), 'the writer was offered the act-1 boss at Lv.2');
+  assert.ok(!now.includes('다이어울프 우두머리'));
+  const r = run(t0);
+  assert.ok(r.session.threat && !later.includes(r.session.threat.npc), `ambush by ${r.session.threat?.npc}`);
+  // At its own step the boss is the fight, at the player's level.
+  const atStep = { ...structuredClone(t0.session), quests: ['그림우드의 다이어울프 우두머리를 토벌하고 기사단 서약하기'], focus: undefined };
+  assert.ok(storyFoes(g, atStep).now.includes('다이어울프 우두머리'));
+  const r2 = run({ ...t0, session: atStep });
+  assert.equal(r2.session.threat?.npc, '다이어울프 우두머리');
+  assert.equal(r2.session.threat?.level, atStep.level);
+});
+test('a foe met on a move blocks the way only after the arrival scene', () => {
+  const t0 = turns.find(x => x.name.includes('다이어울프'));
+  assert.ok(t0, 'fixture missing');
+  const met = { npc: '굶주린 늑대 무리', monster: true, level: 2, lead: '그림우드에 들어서자' };
+  const r = run({ ...t0, session: { ...structuredClone(t0.session), ambushNext: met }, data: { ...t0.data, ambush: '' } });
+  assert.deepEqual(r.session.threat, met);
+  assert.equal(r.session.ambushNext, undefined);
+  assert.ok(r.session.log[r.session.log.length - 1].startsWith('시스템: 습격! 굶주린 늑대 무리'));
+});
 test('a mid-reply gesture at a carried item reads as the item clue', () => {
   const inv = ['낡은 롱소드', '잿빛 갈매기 인장 반지'];
   assert.deepEqual(asideClue('에드리아 하르트', ['인장 반지를 잠시 바라보다'], inv), { item: '잿빛 갈매기 인장 반지', text: '에드리아 하르트가 인장 반지를 잠시 바라본다.' });

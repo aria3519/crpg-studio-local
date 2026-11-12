@@ -301,7 +301,7 @@ export type DirectorNotes = { fixes: string[]; upTo: number; at: number; hooks?:
 // act: which act of the outline the story is in (the director says so; it never goes back).
 // runId: one playthrough. A new game keeps the gameId and the same prologue, so background jobs (story memory, director, NPC
 // memory) still running from the previous playthrough wrote into the new one: 에드리아 spoke of a wolf test it never gave.
-export type Session = { storyNpcs?: { goal: string; names: string[] }; runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; act?: number; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];completedGoalSteps?: number[]; currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
+export type Session = { storyNpcs?: { goal: string; names: string[] }; runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; act?: number; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; ambushNext?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];completedGoalSteps?: number[]; currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
 export type View = 'library' | 'edit' | 'play';
 export type Tab = 'prompt' | 'map' | 'assets' | 'settings' | 'register';
 export const initial: Game = { finalGoalMode:'single',finalGoalSteps:[],characterConfig: defaultCharacterConfig(), showHpBar: true, showEquipment: true, showDice: true, startingEquipment: '낡은 검, 가죽 갑옷, 회복 물약', playMode: 'single', minPlayers: 2, maxPlayers: 4, id: 'sample', name: '잊혀진 던전', description: '고대 유적을 탐험하는 판타지 TRPG', world: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.', rules: 'D20 판정. 10 이상 보통 성공, 15 이상 어려운 성공. 같은 맵 안에서는 장소를 자유롭게 선택하고 다른 맵으로는 포탈을 통해 이동한다. 전투 및 아이템 사용은 추후 규칙 모듈로 확장.', gm: '몰입감 있는 한국어 판타지 TRPG GM. 플레이어의 행동을 임의로 확정하지 말고 결과를 설명한다.', hp: 100, size: 7, created: 0, prompt: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.\nD20 판정을 사용한다.\nGM은 플레이어의 행동을 임의로 확정하지 않는다.', assets: [], imageRows: [], imageColumns: [], imageCells: [], mapImage: '', registrationDescription: '', genre: 'RPG / 탐험', gameType: 'RPG / 탐험', cooperation: '협동', progression: '턴제', playTime: '장기 캠페인', hashtags: [], audience: '전체 이용가' };
@@ -488,12 +488,28 @@ export const storyNpcsAfter = (s: Session, relationships: { name: string }[]) =>
   const goal = currentGoalOf(s), before = new Set((s.relationships || []).map(r => r.name));
   return { goal, names: [...new Set([...(s.storyNpcs?.goal === goal ? s.storyNpcs.names : []), ...relationships.map(r => r.name).filter(n => !before.has(n))])] };
 };
-export const goalPath = (g: Game, q: string): string[] => {
-  const main = mainPrologue(g.wizardMain);
-  const steps = [...(main ? [{ q: main.firstQuest, beats: main.firstBeats }, ...(main.questChain || [])] : []),
-    ...regionQuestsOf(g).flatMap(r => [{ q: r.title, beats: r.steps.flatMap(x => x.beats) }, ...r.steps])];
-  const step = q ? steps.find(x => alikeQuest(x.q, q)) : undefined;
-  return (step?.beats || []).map(b => `${beatGoal(b)} → ${b.then}`);
+const mainSteps = (g: Game) => { const main = mainPrologue(g.wizardMain); return main ? [{ q: main.firstQuest, beats: main.firstBeats }, ...(main.questChain || [])] : []; };
+const storySteps = (g: Game) => [...mainSteps(g), ...regionQuestsOf(g).flatMap(r => [{ q: r.title, beats: r.steps.flatMap(x => x.beats) }, ...r.steps])];
+const stepOf = (g: Game, q: string) => q ? storySteps(g).find(x => alikeQuest(x.q, q)) : undefined;
+export const goalPath = (g: Game, q: string): string[] => (stepOf(g, q)?.beats || []).map(b => `${beatGoal(b)} → ${b.then}`);
+// Foes the story sets for its steps (do: 'defeat'): the current goal's are fought as written, and those of main steps not
+// reached yet stay off stage until their step. Before, a Lv.2 player's improvised goal ("큰 그림자") met 다이어울프
+// 우두머리, the act-1 finale foe, and 고블린 약탈대 from act 2.
+export const storyFoes = (g: Game, s: Session) => {
+  const foes = (beats: Beat[]) => beats.flatMap(b => b.do === 'defeat' ? [b.foe] : []);
+  const steps = mainSteps(g);
+  const seen = [...questsOf(s), ...s.log.flatMap(l => l.match(/^시스템: 목표 완료 — (.+?)(?: \(의뢰인 .*\))?$/)?.[1] || [])];
+  const reached = Math.max(0, ...steps.map((st, i) => seen.some(q => alikeQuest(st.q, q)) ? i : 0));
+  const now = foes(stepOf(g, currentGoalOf(s))?.beats || []);
+  return { now, later: [...new Set(steps.slice(reached + 1).flatMap(st => foes(st.beats)))].filter(n => !now.includes(n)) };
+};
+// The level a foe is met at. The current goal's foe matches the player: the story puts it on that step, so its tier's
+// minimum (Lv.10 for 다이어울프 우두머리) doesn't apply.
+export const foeLevel = (g: Game, s: Session, foe: Foe) => storyFoes(g, s).now.includes(foe.name) ? Math.max(1, s.level || 1) : encounterLevel(foe.power, !!foe.boss, s.level || 1);
+// The foes the writer may bring in: fair for the player's level (as for roaming foes), never a later step's, always the current goal's.
+export const writerFoes = (g: Game, s: Session) => {
+  const { now, later } = storyFoes(g, s), lv = s.level || 1;
+  return foesOf(defaultMapGenre(g)).filter(f => now.includes(f.name) || (!later.includes(f.name) && foeLevelRange(f.power, !!f.boss)[0] <= lv + 4));
 };
 export const startGold = (g: Game) => (g.characterConfig || defaultCharacterConfig()).initialGold;
 export const applyQuests = (quests: string[], data: { addQuests?: unknown; completedQuests?: unknown; failedQuests?: unknown }, givers: Record<string, string> = {}) => {
@@ -715,6 +731,7 @@ export const startCombat = (c: CombatState, enemy?: { hp?: unknown; dc?: unknown
 };
 // A monster or hostile NPC blocking the way: the player chooses to fight or to run (no talking).
 export type Threat = { npc: string; monster: boolean; level?: number; lead?: string; fleeTo?: { mapId: string; pinId: string } };
+// A threat met on a move: the arrival scene is written first, then applyReply turns it into session.threat.
 // Test commands: a named foe ("고블린") wins; otherwise a generic request ("몬스터 인카운트") rolls a local encounter.
 export const debugFoe = (g: Game, s: Session, command: string): Foe | undefined => {
   const genre = defaultMapGenre(g);
@@ -1075,6 +1092,8 @@ export const SPEECH_INTENT = /(묻|물어|말을 건|말한다|말해|부탁|요
 // Is the action aimed at this person? "여관 주인에게 에드리아 하르트에 대해 묻는다" asks the innkeeper, so it isn't a talk with 에드리아.
 // A two-word name also answers to its first word (에드리아 하르트 → 에드리아).
 export const TALK_TO = ['에게', '한테', '께', '와', '과', '랑', '이랑', '하고', '을 만', '를 만', '을 설득', '를 설득'];
+// A foe met on a move: the way there and the foe showing up, ending before any blow (the fight is the player's call).
+export const ambushScene = (where: string, foe: { name: string; desc: string }, intent = '') => `시스템이 이동을 확정했습니다. ${where} ${intent ? `플레이어가 하려던 일: "${intent}". ` : ''}가는 길과 주변을 짧게 묘사한 뒤, ${foe.name}(${foe.desc})${josa(foe.name, '이')} 나타나 앞을 막아서는 데서 장면을 끝내세요. 싸움은 아직 시작되지 않았습니다.`;
 export const arrivalToMeet = (npc: string) => `도착한 장면을 묘사하세요. ${npc}${josa(npc, '이')} 그곳에 있습니다. 대화는 아직 시작되지 않았으니 ${npc}의 대사는 쓰지 마세요.`;
 export const speaksTo = (text: string, npc: string) => { const w = npc.split(/\s+/); return [npc, ...(w.length === 2 && w[0].length >= 2 ? [w[0]] : [])].some(n => TALK_TO.some(p => text.includes(n + p))); };
 export type LogItem = { kind: 'entry'; entry: string } | { kind: 'talk'; lines: TalkLine[] } | { kind: 'battle'; lines: string[] };
