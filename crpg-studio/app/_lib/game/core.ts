@@ -528,6 +528,15 @@ export const applyQuests = (quests: string[], data: { addQuests?: unknown; compl
   for (const q of added) { const giver = incoming.find(x => x.text === q)?.giver; if (giver) nextGivers[q] = giver; }
   return { quests: [...kept, ...added], done, failed, added, givers: nextGivers, doneGivers: done.map(q => givers[q] || '') };
 };
+// A task handed over in the turn a main step closes is the next main step: it keeps the story's wording, so goalPath,
+// weight and foes still find it (Luna's "진흙 골목에서 무기 거래를 적발…" matched no step and the story lost its path).
+export const snapMainQuest = (g: Game, log: ReturnType<typeof applyQuests>) => {
+  const steps = mainSteps(g), i = steps.findIndex(st => log.done.some(q => alikeQuest(st.q, q))), next = steps[i + 1]?.q;
+  if (i < 0 || !next || !log.added.length || log.quests.some(q => alikeQuest(q, next))) return log;
+  const old = log.added[0], givers = { ...log.givers };
+  if (givers[old]) { givers[next] = givers[old]; delete givers[old]; }
+  return { ...log, quests: log.quests.map(q => q === old ? next : q), added: [next, ...log.added.slice(1)], givers };
+};
 // Affection runs -100..100; the tier is what the GM must act out, not just mention.
 export const AFFECTION_MIN = -100, AFFECTION_MAX = 100, AFFECTION_STEP = 25;
 export const clampAffection = (v: number) => Math.max(AFFECTION_MIN, Math.min(AFFECTION_MAX, Math.round(v)));

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply, type TurnContext } from '../app/_lib/game/turn';
-import { maxHpOf, refitHp, storyFoes, writerFoes, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, checkDc, checkStakes, type Game, type Session } from '../app/_lib/game/core';
+import { maxHpOf, refitHp, storyFoes, writerFoes, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, snapMainQuest, checkDc, checkStakes, type Game, type Session } from '../app/_lib/game/core';
 
 const root = path.join(__dirname, '..', '..');
 const fixtures = path.join(root, 'tests', 'fixtures', 'turns.jsonl');
@@ -69,6 +69,17 @@ test('goal path comes from the story data', () => {
   assert.equal(path.length, 3);
   assert.ok(path[1].includes('굶주린 늑대 무리'));
   assert.deepEqual(goalPath(g, '근무 절차 확인하기'), []);
+});
+
+// The task given as a main step closes takes the next step's wording, so the story path still finds it.
+test('next main step keeps the story wording', () => {
+  const g = { ...games[0], wizardMain: '잿빛 문장의 기사' } as Game, exam = '기사단장 에드리아의 입단 시험 통과하기';
+  const log = snapMainQuest(g, applyQuests([exam], { completedQuests: [exam], addQuests: [{ text: '진흙 골목에서 무기 거래를 적발하고 유출 경로를 조사하기', giver: '에드리아 하르트' }] }));
+  assert.deepEqual(log.quests, ['견습 순찰로 진흙 골목의 장물 거래 단속하기']);
+  assert.equal(log.givers[log.quests[0]], '에드리아 하르트');
+  assert.ok(goalPath(g, log.quests[0]).length > 0);
+  const side = snapMainQuest(g, applyQuests([exam], { addQuests: ['보급 명세서 조사하기'] }));
+  assert.deepEqual(side.quests, [exam, '보급 명세서 조사하기']);
 });
 
 // One story brings in 1~2 people (3 for a long one); after that the writer works with who was already met.
