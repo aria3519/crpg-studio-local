@@ -24,7 +24,8 @@ export async function PUT(request: Request, { params }: Ctx) {
   try { value = JSON.parse(await request.text()); } catch { return new NextResponse('bad json', { status: 400 }); }
   await mkdir(dir, { recursive: true });
   // Write then rename, so a crash mid-write never leaves a half-written save. Indented for readable git diffs.
-  const tmp = `${file}.tmp`;
+  // A tmp name per write: two saves at once (a new game while the old one was still saving) wrote into one shared .tmp and left mixed JSON.
+  const tmp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
   await writeFile(tmp, JSON.stringify(value, null, 1), 'utf8');
   await rename(tmp, file);
   return NextResponse.json({ ok: true });

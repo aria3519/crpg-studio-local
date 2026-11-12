@@ -15,7 +15,7 @@ import { mainSections } from './api/prompt/_lib/reference-builder';
 import { GRADE_LABELS, KIND_LABELS, SKILLS, infoOf, gearOf, bonusText, skillText, enemyGear, gradeForTier, dropChance, rollGrade, rollSkill, randomGearKind, gearName, POTIONS, healShareOf, enemySkill, enemySkillText, type EnemySkill, type Grade, type ItemInfo, type ItemKind, type Equipped } from './_lib/items';
 import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, type Foe } from './_lib/monsters';
 import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, battleXp, questXp, mainQuestXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from './_lib/progression';
-import { refitHp, npcWhereabouts, weightOf, checkDc, checkStakes, WEIGHT_LABEL, RuleItem, START_SECTION, extractRuleItems, combinedStartingItems, NpcPortrait, ImageRow, ImageColumn, ImageCell, Asset, MapPin, MapLink, BoardMap, DEFAULT_MAP_NAMES, GENRE_REF_KEY, cityPlaceCache, cityPlaces, cityOfPlace, replaceSection, refreshMainPrompt, defaultMapGenre, DEFAULT_MAP_PLACES, presetMaps, withoutAutoPortals, missingDefaultPins, rawPresetMaps, DEFAULT_PLAYER_MARKERS, playerPortraitSrc, playerMarkerSrc, createDefaultMaps, Relationship, InfoField, CharacterConfig, defaultCharacterConfig, relationshipTypes, characterPresets, normalizeCharacterConfig, statDisplayName, statDisplayValue, applyCharacterPreset, genrePresetPatch, minimalCharacterConfig, genreSystemSuggestions, PromptDraft, PromptDrafts, CustomPromptSection, DirectionOptions, promptSections, draftText, buildDraftPrompt, withExtras, displayGoal, getGameGoal, DEFAULT_PROLOGUES, defaultPrologueImage, prologueText, prologueTitle, prologueImage, DEFAULT_PLACE_BACKGROUNDS, placeBackground, Game, CombatState, DiceCheck, DiceResult, rolledRecently, LEAVING, StoryMemory, StoryHook, DirectorNotes, Session, View, Tab, initial, storageKey, legacyKey, databaseName, databaseVersion, openProjectDatabase, readProjectRecord, writeProjectRecord, deleteProjectRecord, PROMPT_LIMIT, MEMORY_KEEP_RECENT, DIRECTOR_EVERY, PLACE_SEEDS_V, MEMORY_BATCH, TALK_LIMIT, FLEE_REPUTATION, REVIVE_CHANCES, EVENT_XP_GAP, AWAKEN_LEVELS, BLESSING, LOG_PAGE, INTERFERE_GAP, INTERFERE_CHANCE, isTalkStart, talkStartIndex, talkTurns, npcHistory, recentHistory, MAX_QUESTS, questsOf, scenesHere, currentGoalOf, QUEST_LENGTH, sameQuest, questPairs, alikeQuest, QUEST_REPUTATION, startGold, applyQuests, AFFECTION_MIN, clampAffection, attitudeTier, PARTY_LIMIT, PARTY_THINK_MS, joinChance, INVITE_COOLDOWN, inviteWait, REPUTATION_STEP, clampReputation, reputationScore, reputationRank, formatReputation, hashText, npcTaste, NPC_PROFILE_LIMIT, genreCast, knownNpcNames, npcProfiles, GAME_TYPES, COOPERATION, PROGRESSION, PLAY_TIMES, normalizeType, MAX_TAGS, makeId, renderLabeledMap, getStartingLocation, travelSteps, nearbyPins, AFTERMATH, FIGHT_INTENT, BEAST_SCENE, GENERIC_PLACE, reachablePins, d, signed, abilityMod, clampInt, startCombat, Threat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, npcLevel, GROWTH_POINTS, growthFields, statLike, STRENGTH, train, growStats, levelUpRestore, withXp, TALK_ACCEPT, rewardBase, RANK_FLOORS, ALL_REGION_QUESTS, regionQuestsOf, regionWhere, inRegion, actsDone, withoutOldSpeechRules, promptUpToAct, playerActs, regionOpen, reservedNpcs, regionFree, DICE_ROLL_MS, AUTO_BATTLE_LIMIT, SPELL_GAUGE, HP_REGEN_TURN, REST_REASONS, restReason, spellScale, combatStatsOf, autoBattleStep, fightEdge, QuestClear, mergeClear, INTRO_SECONDS, gifSeconds, battleIntro, affectionClass, josa, storyText, QUOTE, WHOLE_QUOTE, TalkLine, parseTalk, lastSceneLine, carriedOpening, openWithCue, historyLine, talkEntries, withPlayerLine, SPEECH_INTENT, TALK_TO, arrivalToMeet, speaksTo, LogItem, groupLog, DEFAULT_NPC_NAMES, defaultNpcImage, freshAsset, unknownNpcImage, npcImage, openingActions, defaultActions, START_PROFILES, startValues, startStatLine, withStoryItems, wearStartGear, storyReplaces, makeSession, gestureMotion, tabs, itemTitle, sceneTime, infoMarks, wizardWorlds, BulkRuleSection, parseBulkRules, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_MAX, AFFECTION_STEP, AGILITY, CHARM, MIND, SPELL_COST, MAGIC_RESIST, MANA_REGEN_ROUND, MANA_REGEN_TURN, INTRO_MAX_SECONDS } from './_lib/game/core';
+import { refitHp, npcWhereabouts, goalPath, storyCastFull, mapRoute, weightOf, checkDc, checkStakes, WEIGHT_LABEL, RuleItem, START_SECTION, extractRuleItems, combinedStartingItems, NpcPortrait, ImageRow, ImageColumn, ImageCell, Asset, MapPin, MapLink, BoardMap, DEFAULT_MAP_NAMES, GENRE_REF_KEY, cityPlaceCache, cityPlaces, cityOfPlace, replaceSection, refreshMainPrompt, defaultMapGenre, DEFAULT_MAP_PLACES, presetMaps, withoutAutoPortals, missingDefaultPins, rawPresetMaps, DEFAULT_PLAYER_MARKERS, playerPortraitSrc, playerMarkerSrc, createDefaultMaps, Relationship, InfoField, CharacterConfig, defaultCharacterConfig, relationshipTypes, characterPresets, normalizeCharacterConfig, statDisplayName, statDisplayValue, applyCharacterPreset, genrePresetPatch, minimalCharacterConfig, genreSystemSuggestions, PromptDraft, PromptDrafts, CustomPromptSection, DirectionOptions, promptSections, draftText, buildDraftPrompt, withExtras, displayGoal, getGameGoal, DEFAULT_PROLOGUES, defaultPrologueImage, prologueText, prologueTitle, prologueImage, DEFAULT_PLACE_BACKGROUNDS, placeBackground, Game, CombatState, DiceCheck, DiceResult, rolledRecently, LEAVING, StoryMemory, StoryHook, DirectorNotes, Session, View, Tab, initial, storageKey, legacyKey, databaseName, databaseVersion, openProjectDatabase, readProjectRecord, writeProjectRecord, deleteProjectRecord, PROMPT_LIMIT, MEMORY_KEEP_RECENT, DIRECTOR_EVERY, PLACE_SEEDS_V, MEMORY_BATCH, TALK_LIMIT, FLEE_REPUTATION, REVIVE_CHANCES, EVENT_XP_GAP, AWAKEN_LEVELS, BLESSING, LOG_PAGE, INTERFERE_GAP, INTERFERE_CHANCE, isTalkStart, talkStartIndex, talkTurns, npcHistory, recentHistory, MAX_QUESTS, questsOf, scenesHere, currentGoalOf, QUEST_LENGTH, sameQuest, questPairs, alikeQuest, QUEST_REPUTATION, startGold, applyQuests, AFFECTION_MIN, clampAffection, attitudeTier, PARTY_LIMIT, PARTY_THINK_MS, joinChance, INVITE_COOLDOWN, inviteWait, REPUTATION_STEP, clampReputation, reputationScore, reputationRank, formatReputation, hashText, npcTaste, NPC_PROFILE_LIMIT, genreCast, knownNpcNames, npcProfiles, GAME_TYPES, COOPERATION, PROGRESSION, PLAY_TIMES, normalizeType, MAX_TAGS, makeId, renderLabeledMap, getStartingLocation, travelSteps, nearbyPins, AFTERMATH, FIGHT_INTENT, BEAST_SCENE, GENERIC_PLACE, reachablePins, d, signed, abilityMod, clampInt, startCombat, Threat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, npcLevel, GROWTH_POINTS, growthFields, statLike, STRENGTH, train, growStats, levelUpRestore, withXp, TALK_ACCEPT, rewardBase, RANK_FLOORS, ALL_REGION_QUESTS, regionQuestsOf, regionWhere, inRegion, actsDone, withoutOldSpeechRules, promptUpToAct, playerActs, regionOpen, reservedNpcs, regionFree, DICE_ROLL_MS, AUTO_BATTLE_LIMIT, SPELL_GAUGE, HP_REGEN_TURN, REST_REASONS, restReason, spellScale, combatStatsOf, autoBattleStep, fightEdge, QuestClear, mergeClear, INTRO_SECONDS, gifSeconds, battleIntro, affectionClass, josa, storyText, QUOTE, WHOLE_QUOTE, TalkLine, parseTalk, lastSceneLine, carriedOpening, openWithCue, historyLine, talkEntries, withPlayerLine, SPEECH_INTENT, TALK_TO, arrivalToMeet, speaksTo, LogItem, groupLog, DEFAULT_NPC_NAMES, defaultNpcImage, freshAsset, unknownNpcImage, npcImage, openingActions, defaultActions, START_PROFILES, startValues, startStatLine, withStoryItems, wearStartGear, storyReplaces, makeSession, gestureMotion, tabs, itemTitle, sceneTime, infoMarks, wizardWorlds, BulkRuleSection, parseBulkRules, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_MAX, AFFECTION_STEP, AGILITY, CHARM, MIND, SPELL_COST, MAGIC_RESIST, MANA_REGEN_ROUND, MANA_REGEN_TURN, INTRO_MAX_SECONDS } from './_lib/game/core';
 
 /** Extract explicitly granted starting items without rewriting their authored wording. */
 // Play map camera: the player marker stays in the middle and the map slides under it, zoomed in just far enough
@@ -421,7 +421,8 @@ export default function Home() {
   const moved = useRef({ map: '', pin: '', place: '', kind: '', seq: 0 });
   const [infoSeen, setInfoSeen] = useState<Record<string, string> | null>(null);
   useEffect(() => { if (!infoSeen) setInfoSeen(infoMarks(session)); }, [infoSeen, session]);
-  const replaceSession = (s: Session) => { seenInv.current = null; setDiceRoll(null); setInfoSeen(null); setSession(s); };
+  // A game with only its prologue so far reads it in the scene box first, like any new scene.
+  const replaceSession = (s: Session) => { seenInv.current = null; setDiceRoll(null); setInfoSeen(null); setSession(s); setFreshFrom(s.log.length === 1 && s.log[0].startsWith('프롤로그:') ? 0 : null); setVnPage(0); };
   useEffect(() => {
     const inv = session.inventory || [], before = seenInv.current;
     seenInv.current = inv;
@@ -433,7 +434,8 @@ export default function Home() {
     if (!gear.length) return;
     // The get window only for gear above the best of its kind already in the bag.
     const owned = (kind: ItemKind) => Math.max(-1, ...before.filter(n => infoOf(n, session.itemInfo).kind === kind).map(n => infoOf(n, session.itemInfo).grade));
-    const better = gear.filter(n => { const it = infoOf(n, session.itemInfo); return it.grade > owned(it.kind); });
+    // Gear the quest-clear window already lists isn't announced a second time.
+    const better = gear.filter(n => { const it = infoOf(n, session.itemInfo); return it.grade > owned(it.kind) && !questClear?.items.includes(n); });
     if (better.length) { const best = better.reduce((a, b) => infoOf(b, session.itemInfo).grade > infoOf(a, session.itemInfo).grade ? b : a); setItemBurst({ name: best, info: infoOf(best, session.itemInfo), more: better.length - 1, key: Date.now() }); }
     const equipped = { ...(session.equipped || {}) }, worn: string[] = [];
     for (const n of gear) {
@@ -535,7 +537,7 @@ export default function Home() {
   const readKey = freshFrom === null ? '' : `${freshFrom}:${session.log.length}`;
   const toPages = (text: string) => { const c = storyText(text), h = c.match(/^【([^】]+)】\s*/); const place = h ? h[1].split('·')[0].trim() : '';
     return (h ? c.slice(h[0].length) : c).split(/\n+/).map(t => t.trim()).filter(Boolean).map(t => ({ place, text: t })); };
-  const readPages = freshFrom === null || session.mode ? [] : groupLog(session.log).slice(freshFrom).flatMap(it => it.kind === 'entry' && /^(GM|이벤트):/.test(it.entry) ? toPages(it.entry.replace(/^(GM|이벤트):\s*/, '')) : []);
+  const readPages = freshFrom === null || session.mode ? [] : groupLog(session.log).slice(freshFrom).flatMap(it => it.kind === 'entry' && /^(GM|이벤트|프롤로그):/.test(it.entry) ? toPages(it.entry.replace(/^(GM|이벤트|프롤로그):\s*/, '')) : []);
   const reading = !busy && !session.mode && !!readKey && readPages.length > 0 && readDone !== readKey;
   const streaming = busy && !session.mode && !!liveScene.trim();
   const vnPages = reading ? readPages : streaming ? toPages(liveScene) : [];
@@ -761,12 +763,17 @@ export default function Home() {
   useEffect(() => { if (awakenBurst) { const t = setTimeout(() => setAwakenBurst(null), 4200); return () => clearTimeout(t); } }, [awakenBurst]);
   const [levelBurst, setLevelBurst] = useState<{ level: number; key: number } | null>(null);
   // Reward pop-ups wait until the new scene has been read (user: the result and its scene first, then the fanfare).
-  const holdBursts = busy || vnPages.length > 0;
-  useEffect(() => { if (levelBurst && !holdBursts) { const t = setTimeout(() => setLevelBurst(null), 3200); return () => clearTimeout(t); } }, [levelBurst, holdBursts]);
-  useEffect(() => { if (repBurst && !holdBursts) { const t = setTimeout(() => setRepBurst(null), 3200); return () => clearTimeout(t); } }, [repBurst, holdBursts]);
   // Gear the last beaten enemy was carrying; the GM names it in the next reply and its grade is fixed here.
   const [itemBurst, setItemBurst] = useState<{ name: string; info: ItemInfo; more: number; key: number } | null>(null);
-  useEffect(() => { if (itemBurst && !holdBursts) { const t = setTimeout(() => setItemBurst(null), 4200); return () => clearTimeout(t); } }, [itemBurst, holdBursts]);
+  const holdBursts = busy || vnPages.length > 0;
+  // A pop-up once on screen stays until it times out: hiding it again for the next talk reply replayed it (user saw gear twice).
+  const [outKeys, setOutKeys] = useState<number[]>([]);
+  useEffect(() => { if (!holdBursts) setOutKeys([levelBurst?.key, repBurst?.key, itemBurst?.key].filter((k): k is number => !!k)); }, [holdBursts, levelBurst, repBurst, itemBurst]);
+  const burstOut = (b: { key: number } | null) => !!b && (!holdBursts || outKeys.includes(b.key));
+  const levelOut = burstOut(levelBurst), repOut = burstOut(repBurst), itemOut = burstOut(itemBurst);
+  useEffect(() => { if (levelBurst && levelOut) { const t = setTimeout(() => setLevelBurst(null), 3200); return () => clearTimeout(t); } }, [levelBurst, levelOut]);
+  useEffect(() => { if (repBurst && repOut) { const t = setTimeout(() => setRepBurst(null), 3200); return () => clearTimeout(t); } }, [repBurst, repOut]);
+  useEffect(() => { if (itemBurst && itemOut) { const t = setTimeout(() => setItemBurst(null), 4200); return () => clearTimeout(t); } }, [itemBurst, itemOut]);
   // The quest-clear window: what was finished this turn and everything it paid out.
   // The player's own action, typed as the last choice (apart from the creator's test command).
   const [ownAction, setOwnAction] = useState('');
@@ -889,14 +896,14 @@ export default function Home() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: withoutOldSpeechRules(promptUpToAct(game.prompt || [game.world, game.rules, game.gm].join('\n'), actsDone(next))).slice(0, PROMPT_LIMIT),
-          action: message, history: recentHistory(next).map(historyLine), withThisNpc: next.mode === 'talk' ? npcHistory(next, next.talkNpc || '') : [], memory: next.memory?.summary || '', keyFacts: next.memory?.pinned || [], prologue: early ? prologueText(game) : '', movementAllowed, diceResult: diceResult || null, recentCheck: !diceResult && rolledRecently(next),
+          action: message, history: recentHistory(next).map(historyLine), withThisNpc: next.mode === 'talk' ? npcHistory(next, next.talkNpc || '') : [], memory: next.memory?.summary || '', keyFacts: next.memory?.pinned || [], ...(next.mode === 'talk' ? { hero: prologueText(game).slice(0, 1500) } : {}), prologue: early ? prologueText(game) : '', movementAllowed, diceResult: diceResult || null, recentCheck: !diceResult && rolledRecently(next),
           talkPurpose: next.mode === 'talk' && next.talkPurpose && next.talkPurpose.npc === next.talkNpc ? next.talkPurpose.action : '', closeTalk: next.mode === 'talk' && message.trim() === (next.talkAccept || TALK_ACCEPT), debug, reroll, interfere, previousChoices: reroll ? next.suggestedActions || [] : [], mode: next.mode || '', genre: defaultMapGenre(game), talkTurns: next.mode === 'talk' ? talkTurns(next) : 0, npc: next.mode === 'talk' ? next.talkNpc || '' : next.combat?.npc || '', monsters: foesOf(defaultMapGenre(game)).map(m => ({ name: m.name, power: m.power, desc: m.desc, boss: !!m.boss })), combat: next.mode === 'combat' && next.combat ? { monster: !!next.combat.monster, foeDesc: next.combat.foeDesc || '', round: next.combat.round, enemyHp: next.combat.enemyHp, enemyMaxHp: next.combat.enemyMaxHp, itemUse: next.combat.itemUse || '' } : null,
           initialEquipment: !early ? '' : combinedStartingItems(game.prompt || "", game.startingEquipment || "").filter(n => !storyReplaces(game, n)).join(", "),
           ruleEquipment: !early ? [] : extractRuleItems(game.prompt || "").filter(r => !storyReplaces(game, r.name)),
           state: {
             directorNotes: next.directorNotes && (next.directorNotes.fixes.length || next.directorNotes.threads?.length) ? { fixes: next.directorNotes.fixes, threads: next.directorNotes.threads || [] } : undefined,
             unanswered: next.mode ? [] : next.directorNotes?.consequences || [],
-            safePlace: !isDangerous(defaultMapGenre(game), where), relationships: next.relationships || [], quests: questsOf(next), currentGoal: currentGoalOf(next), gold: next.characterGold ?? startGold(game), reputation: next.reputation || 0, reputationRank: reputationRank(next.reputation || 0), recentFoes: next.recentFoes || [], party: next.party || [], partyLevels: Object.fromEntries((next.party || []).map(n => [n, npcLevel(next, n) || 3])),maxQuests: MAX_QUESTS,finalGoal:getGameGoal(game), finalGoalMode:game.finalGoalMode||'single', finalGoalSteps:game.finalGoalSteps||[],completedGoalSteps:next.completedGoalSteps||[],goalCompleted:!!next.goalCompleted,
+            safePlace: !isDangerous(defaultMapGenre(game), where), relationships: next.relationships || [], quests: questsOf(next), currentGoal: currentGoalOf(next), goalPath: goalPath(game, currentGoalOf(next)), gold: next.characterGold ?? startGold(game), reputation: next.reputation || 0, reputationRank: reputationRank(next.reputation || 0), recentFoes: next.recentFoes || [], party: next.party || [], partyLevels: Object.fromEntries((next.party || []).map(n => [n, npcLevel(next, n) || 3])),maxQuests: MAX_QUESTS,finalGoal:getGameGoal(game), finalGoalMode:game.finalGoalMode||'single', finalGoalSteps:game.finalGoalSteps||[],completedGoalSteps:next.completedGoalSteps||[],goalCompleted:!!next.goalCompleted,
             availableImages: [...(game.npcPortraits||[]).filter(n=>n.image).map(n=>`${n.name}::기본`),...(game.imageCells||[]).flatMap(cell=>{const row=(game.imageRows||[]).find(r=>r.id===cell.rowId);const col=(game.imageColumns||[]).find(c=>c.id===cell.columnId);return row&&col?[`${row.name}::${col.name}`]:[];})],
             currentMapId: map?.id || '', mapName: map?.name || '', locationName: next.scenePlace || pin?.name || '', mapPin: pin?.name || '', locationDescription: pin?.description || '',
             // The director's sketch of who is here and what is going on (made in the background); the scene GM writes from it.
@@ -912,7 +919,7 @@ export default function Home() {
             whereabouts: Object.entries(npcWhereabouts(game, next)).filter(([n]) => !reserved.includes(n) && ![next.talkNpc, ...(next.sceneNpcs || []), ...(next.party || [])].includes(n)).map(([n, at]) => `${n}: ${at}`),
             // The genre's cast with what each wants, hides and when it comes out. The writer had only their names, so it met
             // nobody at 한나's inn or 브리아's guild and made up a 마르타 instead.
-            cast: genreCast(game, next), storyPlan: next.storyPlan || '', sceneNpcs: next.sceneNpcs || [], handledNpcs: next.handledNpcs || [], npcProfiles: npcProfiles(game, next).filter(p => !reserved.includes(p.name) && (p.inScene || p.inParty || lately.includes(p.name))),
+            cast: storyCastFull(game, next) ? genreCast(game, next).filter(t => (next.relationships || []).some(r => r.name === t.replace(/^\[GM\]\s*/, '').split('(')[0].trim())) : genreCast(game, next), storyCastFull: storyCastFull(game, next), storyPlan: next.storyPlan || '', sceneNpcs: next.sceneNpcs || [], handledNpcs: next.handledNpcs || [], npcProfiles: npcProfiles(game, next).filter(p => !reserved.includes(p.name) && (p.inScene || p.inParty || lately.includes(p.name))),
             event: event?.text || '', eventTrigger: event?.trigger || '', currentInteractionEvent: pin?.eventTrigger === 'interact' ? pin.eventText || '' : '',
             characterValues: next.characterValues || {}, trainableStats: growthFields(game).map(f => ({ id: f.id, name: f.name })), hp: next.hp, maxHp: maxHpOf(game, next), level: next.level || 1, xp: next.xp || 0, inventory: next.inventory || [], items: (next.inventory || []).map(n => { const it = infoOf(n, next.itemInfo); return { name: n, grade: GRADE_LABELS[it.grade], kind: KIND_LABELS[it.kind], skill: it.skill?.name || '' }; }), equipped: next.equipped || {}, flags: next.flags || [], roll: next.roll
           }
@@ -1000,7 +1007,7 @@ export default function Home() {
     if (!map || !here) return undefined;
     const words = (p: MapPin) => p.kind === 'exit' ? [] : p.name.split(/\s+/).filter(w => w.length >= 2 && !GENERIC_PLACE.test(w));
     const headed = (w: string) => [`${w}으로`, `${w}로`, `${w}에 `, `${w}까지`, `${w} 쪽`, `${w}쪽`].some(x => text.includes(x));
-    return reachablePins(map, here).find(p => text.includes(p.name) || words(p).some(headed)) || cityTarget(text, map, here, headed)?.pin;
+    return map.pins.filter(p => p.id !== here.id && p.kind !== 'event').find(p => text.includes(p.name) || words(p).some(headed)) || cityTarget(text, map, here, headed)?.pin;
   }
   // The exit pin on this map that leads straight to the map holding a place (or the map itself) named in a travel action.
   // shortcut: one hop only; a map two exits away isn't found and the GM handles the action in place. Upgrade with a path search if maps chain.
@@ -1017,7 +1024,7 @@ export default function Home() {
     const go = `${name}로 간다`;
     const map = (game.maps || []).find(m => m.id === s.mapId), here = map?.pins.find(p => p.id === s.pinId), pinName = here?.name || '';
     const pin = travelPinFor(go, s) || exitToward(go, s);
-    if (pin && map && here && reachablePins(map, here).some(p => p.id === pin.id)) return { pin };
+    if (pin && map && here && mapRoute(map, here, pin.id).length) return { pin };
     if (pinName.length >= 2 && name.includes(pinName)) return {};
     const town = cityPlaces(defaultMapGenre(game)).find(([n, c]) => c === pinName && n.length >= 2 && name.includes(n))?.[0];
     if (town) return town === s.scenePlace ? {} : { inTown: town };
@@ -1035,21 +1042,32 @@ export default function Home() {
   }
   // A place inside a city named in the action (북문 초소 → 레븐홀트): that city's pin, when it isn't where the player is.
   function cityTarget(text: string, map: BoardMap, here: MapPin, headed: (w: string) => boolean): { pin: MapPin } | undefined {
-    const near = reachablePins(map, here), genre = defaultMapGenre(game);
+    const genre = defaultMapGenre(game);
     const named = cityPlaces(genre).find(([n]) => n.length >= 2 && (text.includes(n + '으로') || text.includes(n + '로') || headed(n) || text.includes(n + '에서') || text.includes(n + '에 ')));
     const target = named ? map.pins.find(p => p.name === named[1] && p.kind !== 'exit' && p.kind !== 'event') : map.pins.find(p => p.id !== here.id && p.kind !== 'exit' && p.kind !== 'event' && p.name.length >= 2 && headed(p.name));
-    if (!target || target.id === here.id) return undefined;
-    return near.some(p => p.id === target.id) ? { pin: target } : undefined;
+    return !target || target.id === here.id ? undefined : { pin: target };
   }
   // meet: the person the player came to talk to. They wait at the destination; the talk itself opens from there.
   // logIntent: false when the player's line is already in the log (the scene showed them setting off).
   async function moveTo(p: MapPin, intent = '', base: Session = session, meet = '', logIntent = true) {
-    const session = base;
-    if (busy || session.pendingCheck || session.goalCompleted || session.dead) return;
-    const map = (game.maps || []).find(m => m.id === session.mapId);
-    const here = map?.pins.find(x => x.id === session.pinId);
-    if (!map || !here || !reachablePins(map, here).some(x => x.id === p.id)) return;
+    if (busy || base.pendingCheck || base.goalCompleted || base.dead) return;
+    const map = (game.maps || []).find(m => m.id === base.mapId);
+    const here = map?.pins.find(x => x.id === base.pinId);
+    const route = map && here ? mapRoute(map, here, p.id) : [];
+    if (!map || !route.length) return;
     setMapOpen(false);
+    const genre = defaultMapGenre(game);
+    // A far place is reached through the places on the way (user chose automatic passing): each one is logged, and a
+    // dangerous one can stop the journey with a foe; the scene is written only where the player stops.
+    let session: Session = intent && logIntent && route.length > 1 ? { ...base, log: [...base.log, `플레이어: ${intent}`] } : base;
+    if (route.length > 1) logIntent = false;
+    for (const hop of route.slice(0, -1)) {
+      const from = session.pinId;
+      session = { ...session, pinId: hop.id, scenePlace: undefined, sceneNpcs: [], handledNpcs: [], log: [...session.log, `시스템: ${hop.name}${josa(hop.name, '을')} 지나갑니다.`] };
+      const spot = `${hop.name} ${hop.description || ''}`;
+      const foe = isDangerous(genre, spot) && Math.random() < ENCOUNTER_CHANCE ? pickEncounter(genre, spot, session.level || 1, Math.random, session.recentFoes) : undefined;
+      if (foe) { setSession({ ...session, suggestedActions: [], lastCheck: null, threat: { npc: foe.name, monster: true, level: encounterLevel(foe.power, !!foe.boss, session.level || 1), lead: `${hop.name}${josa(hop.name, '을')} 지나던 중`, fleeTo: from ? { mapId: map.id, pinId: from } : undefined }, log: [...session.log, `시스템: 습격! ${foe.name}${josa(foe.name, '이')} 앞을 막아섭니다.`] }); return; }
+    }
     let destinationMap = map;
     let destinationPin = p;
     if (p.kind === 'exit') {
@@ -1066,7 +1084,6 @@ export default function Home() {
     const next: Session = { ...session, mapId: destinationMap.id, pinId: destinationPin.id, scenePlace: undefined, travel: undefined, sceneNpcs: meet ? [meet] : [], handledNpcs: [], mode: undefined, talkNpc: undefined, combat: null, suggestedActions: [], lastCheck: null,
       triggeredEvents: arrival && destinationPin.eventOnce ? [...(session.triggeredEvents || []), key] : session.triggeredEvents,
       log: [...session.log, ...(intent && logIntent ? [`플레이어: ${intent}`] : []), `시스템: ${destinationMap.name} / ${destinationPin.name}${josa(destinationPin.name, '로')} 이동했습니다.`] };
-    const genre = defaultMapGenre(game);
     const place = `${destinationPin.name} ${destinationPin.description || ''}`;
     const huntFoe = !arrival && isDangerous(genre, place) ? huntTarget(genre, place, questsOf(next)) : undefined;
     const hunted = huntFoe;
@@ -1189,7 +1206,7 @@ export default function Home() {
       if (then) {
         const map = (game.maps || []).find(m => m.id === closed.mapId), here = map?.pins.find(p => p.id === closed.pinId);
         const pin = travelPinFor(then, closed) || exitToward(then, closed);
-        if (pin && map && here && reachablePins(map, here).some(p => p.id === pin.id)) await moveTo(pin, then, closed, '', false);
+        if (pin && map && here && mapRoute(map, here, pin.id).length) await moveTo(pin, then, closed, '', false);
         else await requestGM(then, closed);
         return;
       }
@@ -1707,9 +1724,14 @@ export default function Home() {
   const m = maps.find(x => x.id === session.mapId) || maps[0];
   const here = m?.pins.find(p => p.id === session.pinId);
   const reachable = m && here ? reachablePins(m, here).map(p => p.id) : [];
-  const locked = busy || !!session.pendingCheck || session.goalCompleted === true || !!session.dead || !!session.threat || !!session.mode;
   const infoFresh = infoSeen ? Object.entries(infoMarks(session)).filter(([k, v]) => infoSeen[k] !== v).map(([k]) => k) : [];
   const encounterNpc = !session.mode && !session.dead && !session.threat ? (session.sceneNpcs || []).find(n => !(session.handledNpcs || []).includes(n) && !(session.party || []).includes(n)) : undefined;
+  // The map waits while someone stands in front of the player (talk / fight / ignore first) and while a scene is still being read:
+  // leaving then left the person's talk purpose and first-meeting cut-in behind.
+  // No travel before the story's first scene: the director's place sketches aren't ready yet, and an early trip to 변경백가 영지
+  // got the prologue's recruiting queue written into it (user, 2026-11-12).
+  const opening = !session.log.some(l => l.startsWith('GM:'));
+  const locked = busy || !!session.pendingCheck || session.goalCompleted === true || !!session.dead || !!session.threat || !!session.mode || !!encounterNpc || vnPages.length > 0 || opening;
   const talkStart = session.mode === 'talk' && session.talkNpc ? talkStartIndex(session.log, session.talkNpc) : -1;
   const talkThread = talkStart >= 0 ? session.log.slice(talkStart + 1).map(parseTalk).filter((t): t is TalkLine => !!t) : [];
   const background = placeBackground(game, here);
@@ -1727,7 +1749,8 @@ export default function Home() {
   const move = moved.current;
   const npcs = (session.sceneNpcs || []).map(name => ({ name, image: npcImage(game, name, session.activeImageKey) }));
   const interactKey = m && here ? `${m.id}:${here.id}` : '';
-  const showMap = mapOpen && !!m && session.mode !== 'combat';
+  // The map (and its button) is there only while the player can move.
+  const showMap = mapOpen && !!m && !locked;
   const interactable = !!here && here.eventTrigger === 'interact' && !!here.eventText?.trim() && !(here.eventOnce && (session.triggeredEvents || []).includes(interactKey));
   return <div className="playBoard">
   <PlayIntro cover={game.cover} art={background}>
@@ -1766,7 +1789,7 @@ export default function Home() {
       {background ?<img key={`${session.mapId}|${session.pinId}`} className="sceneBackground sceneArrive" src={background} alt="" draggable={false} ref={img => { if (img?.complete) noteMapRatio(background, img); }} onLoad={e => noteMapRatio(background, e.currentTarget)}/> : <div className="sceneBackground sceneFallback"/>}
       {move.kind === 'scene' && <div key={move.seq} className="sceneRibbon" aria-hidden="true"><small>현재 위치</small><b>{placeName}</b></div>}
       <div className="sceneTopBar">
-      <button type="button" className={`sceneLocation${showMap ? ' open' : ''}`} disabled={!m} aria-expanded={showMap} title={showMap ? '지도 닫기' : '지도를 열어 이동'} onClick={() => setMapOpen(o => !o)}><MapPinIcon size={14}/><span>{m ? `${m.name} · ` : ''}{here?.name || '위치 미지정'}</span><b>{showMap ? <><X size={13}/> 닫기</> : <><MapIcon size={13}/> 지도</>}</b></button>
+      {!locked && <button type="button" className={`sceneLocation${showMap ? ' open' : ''}`} disabled={!m} aria-expanded={showMap} title={showMap ? '지도 닫기' : '지도를 열어 이동'} onClick={() => setMapOpen(o => !o)}><b>{showMap ? <><X size={17}/> 닫기</> : <><MapIcon size={17}/> 지도</>}</b></button>}
       </div>
       {showMap && m && <div className="stageMap">
         <div className="miniMap"><div className="stageMapFrame stageMapFollow" style={mapCamera(m, here, reachable)}>
@@ -1774,10 +1797,10 @@ export default function Home() {
           {m.pins.filter(p => p.kind !== 'event').map(p => { const current = p.id === here?.id; const near = reachable.includes(p.id); return <button key={p.id} type="button" className={`miniMapPin ${current ? 'current' : near ? 'near' : 'far'}${p.kind === 'exit' ? ' exit' : ''}`} style={{left:`${p.x}%`,top:`${p.y}%`}} aria-disabled={!near || locked} title={current ? `현재 위치: ${p.name}` : near ? (p.kind === 'exit' ? p.name : `${p.name}${josa(p.name, '로')} 이동`) : `${p.name} · 너무 멀어서 바로 갈 수 없습니다`} onClick={() => { if (near && !locked) { setMapOpen(false); void moveTo(p); } }}><i aria-hidden="true"/><span>{p.name}</span></button>; })}
           {here && <img className="miniMapPlayer" src={playerPortraitSrc(game)} alt="플레이어 현재 위치" draggable={false} style={{left:`${here.x}%`,top:`${here.y}%`}}/>}
         </div></div>
-        <p className="stageMapHint">{locked ? '진행 중인 장면이 끝나면 이동할 수 있습니다.' : '밝게 표시된 가까운 장소를 누르거나, 선택지·직접 입력으로 이동하세요.'}</p>
+        <p className="stageMapHint">밝게 표시된 가까운 장소를 누르거나, 선택지·직접 입력으로 이동하세요.</p>
       </div>}
       {!showMap && !session.mode && !session.threat && (session.party || []).length > 0 && <div className="partyStrip">{(session.party || []).map(n => { const face = npcImage(game, n); return <button key={n} type="button" className="partyTalk" disabled={busy} title={`${n}와(과) 대화`} aria-label={`${n}와(과) 대화`} onClick={() => void startTalk(n)}><span className="partyTalkFace">{face ? <img src={face} alt="" draggable={false}/> : <Users size={20}/>}</span><small><MessageCircle size={10}/> {n}</small></button>; })}</div>}
-      {!showMap && session.mode !== 'combat' && (npcs.length > 0 || !session.threat) && <div className={`sceneNpcs${session.mode === 'talk' ? ' sceneTalking' : ''}`}>{!session.threat && (() => {
+      {!showMap && session.mode !== 'combat' && !session.threat && <div className={`sceneNpcs${session.mode === 'talk' ? ' sceneTalking' : ''}`}>{(() => {
         const mine = talkThread.filter(t => t.speaker === 'me');
         const speaking = talkThread[talkThread.length - 1]?.speaker === 'me';
         return <figure key="__player" className={`sceneNpc scenePlayer${speaking ? ' scenePlayerSpeaking' : ''}`}><div key={`me-${mine.length}`} className={`sceneNpcBody${speaking ? ' npcTalk' : ''}`}><img src={playerPortraitSrc(game)} alt="플레이어" draggable={false}/></div><figcaption>나</figcaption></figure>;
@@ -1887,7 +1910,7 @@ export default function Home() {
     <div className="battleResultStats"><span>입힌 피해 <b>{session.combat.totalDealt || 0}</b></span><span>받은 피해 <b>{session.combat.totalTaken || 0}</b></span><span>남은 HP <b>{session.hp}/{maxHpOf(game, session)}</b></span></div>
     <button type="button" className="btn primary" disabled={busy} autoFocus onClick={() => void finishBattle()}>확인</button>
   </div></div>}
-  {levelBurst && !holdBursts && <div key={levelBurst.key} className="repBurst levelBurst" role="status" onClick={() => setLevelBurst(null)}>
+  {levelBurst && levelOut && <div key={levelBurst.key} className="repBurst levelBurst" role="status" onClick={() => setLevelBurst(null)}>
     <Sparkles size={34}/>
     <strong>레벨 업!</strong>
     <b>Lv.{levelBurst.level}</b>
@@ -1899,14 +1922,14 @@ export default function Home() {
     <b>Lv.{awakenBurst.level}</b>
     <span>쓰러진 자리에서 다시 일어섰습니다. 전투가 이어집니다.</span>
   </div>}
-  {itemBurst && !holdBursts && <div key={itemBurst.key} className={`repBurst itemBurst grade${itemBurst.info.grade}`} role="status" onClick={() => setItemBurst(null)}>
+  {itemBurst && itemOut && <div key={itemBurst.key} className={`repBurst itemBurst grade${itemBurst.info.grade}`} role="status" onClick={() => setItemBurst(null)}>
     <Sparkles size={34}/>
     <strong>{GRADE_LABELS[itemBurst.info.grade]} 장비 획득!</strong>
     <b>{itemBurst.name}</b>{itemBurst.more > 0 && <span>외 {itemBurst.more}개</span>}
     <span>{[KIND_LABELS[itemBurst.info.kind], bonusText(itemBurst.info, itemBurst.name)].filter(Boolean).join(' · ')}</span>
     {itemBurst.info.skill && <span className="itemBurstSkill">{skillText(itemBurst.info)}</span>}
   </div>}
-  {repBurst && !holdBursts && <div key={repBurst.key} className={`repBurst${repBurst.delta < 0 ? ' infamy' : ''}`} role="status" onClick={() => setRepBurst(null)}>
+  {repBurst && repOut && <div key={repBurst.key} className={`repBurst${repBurst.delta < 0 ? ' infamy' : ''}`} role="status" onClick={() => setRepBurst(null)}>
     <Award size={34}/>
     <strong>{repBurst.delta > 0 ? '명성 대폭 상승!' : '명성 급락!'}</strong>
     <b>{formatReputation(repBurst.delta)}</b>

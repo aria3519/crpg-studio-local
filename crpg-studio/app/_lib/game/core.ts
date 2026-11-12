@@ -301,7 +301,7 @@ export type DirectorNotes = { fixes: string[]; upTo: number; at: number; hooks?:
 // act: which act of the outline the story is in (the director says so; it never goes back).
 // runId: one playthrough. A new game keeps the gameId and the same prologue, so background jobs (story memory, director, NPC
 // memory) still running from the previous playthrough wrote into the new one: 에드리아 spoke of a wolf test it never gave.
-export type Session = { runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; act?: number; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];completedGoalSteps?: number[]; currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
+export type Session = { storyNpcs?: { goal: string; names: string[] }; runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; act?: number; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];completedGoalSteps?: number[]; currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
 export type View = 'library' | 'edit' | 'play';
 export type Tab = 'prompt' | 'map' | 'assets' | 'settings' | 'register';
 export const initial: Game = { finalGoalMode:'single',finalGoalSteps:[],characterConfig: defaultCharacterConfig(), showHpBar: true, showEquipment: true, showDice: true, startingEquipment: '낡은 검, 가죽 갑옷, 회복 물약', playMode: 'single', minPlayers: 2, maxPlayers: 4, id: 'sample', name: '잊혀진 던전', description: '고대 유적을 탐험하는 판타지 TRPG', world: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.', rules: 'D20 판정. 10 이상 보통 성공, 15 이상 어려운 성공. 같은 맵 안에서는 장소를 자유롭게 선택하고 다른 맵으로는 포탈을 통해 이동한다. 전투 및 아이템 사용은 추후 규칙 모듈로 확장.', gm: '몰입감 있는 한국어 판타지 TRPG GM. 플레이어의 행동을 임의로 확정하지 말고 결과를 설명한다.', hp: 100, size: 7, created: 0, prompt: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.\nD20 판정을 사용한다.\nGM은 플레이어의 행동을 임의로 확정하지 않는다.', assets: [], imageRows: [], imageColumns: [], imageCells: [], mapImage: '', registrationDescription: '', genre: 'RPG / 탐험', gameType: 'RPG / 탐험', cooperation: '협동', progression: '턴제', playTime: '장기 캠페인', hashtags: [], audience: '전체 이용가' };
@@ -479,6 +479,22 @@ export const questWeight = (g: Game, q: string): Weight => {
   if (first && alikeQuest(first, q)) return 'big';
   return regionQuestsOf(g).some(r => alikeQuest(r.title, q) || r.steps.some(x => alikeQuest(x.q, q))) ? 'normal' : 'small';
 };
+// How the goal is prepared to go, from the story data ("할 일 → 그때 벌어지는 일"), as material for the writer and the talk.
+// With only the goal's name, the talk made the entrance exam a wooden-sword duel and the writer dragged it out over 9 turns.
+// People one story (the current goal) brings in: 1~2, 3 for a long one (user, 2026-11-12). storyNpcs counts who was met
+// under the goal; once full the writer gets only people already met, as 넬 and 실바엘 joined 에드리아 within three actions.
+export const storyCastFull = (g: Game, s: Session) => { const goal = currentGoalOf(s); return (s.storyNpcs?.goal === goal ? s.storyNpcs.names.length : 0) >= (goalPath(g, goal).length > 3 ? 3 : 2); };
+export const storyNpcsAfter = (s: Session, relationships: { name: string }[]) => {
+  const goal = currentGoalOf(s), before = new Set((s.relationships || []).map(r => r.name));
+  return { goal, names: [...new Set([...(s.storyNpcs?.goal === goal ? s.storyNpcs.names : []), ...relationships.map(r => r.name).filter(n => !before.has(n))])] };
+};
+export const goalPath = (g: Game, q: string): string[] => {
+  const main = mainPrologue(g.wizardMain);
+  const steps = [...(main ? [{ q: main.firstQuest, beats: main.firstBeats }, ...(main.questChain || [])] : []),
+    ...regionQuestsOf(g).flatMap(r => [{ q: r.title, beats: r.steps.flatMap(x => x.beats) }, ...r.steps])];
+  const step = q ? steps.find(x => alikeQuest(x.q, q)) : undefined;
+  return (step?.beats || []).map(b => `${beatGoal(b)} → ${b.then}`);
+};
 export const startGold = (g: Game) => (g.characterConfig || defaultCharacterConfig()).initialGold;
 export const applyQuests = (quests: string[], data: { addQuests?: unknown; completedQuests?: unknown; failedQuests?: unknown }, givers: Record<string, string> = {}) => {
   const strings = (v: unknown) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').map(x => x.trim()).filter(Boolean) : [];
@@ -622,8 +638,57 @@ export const AFTERMATH = /^전투 결과:|에게서 간신히 도망쳤다\.|의
 export const FIGHT_INTENT = /(싸운다|맞서 싸|맞선다|공격한다|베어 넘|베어낸다|덤벼든다|덤빈다|휘두른다|맞받아친다|전투를 벌)/;
 export const BEAST_SCENE = /(마물|늑대|괴물|짐승|야수|습격|덮치|돌진|달려들|으르렁|트롤|거미|고블린|해골|구울)/;
 export const GENERIC_PLACE = /^(입구|광장|거리|마을|도시|근처|안쪽|바깥|가장자리)$/;
-// Every place on the map is one move away.
-export const reachablePins = (map: BoardMap, here: MapPin): MapPin[] => map.pins.filter(p => p.id !== here.id && p.kind !== 'event');
+// Places next to each other (user, 2026-11-12: a far place is reached through the near ones, like a real journey): the map's
+// own links when it has any, else each place's NEAR_PINS nearest; separate groups are joined at their closest pair.
+const NEAR_PINS = 3;
+// Roads of the built-in maps by place name (key: the map's image), used when the map has no links of its own; nearness alone
+// left 그림우드 (북문 밖) off 레븐홀트's list and put the island 해신의 섬 next to it. The island is reached by ship from 사레타.
+const DEFAULT_MAP_LINKS: Record<string, [string, string][]> = {
+  '/api/default-map/fantasy/0': [
+    ['레븐홀트', '그림우드'], ['레븐홀트', '회색 탑 폐허'], ['레븐홀트', '변경백가 영지'], ['레븐홀트', '철망치 씨족 본거지'], ['레븐홀트', '아스테라'],
+    ['그림우드', '회색 탑 폐허'], ['회색 탑 폐허', '변경백가 영지'], ['그림우드', '옛 왕조 지하 묘지'],
+    ['아스테라', '마탑 본부'], ['아스테라', '태양교단 총본산'], ['아스테라', '금지된 상회 본거지'], ['아스테라', '그림자 숲의 거점'], ['마탑 본부', '금지된 상회 본거지'],
+    ['태양교단 총본산', '옛 왕조 지하 묘지'], ['옛 왕조 지하 묘지', '심연의 사도 성역'], ['태양교단 총본산', '심연의 사도 성역'],
+    ['사레타', '그림자 숲의 거점'], ['사레타', '금지된 상회 본거지'], ['사레타', '검은 문 관리지'], ['사레타', '산호 동굴 해안'], ['검은 문 관리지', '금지된 상회 본거지'],
+    ['사레타', '해신의 섬'], ['산호 동굴 해안', '가라앉는 등대'],
+    ['그림자 숲의 거점', '은염 숲'], ['은염 숲', '철망치 씨족 본거지'], ['은염 숲', '산호 동굴 해안'],
+  ],
+};
+export const mapNeighbors = (map: BoardMap): Map<string, Set<string>> => {
+  const pins = map.pins.filter(p => p.kind !== 'event'), out = new Map(pins.map(p => [p.id, new Set<string>()]));
+  const link = (a: string, b: string) => { if (a !== b && out.has(a) && out.has(b)) { out.get(a)!.add(b); out.get(b)!.add(a); } };
+  const dist = (a: MapPin, b: MapPin) => Math.hypot(a.x - b.x, a.y - b.y);
+  const roads = DEFAULT_MAP_LINKS[map.image], idOf = (name: string) => pins.find(p => p.name.trim() === name)?.id || '';
+  if (map.links?.length) map.links.forEach(l => link(l.from, l.to));
+  else if (roads) roads.forEach(([a, b]) => link(idOf(a), idOf(b)));
+  else for (const p of pins) pins.filter(q => q.id !== p.id).sort((a, b) => dist(p, a) - dist(p, b)).slice(0, NEAR_PINS).forEach(q => link(p.id, q.id));
+  for (;;) {
+    const seen = new Set<string>(), stack = pins.length ? [pins[0].id] : [];
+    while (stack.length) { const id = stack.pop()!; if (!seen.has(id)) { seen.add(id); stack.push(...out.get(id)!); } }
+    const rest = pins.filter(p => !seen.has(p.id));
+    if (!rest.length) break;
+    let best: [MapPin, MapPin] = [pins.find(p => seen.has(p.id))!, rest[0]];
+    for (const a of pins.filter(p => seen.has(p.id))) for (const b of rest) if (dist(a, b) < dist(best[0], best[1])) best = [a, b];
+    link(best[0].id, best[1].id);
+  }
+  return out;
+};
+export const reachablePins = (map: BoardMap, here: MapPin): MapPin[] => { const near = mapNeighbors(map).get(here.id); return map.pins.filter(p => near?.has(p.id)); };
+// The places passed on the way to a place, the place itself last, in the fewest steps; an exit (to another map) is only
+// ever the destination. Empty when it is here or can't be reached.
+export const mapRoute = (map: BoardMap, from: MapPin, toId: string): MapPin[] => {
+  const near = mapNeighbors(map), back = new Map<string, string>([[from.id, '']]), queue = [from.id];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (id === toId) break;
+    if (id !== from.id && map.pins.find(p => p.id === id)?.kind === 'exit') continue;
+    for (const n of near.get(id) || []) if (!back.has(n)) { back.set(n, id); queue.push(n); }
+  }
+  if (toId === from.id || !back.has(toId)) return [];
+  const path: MapPin[] = [];
+  for (let id = toId; id !== from.id; id = back.get(id)!) path.unshift(map.pins.find(p => p.id === id)!);
+  return path;
+};
 export const d = (sides: number) => 1 + Math.floor(Math.random() * Math.max(1, sides));
 export const signed = (n: number) => n >= 0 ? `+ ${n}` : `- ${Math.abs(n)}`;
 // Resource-like stats (mana, inner energy) are pools, not ability scores, so they never become modifiers.
@@ -937,6 +1002,22 @@ export const josa = (word: unknown, p: '와' | '을' | '이' | '은' | '로'): s
   if (p === '로') return fin && fin !== 8 ? '으로' : '로';
   const has = fin > 0;
   return p === '와' ? (has ? '과' : '와') : p === '을' ? (has ? '을' : '를') : p === '이' ? (has ? '이' : '가') : (has ? '은' : '는');
+};
+// A gesture the talk writer put mid-reply ("…받겠습니다. (인장 반지를 잠시 바라보다) 첫 임무입니다…") that looks at something the
+// player carries reads as the item clue line, as the first sight of the ring did (user, 2026-11-12). "바라보다" → "바라본다".
+export const asideClue = (partner: string, asides: string[], inventory: string[]) => {
+  const short = (n: string) => n.split(' ').slice(-2).join(' ');
+  for (const a of asides) {
+    const item = inventory.find(n => a.includes(n) || a.includes(short(n))) || inventory.find(n => { const w = n.split(' ').pop() || ''; return w.length >= 2 && a.includes(w); });
+    if (!item) continue;
+    const act = a.trim().replace(/[.。]$/, '').replace(/(.)다$/, (m, ch: string) => {
+      const c = ch.charCodeAt(0), fin = c >= 0xac00 && c <= 0xd7a3 ? (c - 0xac00) % 28 : -1;
+      if (fin < 0 || /[있없]/.test(ch) || fin === 4) return m;
+      return fin === 0 ? String.fromCharCode(c + 4) + '다' : fin === 8 ? String.fromCharCode(c - 4) + '다' : ch + '는다';
+    });
+    return { item, text: `${partner}${josa(partner, '이')} ${act}.` };
+  }
+  return null;
 };
 export const storyText = (text: string) => text.replace(/\{\{\s*img\s*::[^{}\n]*\}\}/g, '').replace(/\n{3,}/g, '\n\n').trim();
 // GM narration in the story log reads as narration / speech / narration: the 【장소 · 때】 heading stands apart, and

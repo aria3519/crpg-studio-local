@@ -6,6 +6,7 @@ import { alignEngineRules } from '../../_lib/engine-rules';
 import { namesFoe } from '../../_lib/monsters';
 import { TRAVEL_VERB } from '../../_lib/travel';
 import type { GmBody, GmState } from '../../_lib/game/gm-contract';
+import { asideClue } from '../../_lib/game/core';
 
 export const runtime = 'nodejs';
 // The model occasionally slips a word from another language into Korean (e.g. Russian "слух" for 소문).
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
     const playerVoice = [
       `플레이어 대사의 말투: 세 대사 모두 같은 어체입니다. ${partnerAffection >= 40 || party.includes(partner) ? `${partner}와(과)는 가까운 사이라 편한 반말도 됩니다.` : `${partner}에게는 해요체(~요)로 말하고 반말은 쓰지 마세요.`}`,
       `지금 플레이어의 동료: ${party.length ? party.join(', ') : '없음(혼자)'}. 없는 동료나 "우리 둘" 같은 일행을 전제하지 말고, ${partner}가 함께 간다고 정해지지 않았으면 같이 가자는 전제도 하지 마세요.`,
-      '주인공의 출신·직업·특기·과거를 단정하는 말("그건 내 전문이야", "기사 출신이라서")은 금지입니다.',
+      '주인공의 출신·직업·특기·과거는 주인공 자료(대화에서는 hero)에 있는 그대로만 말합니다.',
     ].join(' ');
     const talkTurns = Math.max(0, Math.min(99, Math.round(Number(body.talkTurns) || 0)));
     // The talk closes after this reply either way, so the NPC must say goodbye in it rather than ask something left hanging.
@@ -231,7 +232,7 @@ export async function POST(request: Request) {
       'npcProfiles의 attitude는 그 인물의 현재 호감도 단계와 그 단계에서 해야 할 행동입니다. 태도는 말투만이 아니라 실제 행동과 결과로 보여 주세요. 같은 부탁이라도 단계에 따라 결과가 달라야 합니다: 반감·적대 인물은 정보를 숨기거나 거짓말하고, 값을 올리거나 거절하고, 플레이어 몰래 방해하며, 적대 인물은 위협·경비 호출·공격까지 갑니다. 호의·신뢰 인물은 먼저 도움을 주고 할인·단서·비밀을 내줍니다. 말로는 화를 내면서 결국 순순히 도와주는 식으로 처리하지 마세요. 반감 이하 인물의 협조가 필요한 행동에는 D20 판정의 dc를 3~6 올리고, 호의 이상이면 3~6 내리거나 판정 없이 성공시키세요. 선택지(choices)에도 관계가 드러나게 하세요(예: 적대 인물 앞에서는 달래기·협박·피하기·대가 제시처럼 관계를 다루는 선택지).',
       '토벌을 부탁받아 맡는 목표는 문장에 currentState.monsters의 이름을 표기 그대로 넣으세요(예: "숲 트롤 토벌하기"). 그 몬스터를 전투로 이기면 게임이 완료 처리합니다.',
       'currentState.currentGoal은 플레이어가 지금 몰두하고 있는 일이며, 화면에 보이는 목표는 이것 하나입니다. 장면은 플레이어의 행동과 이 일을 중심으로 이어 가고, quests의 다른 일은 플레이어가 그쪽으로 움직이거나 장면이 자연스럽게 닿을 때만 꺼내세요.',
-      'currentState.quests는 플레이어가 지금 진행 중인 목표(퀘스트) 목록이며 최대 currentState.maxQuests개까지 동시에 가질 수 있습니다. NPC에게 의뢰·부탁을 받아 플레이어가 수락했거나, 사건으로 새로 해야 할 일이 분명해졌을 때만 addQuests에 {"text":"구체적 대상과 할 일이 담긴 짧은 한 문장, 40자 이내","giver":"의뢰한 NPC의 정확한 이름(없으면 빈 문자열)"} 형태로 새 목표를 넣으세요. 플레이어가 수락하지 않은 제안은 넣지 말고, 기존 목표와 같은 일은 다시 넣지 마세요. 목표 하나는 일 하나입니다. 기존 목표 문장을 고쳐 쓰거나 내용을 덧붙여 늘리지 마세요(완료 처리 후 더 긴 같은 목표를 다시 넣는 것도 금지). 같은 목표가 진행돼 다음 단계가 생겨도 기존 목표는 그대로 두고 서술로만 보여 주세요. 새로 생긴 다른 일(다른 인물의 의뢰, 새 장소 조사 등)만 addQuests에 별도 항목으로 넣으세요. 목표를 실제로 이뤄 냈으면 currentState.quests의 문장을 글자 그대로 completedQuests에, 실패·포기·무의미해졌으면 failedQuests에 넣으세요. 변화가 없으면 모두 빈 배열입니다. 퀘스트 완료 기본 보상(명성 +150, 의뢰인 호감도 +10)은 게임 코드가 자동으로 주므로, 완료 그 자체에 대해서는 reputationDelta나 의뢰인 relationshipUpdates를 따로 올리지 마세요(완료 과정에서 생긴 다른 일은 반영). 퀘스트를 완료하는 턴에는 의뢰인이나 그 일의 결과로 손에 들어오는 보수 장비 하나(무기·방어구·장신구)를 addItems에 {"name","kind","desc"} 객체로 넣고 장면에서 건네받는 모습을 묘사하세요. 등급은 게임 코드가 정하며, 넣지 않으면 게임이 대신 지급합니다. 최종 목표는 플레이어에게 보이지 않는 GM 전용 정보입니다. 최종 목표를 목록에 그대로 넣거나 서술에서 밝히지 말고 사건을 통해 자연스럽게 드러나게 하세요. 최종 목표가 single이면 구체적 승리 조건이 실제 충족된 경우에만 finalGoalCompleted:true를 반환하세요. progress이면 currentState.finalGoalSteps의 각 단계를 실제 달성한 경우에만 0부터 시작하는 해당 인덱스를 completedGoalSteps 배열에 넣으세요. 이미 완료한 단계는 반복할 필요 없습니다. 아직 달성하지 않은 단계는 절대 완료 처리하지 마세요. progress 모드에서는 finalGoalCompleted:true만으로 종료할 수 없고 모든 단계 완료 시에만 엔딩을 서술하세요.',
+      'currentState.quests는 플레이어가 지금 진행 중인 목표(퀘스트) 목록이며 최대 currentState.maxQuests개까지 동시에 가질 수 있습니다. 주인공이 맡게 된 일이 생기면 addQuests에 {"text":"구체적 대상과 할 일이 담긴 짧은 한 문장, 40자 이내","giver":"맡긴 NPC의 정확한 이름(없으면 빈 문자열)"} 형태로 새 목표를 넣으세요. 맡게 된 일은 NPC가 의뢰·부탁·명령으로 맡겼고 주인공이 거절하지 않은 일(맡기는 말로 대화가 끝났으면 맡은 것입니다), 또는 사건으로 새로 해야 할 일이 분명해진 것입니다. 목표를 완료한 바로 그 턴에 다음 일이 맡겨져도 같습니다. 주인공이 거절했거나 아직 대답을 기다리는 제안은 넣지 말고, 기존 목표와 같은 일은 다시 넣지 마세요. 목표 하나는 일 하나입니다. 기존 목표 문장을 고쳐 쓰거나 내용을 덧붙여 늘리지 마세요(완료 처리 후 더 긴 같은 목표를 다시 넣는 것도 금지). 같은 목표가 진행돼 다음 단계가 생겨도 기존 목표는 그대로 두고 서술로만 보여 주세요. 새로 생긴 다른 일(다른 인물의 의뢰, 새 장소 조사 등)만 addQuests에 별도 항목으로 넣으세요. 목표를 실제로 이뤄 냈으면 currentState.quests의 문장을 글자 그대로 completedQuests에, 실패·포기·무의미해졌으면 failedQuests에 넣으세요. 변화가 없으면 모두 빈 배열입니다. 퀘스트 완료 기본 보상(명성 +150, 의뢰인 호감도 +10)은 게임 코드가 자동으로 주므로, 완료 그 자체에 대해서는 reputationDelta나 의뢰인 relationshipUpdates를 따로 올리지 마세요(완료 과정에서 생긴 다른 일은 반영). 퀘스트를 완료하는 턴에는 의뢰인이나 그 일의 결과로 손에 들어오는 보수 장비 하나(무기·방어구·장신구)를 addItems에 {"name","kind","desc"} 객체로 넣고 장면에서 건네받는 모습을 묘사하세요. 등급은 게임 코드가 정하며, 넣지 않으면 게임이 대신 지급합니다. 최종 목표는 플레이어에게 보이지 않는 GM 전용 정보입니다. 최종 목표를 목록에 그대로 넣거나 서술에서 밝히지 말고 사건을 통해 자연스럽게 드러나게 하세요. 최종 목표가 single이면 구체적 승리 조건이 실제 충족된 경우에만 finalGoalCompleted:true를 반환하세요. progress이면 currentState.finalGoalSteps의 각 단계를 실제 달성한 경우에만 0부터 시작하는 해당 인덱스를 completedGoalSteps 배열에 넣으세요. 이미 완료한 단계는 반복할 필요 없습니다. 아직 달성하지 않은 단계는 절대 완료 처리하지 마세요. progress 모드에서는 finalGoalCompleted:true만으로 종료할 수 없고 모든 단계 완료 시에만 엔딩을 서술하세요.',
       'text·choices·gesture는 모두 자연스러운 한국어로만 쓰세요. 러시아어·일본어 등 다른 언어 단어를 섞지 마세요(세계관 고유명사는 예외).',
       '다음 JSON 객체만 반환하세요: {"text":"GM의 한국어 묘사","hpDelta":0,"addItems":[],"removeItems":[],"addFlags":[],"imageKey":"","moveToPinId":"","check":null,"choices":[{"text":"","target":""},{"text":"","target":""},{"text":"","target":""}],"presentNpcs":[],"npcVoices":[],"reputationDelta":0,"goldDelta":0,"xpGain":"","trained":[],"ambush":"","relationshipUpdates":[],"addQuests":[],"completedQuests":[],"failedQuests":[],"completedGoalSteps":[],"finalGoalCompleted":false}',
       // Older games still carry the outdated engine rules in their saved prompt; they are rewritten before the GM sees them.
@@ -309,15 +310,16 @@ export async function POST(request: Request) {
       const opening = talkTurns === 0;
       const talk = {
         partner: { name: partner, profile: me.profile, remembers: (me as { remembers?: unknown }).remembers, attitude: (me as { attitude?: unknown }).attitude, speechStyle: me.speechStyle || '' },
+        hero: { story: String(body.hero || '').slice(0, 1500), sheet: state.characterValues || {}, level: state.level, reputationRank: state.reputationRank || '' },
         purpose: String(body.talkPurpose || '').slice(0, 300), playerSaid: body.action, talkSoFar: recent.slice(-14), withThisNpc, keyFacts, storySoFar: storySoFar.slice(0, 4000),
-        now: { story: String(state.storyPlan || '').slice(0, 1200), location: state.locationName || '', currentGoal: state.currentGoal || '', gold: state.gold, inventory: state.inventory || [], party: state.party || [], reservedNpcs: state.reservedNpcs || [] },
+        now: { story: String(state.storyPlan || '').slice(0, 1200), location: state.locationName || '', currentGoal: state.currentGoal || '', goalPath: Array.isArray(state.goalPath) ? state.goalPath.slice(0, 8) : [], gold: state.gold, inventory: state.inventory || [], party: state.party || [], reservedNpcs: state.reservedNpcs || [] },
       };
       const writer = [
         `당신은 한국어 CRPG의 대화를 씁니다. 주인공(플레이어)과 ${partner}가 마주 보고 이야기하는 메신저식 대화창이고, 당신은 ${partner}의 대답을 씁니다.`,
-        `자료: partner는 ${partner}의 설정(profile), 주인공에 대한 기억(remembers), 지금 태도(attitude), 말투(speechStyle)입니다. purpose는 주인공이 이 대화를 시작한 까닭, playerSaid는 주인공이 방금 한 말이나 행동, talkSoFar는 최근에 오간 말, withThisNpc는 두 사람 사이에 전에 있었던 일, now.story·storySoFar·keyFacts는 지금까지의 이야기입니다.`,
-        `${partner}는 자기 목적과 사정을 가진 사람입니다. 매 대답에서 새 정보, 조건, 요구, 감정 중 하나를 내놓아 이야기를 앞으로 밀고, 이미 한 말은 되풀이하지 않습니다. 말투는 speechStyle 그대로(어체·어미·버릇), 태도는 attitude에 맞는 실제 대답(숨기기, 값 올리기, 먼저 돕기)으로 드러납니다. ${partner}는 직접 보거나 들은 것만 알고, 지금 이 자리(now.location)에서 말합니다.`,
+        `자료: partner는 ${partner}의 설정(profile), 주인공에 대한 기억(remembers), 지금 태도(attitude), 말투(speechStyle)입니다. hero는 주인공입니다: story는 주인공이 누구이고 어디서 왔는지(프롤로그), sheet는 능력치와 신분, level과 reputationRank는 성장과 이름값입니다. purpose는 주인공이 이 대화를 시작한 까닭, playerSaid는 주인공이 방금 한 말이나 행동, talkSoFar는 최근에 오간 말, withThisNpc는 두 사람 사이에 전에 있었던 일, now.story·storySoFar·keyFacts는 지금까지의 이야기입니다. now.goalPath는 주인공의 지금 목표(now.currentGoal)를 두고 정해져 있는 일(순서대로 "할 일 → 그때 벌어지는 일")로, ${partner}가 아는 사정이자 앞으로 할 일입니다.`,
+        `${partner}의 대답은 주인공이 방금 한 말(playerSaid)에 대한 반응입니다: 그 말의 내용과 태도를 듣고, 자기 성격과 사정대로 답하거나 받아치거나 되묻습니다. 정해진 일은 대화가 그쪽에 닿을 때 ${partner}가 자기 말로 꺼냅니다. ${partner}는 자기 목적과 사정을 가진 사람입니다. 매 대답에서 새 정보, 조건, 요구, 감정 중 하나를 내놓아 이야기를 앞으로 밀고, 이미 한 말은 되풀이하지 않습니다. 말투는 speechStyle 그대로(어체·어미·버릇), 태도는 attitude에 맞는 실제 대답(숨기기, 값 올리기, 먼저 돕기)으로 드러납니다. ${partner}는 직접 보거나 들은 것만 알고, 지금 이 자리(now.location)에서 말합니다.`,
         `형식: ${partner}의 말을 1~3줄로 씁니다. 한 줄이 말풍선 하나이고, 따옴표와 이름표 없이 말만 씁니다. 표정이나 몸짓이 필요하면 첫 줄 맨 앞에 (괄호)로 짧게 씁니다.${opening ? ` 이번은 대화의 첫마디입니다: purpose를 보고 ${partner}가 먼저 반응합니다.` : ''}`,
-        `말이 끝나면 "---"만 쓴 줄을 두고, 그 아래에 셋 중 하나를 씁니다. (가) 주인공이 이번 말로 무엇을 하겠다고 스스로 정했으면(받아들임, 나서겠다고 함, 어디로 가겠다고 함): "[대화 끝: 그 행동]" 한 줄. 행동은 주인공이 지금 바로 하는 첫 행동 하나를 주어 없이 "~한다"로 끝나는 한 문장으로 씁니다(예: 개척지로 간다). (나) 그 밖에 대화가 끝났으면(${partner}가 할 일·갈 곳·기다릴 곳을 정해 줌, 작별, 거절하고 돌아섬, 볼일이 있어 떠남): "[대화 끝]" 한 줄과, 그 아래에 대화가 끝난 뒤 주인공이 고를 행동 3개를 "1. ", "2. ", "3. "으로 한 줄씩. 셋은 서로 다른 방향의 결정입니다: 1 ${partner}가 정해 준 일을 하거나 이야기를 앞으로 미는 행동, 2 다른 방법으로 자기 뜻을 밀어붙이는 행동, 3 아무도 예상 못 한 수. 주어 없이 "~한다"로 끝나는 한 문장입니다. (다) 그 밖에는 주인공이 이어서 할 말 3개를 "1. ", "2. ", "3. "으로 한 줄씩: 1 받아들이거나 이야기를 앞으로 미는 말, 2 조건·흥정·의심처럼 다른 방법으로 응하는 말, 3 거절하거나 물러나는 말. 주인공이 입 밖에 내는 말 그대로 씁니다. ${playerVoice}`,
+        `말이 끝나면 "---"만 쓴 줄을 두고, 그 아래에 셋 중 하나를 씁니다. (가) 주인공이 이번 말로 무엇을 하겠다고 스스로 정했으면(받아들임, 나서겠다고 함, 어디로 가겠다고 함): "[대화 끝: 그 행동]" 한 줄. 행동은 주인공이 지금 바로 하는 첫 행동 하나를 주어 없이 "~한다"로 끝나는 한 문장으로 씁니다(예: 개척지로 간다). (나) 그 밖에 대화가 끝났으면(${partner}가 할 일·갈 곳·기다릴 곳을 정해 줌, 작별, 거절하고 돌아섬, 볼일이 있어 떠남): "[대화 끝]" 한 줄과, 그 아래에 대화가 끝난 뒤 주인공이 고를 행동 3개를 "1. ", "2. ", "3. "으로 한 줄씩. 셋은 서로 다른 방향의 결정입니다: 1 ${partner}가 정해 준 일을 하거나 이야기를 앞으로 미는 행동, 2 다른 방법으로 자기 뜻을 밀어붙이는 행동, 3 아무도 예상 못 한 수. 주어 없이 "~한다"로 끝나는 한 문장입니다. (다) 그 밖에는 주인공이 이어서 할 말 3개를 "1. ", "2. ", "3. "으로 한 줄씩 씁니다. 셋은 모두 ${partner}가 방금 한 말에 대한 주인공의 대답입니다: ${partner}가 물었으면 hero에 맞게 실제로 답하고, 요구했으면 응하거나 버팁니다. 셋은 대답의 방향으로 나뉩니다: 1 응함, 2 조건·흥정·의심, 3 거절하거나 물러남. 주인공이 입 밖에 내는 말 그대로 씁니다. ${playerVoice}`,
         ...(opening ? ['첫마디에서는 (다)를 씁니다.'] : lastReply ? [`이번이 이 대화의 마지막 대답입니다: ${partner}는 짧게 답하고 마무리하며, "---" 아래는 (가)나 (나)입니다.`] : []),
         '모든 글은 자연스러운 한국어로만 씁니다.',
         '세계관(제작자 프롬프트):\n' + alignEngineRules(String(body.prompt || '')).slice(0, 5000),
@@ -341,25 +343,25 @@ export async function POST(request: Request) {
       // next (a risky attempt's outcome) are written out; arriving and plain
       // situation are kept short (user, 2026-11-10: skip plain description, tell future-changing moments and decisions well).
       const arrived = String(body.action || '').startsWith('시스템이 이동을 확정');
-      const length = body.diceResult ? '1,000~1,800자. 앞으로를 바꾸는 순간입니다: 무엇이 걸렸는지, 인물들이 어떻게 움직이고 반응하는지, 주인공의 선택이 무엇을 바꿨는지를 긴장과 감각 속에 자세히 씁니다.'
+      const length = body.diceResult ? '1,000~1,800자. 앞으로를 바꾸는 순간입니다: 무엇이 걸렸는지, 인물들이 어떻게 움직이고 반응하는지, 주인공의 선택이 무엇을 바꿨는지를 장면으로 보여 줍니다.'
         : arrived ? '400자 안팎. 도착은 짧게 넘기고, 그곳에서 지금 벌어지고 있는 일 하나에 바로 닿습니다.'
         : '300~600자. 주인공의 행동과 그 결과를 보여 주고, 단순한 상황 설명은 건너뜁니다.';
       const scene = {
         playerAction: body.action, ...(events.length ? { mustHappen: events } : {}), length, diceResult: body.diceResult || null, keyFacts, storySoFar, recentHistory: recent,
         now: { story: String(state.storyPlan || '').slice(0, 1500), location: state.locationName || '', mapPin: state.mapPin || '', nearby: Array.isArray(state.adjacentLocations) ? state.adjacentLocations.filter((l: { kind?: unknown }) => l?.kind !== 'event').map((l: { name?: unknown }) => l?.name) : [],
-          event: state.event || '', placeSeed: state.placeSeed || '', localStories: Array.isArray(state.localStories) ? state.localStories.slice(0, 4) : [], directorNotes: state.directorNotes || null, unanswered: Array.isArray(state.unanswered) ? state.unanswered.slice(0, 4) : [], whereabouts: Array.isArray(state.whereabouts) ? state.whereabouts.slice(0, 24) : [], currentGoal: state.currentGoal || '', otherStories: state.quests || [],
+          event: state.event || '', placeSeed: state.placeSeed || '', localStories: Array.isArray(state.localStories) ? state.localStories.slice(0, 4) : [], directorNotes: state.directorNotes || null, unanswered: Array.isArray(state.unanswered) ? state.unanswered.slice(0, 4) : [], whereabouts: Array.isArray(state.whereabouts) ? state.whereabouts.slice(0, 24) : [], currentGoal: state.currentGoal || '', goalPath: Array.isArray(state.goalPath) ? state.goalPath.slice(0, 8) : [], otherStories: state.quests || [],
           hp: state.hp, maxHp: state.maxHp, gold: state.gold, inventory: state.inventory || [], party: state.party || [], level: state.level, reputationRank: state.reputationRank || '',
-          ...(arrived ? { justArrived: true } : {}), presentPeople, awayPeople, cast: Array.isArray(state.cast) && state.cast.length ? state.cast.slice(0, 30) : state.knownNpcs || [], reservedNpcs: state.reservedNpcs || [], monsters: wild ? (Array.isArray(state.monsters) ? state.monsters : []).filter((m: { boss?: unknown }) => !m?.boss).map((m: { name?: unknown; desc?: unknown }) => String(m?.name || '') + ': ' + String(m?.desc || '').slice(0, 60)) : [], abilities, safePlace: state.safePlace === true },
+          ...(arrived ? { justArrived: true } : {}), presentPeople, awayPeople, cast: Array.isArray(state.cast) && state.cast.length ? state.cast.slice(0, 30) : state.knownNpcs || [], reservedNpcs: state.reservedNpcs || [], ...(state.storyCastFull === true ? { storyCastFull: true } : {}), monsters: wild ? (Array.isArray(state.monsters) ? state.monsters : []).filter((m: { boss?: unknown }) => !m?.boss).map((m: { name?: unknown; desc?: unknown }) => String(m?.name || '') + ': ' + String(m?.desc || '').slice(0, 60)) : [], abilities, safePlace: state.safePlace === true },
       };
       const writer = [
-        '당신은 한국어 CRPG의 이야기꾼입니다. 세계관과 지금까지의 이야기를 이어 다음 장면 하나를 씁니다. 이 이야기의 주인공은 플레이어 캐릭터이고, now.story가 이 이야기의 설계도입니다(주인공이 원하는 것과 짊어진 것, 주인공과 얽힌 인물들). 다음에 무슨 일이 일어날지는 당신이 정합니다. 이 게임에서 장면은 진행기록입니다: 상황, 주인공의 행동과 그 결과, 벌어진 사건, 달라진 것을 서술로 씁니다. 사람과 주고받는 말은 대화창이 맡습니다. playerAction은 이번 장면에서 실제로 해냅니다(맡으면 이미 그 일 한가운데에 있습니다). 장면은 그 결정의 결과, 그 결과로 달라진 것, 다음 갈림길 순서로 이어집니다. 본문에서 플레이어 캐릭터는 "당신"이라고 부릅니다.',
-        '이번 장면의 분량은 length를 따릅니다. 기다림·잡일·준비처럼 결과만 중요한 구간은 두세 문장으로 시간을 건너뛰어("해 질 무렵까지 창고를 지킨 끝에…", "사흘 뒤…") 다음 일이 벌어지는 순간에 바로 닿고, 벌어진 일은 감각과 움직임으로 구체적으로 씁니다. 첫 줄은 【장소 · 때】입니다(장소는 지금 이야기 속 위치).',
+        '당신은 한국어 TRPG 테이블의 게임 마스터(사회자)입니다. 플레이어와 마주 앉아 장면을 말로 들려주듯 씁니다: 하십시오체 구어("~합니다", "~입니다")로, 눈앞에 펼쳐지는 일을 차례로 짚어 줍니다. 세계관과 지금까지의 이야기를 이어 다음 장면 하나를 씁니다. 이 이야기의 주인공은 플레이어 캐릭터이고, now.story가 이 이야기의 설계도입니다(주인공이 원하는 것과 짊어진 것, 주인공과 얽힌 인물들). 다음에 무슨 일이 일어날지는 당신이 정합니다. 이 게임에서 장면은 독자가 눈으로 따라가는 이야기입니다: 누가 무엇을 하고 무슨 일이 벌어지는지를 씁니다. 독자는 이 글을 화면 아래 글상자에서 두세 문장씩 넘기며 읽습니다. 돈·보상·시간 같은 상태 변화는 게임 화면이 보여 줍니다. 사람과 주고받는 말은 대화창이 맡습니다. playerAction은 이번 장면에서 실제로 해내고, 그 일이 끝날 때까지 이어집니다(맡으면 이미 그 일 한가운데에 있습니다. 대련은 이기거나 질 때까지, 시험은 붙거나 떨어질 때까지, 수색은 찾아내거나 허탕 칠 때까지). 장면은 그 일의 결말, 그 결말로 달라진 것, 그 결말에서 생긴 다음 갈림길 순서로 이어집니다. 플레이어 캐릭터는 "당신"이라고 부릅니다.',
+        '이번 장면의 분량은 length를 따릅니다. 기다림·잡일·준비처럼 결과만 중요한 구간은 두세 문장으로 시간을 건너뛰어("해 질 무렵까지 창고를 지킨 끝에…", "사흘 뒤…") 다음 일이 벌어지는 순간에 바로 닿습니다. 벌어진 일은 눈에 보이고 들리게 씁니다: 사람들이 하는 일, 그 자리의 모습, 주인공의 손에 닿는 것. 문장은 짧게 끊어, 한 문장에 한 가지 일만 담습니다. 첫 줄은 【장소 · 때】입니다(장소는 지금 이야기 속 위치).',
         '장면을 움직이는 것은 사람입니다. now.story의 인물과 now.cast에서 이 자리에 어울리는 사람이 자기 목적대로 먼저 움직입니다(다가오기, 막아서기, 뒤를 밟기, 무언가를 숨기거나 빼앗기). 주인공의 행동은 무언가를 얻거나 잃게 하고(신뢰, 정보, 돈, 상처, 적, 평판), 그 결과가 다음 일을 부릅니다. 위기는 기회로, 작은 일은 더 큰 일로 이어집니다. 수수께끼는 답을 하나씩 내놓으며 더 큰 질문으로 이어 갑니다.',
-        '자료: now.presentPeople은 지금 이 자리에 있는 사람(동료 포함), now.awayPeople은 다른 곳에 있는 사람, now.whereabouts는 아직 무대에 없는 이야기 속 인물이 지금 있는 곳("이름: 장소")이며, justArrived면 동료만 함께 왔습니다. remembers·attitude·speechStyle은 그 사람의 기억·태도·말투입니다. placeSeed·localStories는 이 장소에서 벌어지는 일, directorNotes.fixes는 앞선 장면에서 어긋난 점(맞는 쪽으로 이어 씁니다), directorNotes.threads는 아직 끝나지 않은 곁가지, unanswered는 주인공이 한 일 중 세상이 아직 반응하지 않은 것(흐름에 맞을 때 누가 찾아오거나 소식이 닿게 합니다), mustHappen은 이번 장면에서 일어나는 일, currentGoal은 주인공이 지금 하는 일, otherStories는 주인공이 벌여 둔 다른 일, keyFacts·storySoFar는 이미 일어난 일입니다. 새 인물이 필요하면 세계관에 맞는 이름의 여성으로 만듭니다.',
-        '지킬 것 세 가지: 1) 세계관에서 [GM]으로 표시된 정보와 reservedNpcs는 아직 무대 밖에 있고, 비밀과 결말은 사건을 통해 조금씩 드러납니다. 2) 돈은 now.gold 안에서, 물건은 now.inventory 안에서 씁니다. 3) 몬스터는 now.monsters의 이름 그대로 나오며, 덤벼드는 순간에서 장면을 멈춥니다(싸움은 게임이 진행합니다).',
+        '자료: now.presentPeople은 지금 이 자리에 있는 사람(동료 포함), now.awayPeople은 다른 곳에 있는 사람, now.whereabouts는 아직 무대에 없는 이야기 속 인물이 지금 있는 곳("이름: 장소")이며, justArrived면 동료만 함께 왔습니다. remembers·attitude·speechStyle은 그 사람의 기억·태도·말투입니다. placeSeed·localStories는 이 장소에서 벌어지는 일, directorNotes.fixes는 앞선 장면에서 어긋난 점(맞는 쪽으로 이어 씁니다), directorNotes.threads는 아직 끝나지 않은 곁가지, unanswered는 주인공이 한 일 중 세상이 아직 반응하지 않은 것(흐름에 맞을 때 누가 찾아오거나 소식이 닿게 합니다), mustHappen은 이번 장면에서 일어나는 일, currentGoal은 주인공이 지금 하는 일, goalPath는 그 일이 준비된 흐름(순서대로 "할 일 → 그때 벌어지는 일"; 주인공이 그 일을 해 나가면 이 흐름대로 벌어집니다), otherStories는 주인공이 벌여 둔 다른 일, keyFacts·storySoFar는 이미 일어난 일입니다. 새 인물이 필요하면 세계관에 맞는 이름의 여성으로 만듭니다. now.storyCastFull이면 이 이야기에 나올 사람은 이미 다 나왔고, 장면은 지금까지 만난 사람과 now.whereabouts의 사람으로 이어 갑니다.',
+        '지킬 것 세 가지: 1) 세계관에서 [GM]으로 표시된 정보와 reservedNpcs는 아직 무대 밖에 있고, 비밀과 결말은 사건을 통해 조금씩 드러납니다. 2) 돈은 now.gold 안에서, 물건은 now.inventory 안에서 씁니다. 3) 몬스터는 now.monsters의 이름 그대로 나오며, 덤벼드는 순간에서 장면을 멈춥니다(싸움은 게임이 진행합니다). 한 장면의 만남은 하나입니다: 사람을 만나는 장면이면 몬스터는 그다음 장면에, 몬스터가 덤벼드는 장면이면 새로 나서는 사람은 싸움이 끝난 뒤의 장면에 나옵니다.',
         'diceResult가 있으면 그 성공·실패를 반드시 따르고 약속된 결과(onSuccess/onFailure)를 실제로 일으킵니다. 실패해도 대가를 치르고 이야기는 나아갑니다.',
         '본문이 끝나면 줄을 바꿔 "---"만 쓴 줄을 둡니다. 주인공이 누군가와 말을 나누게 되는 순간(상대가 말을 걸어오거나, 주인공이 말을 꺼내거나, 신청·거래·보고·추궁하러 마주 섬)에 장면이 닿았다면 거기서 본문을 멈추고, "---" 아래에 "[대화: 이름]" 한 줄만 씁니다(이름은 now.presentPeople·now.cast에 적힌 그대로). 대화는 그 사람의 대화창에서 이어집니다. 주인공이 지금 있는 곳을 떠나 다른 장소로 가려 하면 떠나는 모습까지만 쓰고, "---" 아래에 "[이동: 장소 이름]" 한 줄만 씁니다(now.nearby나 세계관에 나온 장소 이름 그대로). 가는 길과 도착은 게임이 지도에서 진행합니다. 그 밖에는 "---" 아래에 플레이어가 고를 다음 행동 3개를 "1. ", "2. ", "3. "으로 한 줄씩 씁니다. 셋은 각각 고르면 결과가 나는 결정입니다: 무엇을 해서 무엇을 얻거나 잃는지가 한 문장에 드러납니다(예: 기사와 대련해 실력을 증명한다). 셋은 서로 다른 방향으로 이야기를 엽니다: 1 정면으로 맞서거나 밀어붙이기, 2 속이거나 거래하거나 이용하기, 3 아무도 예상 못 한 수. 주어 없이 지금 바로 하는 행동을 "~한다"로 끝나는 한 문장으로 씁니다(다짐이나 계획이 아니라 실제 행동). 휴식·회복 행동은 넣지 않습니다.',
-        ...(body.recentCheck === true || body.diceResult ? [] : ['playerAction이 성공할 수도 실패할 수도 있고, 어느 쪽이냐에 따라 주인공이 얻거나 잃는 것이 달라지는 일이면, 본문 없이 "---" 한 줄과 그 아래 "[판정: 능력치id | 무게 | 시도하는 일 | 성공하면 … | 실패하면 …]" 한 줄만 씁니다(시도와 결과는 주사위를 굴린 뒤 한 장면으로 씁니다). 능력치id는 now.abilities의 괄호 앞 id 중 하나, 무게는 이 시도에 걸린 것의 크기로 작음(얻을 것도 잃을 것도 적은 일상의 시도)·보통(일이 어느 쪽으로 갈릴지 정해지는 시도)·큼(위험하거나 얻는 것이 큰 시도)·결정적(이야기의 갈림길) 중 하나입니다. 난이도와 경험치·골드·명성·피해는 게임이 무게로 정하니, 성공하면·실패하면에는 이야기 속 결과만 씁니다. 이동·대화·둘러보기에는 판정을 걸지 않고, 몬스터와 싸우는 행동은 판정이 아니라 습격입니다.']),
+        ...(body.recentCheck === true || body.diceResult ? [] : ['playerAction이 성공할 수도 실패할 수도 있고, 어느 쪽이냐에 따라 주인공이 얻거나 잃는 것이 달라지는 일이면, 본문 없이 "---" 한 줄과 그 아래 "[판정: 능력치id | 무게 | 시도하는 일 | 성공하면 … | 실패하면 …]" 한 줄만 씁니다(시도와 결과는 주사위를 굴린 뒤 한 장면으로 씁니다). 능력치id는 now.abilities의 괄호 앞 id 중 하나, 무게는 이 시도에 걸린 것의 크기로 작음(얻을 것도 잃을 것도 적은 일상의 시도)·보통(일이 어느 쪽으로 갈릴지 정해지는 시도)·큼(위험하거나 얻는 것이 큰 시도)·결정적(이야기의 갈림길) 중 하나입니다. 난이도와 경험치·골드·명성·피해는 게임이 무게로 정하니, 성공하면·실패하면에는 그 일이 끝났을 때의 이야기 속 결과만 씁니다. 이동·대화·둘러보기에는 판정을 걸지 않고, 몬스터와 싸우는 행동은 판정이 아니라 습격입니다.']),
         '모든 글은 자연스러운 한국어로만 씁니다.',
         '세계관(제작자 프롬프트):\n' + alignEngineRules(String(body.prompt || '')).slice(0, 7000),
         ...(early && String(body.prologue || '').trim() ? ['게임 프롤로그(이미 일어난 일, 다시 설명하지 않음):\n' + String(body.prologue).slice(0, 3000)] : []),
@@ -391,16 +393,21 @@ export async function POST(request: Request) {
     if (prewritten && mode === 'talk') {
       const [said, tail = '']: string[] = prewritten.split(/\n\s*-{3,}\s*(?:\n|$)/);
       let gestureW = '';
+      const asides: string[] = [];
       const lines = said.split('\n').map(l => l.trim()).filter(Boolean).map((l, i) => {
         const g = i === 0 ? l.match(/^\(([^)]{1,40})\)\s*/) : null;
         if (g) { gestureW = g[1].trim(); l = l.slice(g[0].length); }
+        // A gesture written mid-reply is taken out of the speech too.
+        l = l.replace(/\s*\(([^)]{1,40})\)\s*/g, (_m: string, a: string) => { asides.push(a.trim()); return ' '; }).trim();
         const tag = l.match(/^([^:：]{1,20})\s*[:：]\s*/);
         if (tag && tag[1].trim() === partner) l = l.slice(tag[0].length);
         return l.replace(/^["“”'「『]+|["“”'」』]+$/g, '').trim();
       }).filter(l => l && !FOREIGN_SCRIPT.test(l));
       const end = tail.match(/\[대화\s*끝(?:\s*[:：]\s*([^\]]+))?\]/);
       talkWritten = lines.length > 0;
-      data.line = lines.join('\n'); data.text = ''; data.playerLine = ''; data.gesture = gestureW;
+      data.line = lines.join('\n'); data.text = ''; data.playerLine = ''; data.gesture = gestureW || asides[0] || '';
+      const clue = typeof data.howKnown === 'string' && data.howKnown.trim() ? null : asideClue(partner, asides, Array.isArray(state.inventory) ? state.inventory.filter((n: unknown): n is string => typeof n === 'string') : []);
+      if (clue) { data.howKnown = clue.text; data.knownItem = clue.item; }
       data.endTalk = !!end; data.nextAction = end?.[1]?.trim() || '';
       const numbered = tail.split('\n').map(l => (l.match(/^\s*\d\s*[.)]\s*(.+)$/)?.[1] || '').replace(/^["“”'「『]+|["“”'」』]+$/g, '').trim()).filter(Boolean).slice(0, 3);
       data.choices = end ? [] : numbered;
@@ -416,8 +423,9 @@ export async function POST(request: Request) {
       const talkName = tail.match(/\[대화:\s*([^\]|]+)/)?.[1].trim() || '';
       const onStage = (Array.isArray(state.npcProfiles) ? state.npcProfiles : []).filter((p: { inScene?: unknown }) => p?.inScene).map((p: { name?: unknown }) => String(p?.name || ''));
       const talkable = [...onStage, ...[...(Array.isArray(state.knownNpcs) ? state.knownNpcs : []), ...(Array.isArray(state.cast) ? state.cast : []).map((c: unknown) => String(c || '').replace(/^\[GM\]\s*/, '').split(/[(:：]/)[0].trim())].filter((n: string) => story.includes(n))]
-        .filter((n: string) => n.length >= 2 && !(Array.isArray(state.reservedNpcs) ? state.reservedNpcs : []).includes(n) && !(Array.isArray(state.party) ? state.party : []).includes(n));
-      data.talkTo = talkName.length < 2 ? '' : talkable.find((n: string) => n === talkName) || talkable.find((n: string) => talkName.includes(n) || n.includes(talkName)) || '';
+        .filter((n: string) => n.length >= 1 && !(Array.isArray(state.reservedNpcs) ? state.reservedNpcs : []).includes(n) && !(Array.isArray(state.party) ? state.party : []).includes(n));
+      // A one-letter name (넬) counts only when exact; partial matches need two letters so 넬 isn't read into another name.
+      data.talkTo = !talkName ? '' : talkable.find((n: string) => n === talkName) || (talkName.length < 2 ? '' : talkable.find((n: string) => n.length >= 2 && (talkName.includes(n) || n.includes(talkName)))) || '';
       if (data.talkTo) data.choices = [];
       // The player sets off: the game makes the move on the map (not on an arrival the map already made).
       const goName = tail.match(/\[이동:\s*([^\]|]+)/)?.[1].trim().slice(0, 40) || '';

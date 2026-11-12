@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply, type TurnContext } from '../app/_lib/game/turn';
-import { maxHpOf, refitHp, npcWhereabouts, questWeight, checkDc, checkStakes, type Game, type Session } from '../app/_lib/game/core';
+import { maxHpOf, refitHp, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, checkDc, checkStakes, type Game, type Session } from '../app/_lib/game/core';
 
 const root = path.join(__dirname, '..', '..');
 const fixtures = path.join(root, 'tests', 'fixtures', 'turns.jsonl');
@@ -62,6 +62,38 @@ test('whereabouts come from the story data', () => {
   assert.equal(at['에드리아 하르트'], '북문 초소');
 });
 
+// The goal's prepared path reaches the writer: the exam is the wolves, not a made-up duel.
+test('goal path comes from the story data', () => {
+  const g = { ...games[0], wizardMain: '잿빛 문장의 기사' } as Game;
+  const path = goalPath(g, '기사단장 에드리아의 입단 시험 통과하기');
+  assert.equal(path.length, 3);
+  assert.ok(path[1].includes('굶주린 늑대 무리'));
+  assert.deepEqual(goalPath(g, '근무 절차 확인하기'), []);
+});
+
+// One story brings in 1~2 people (3 for a long one); after that the writer works with who was already met.
+test('a story fills up with people', () => {
+  const g = { ...games[0], wizardMain: '잿빛 문장의 기사' } as Game, goal = '근무 절차 확인하기';
+  let s = { log: [], quests: [goal], relationships: [] } as unknown as Session;
+  s = { ...s, storyNpcs: storyNpcsAfter(s, [{ name: '넬' }]), relationships: [{ id: 'a', name: '넬', relation: '', affection: 0 }] };
+  assert.equal(storyCastFull(g, s), false);
+  s = { ...s, storyNpcs: storyNpcsAfter(s, [...s.relationships!, { name: '실바엘' }]) };
+  assert.equal(storyCastFull(g, s), true);
+  assert.equal(storyCastFull(g, { ...s, quests: ['다른 일 하기'] }), false);
+});
+
+// A far place is reached through the near ones, and every place on the map can be reached.
+test('map routes go through near places', () => {
+  const map = games.flatMap(g => g.maps || []).find(m => m.pins.some(p => p.name === '레븐홀트') && m.pins.some(p => p.name === '사레타'))!;
+  const at = (n: string) => map.pins.find(p => p.name === n)!;
+  const near = reachablePins(map, at('레븐홀트')).map(p => p.name);
+  console.log('레븐홀트 near:', near.join(', '), '| to 사레타:', mapRoute(map, at('레븐홀트'), at('사레타').id).map(p => p.name).join(' → '));
+  assert.ok(near.length >= 1 && near.length < map.pins.length - 1);
+  assert.ok(near.includes('그림우드') && !near.includes('해신의 섬'));
+  assert.ok(mapRoute(map, at('레븐홀트'), at('사레타').id).length > 1);
+  for (const a of map.pins) for (const b of map.pins) if (a.id !== b.id && a.kind !== 'event' && b.kind !== 'event' && a.kind !== 'exit') assert.ok(mapRoute(map, a, b.id).length > 0, a.name + ' → ' + b.name);
+});
+
 // Small things early are easy and pay little; a goal pays by where it came from (a duty briefing paid like the entrance exam).
 test('weights set DC and pay', () => {
   const g = { ...games[0], wizardMain: '잿빛 문장의 기사' } as Game;
@@ -99,4 +131,11 @@ test('a lost roll finishes no goal', () => {
   const dice = { ability: 'str', label: '검술 증명', dc: 6, weight: 'normal' as const, die: 1, modifier: 2, total: 3, success: false, critical: '대실패' };
   const r = applyReply(g, structuredClone(t0.session), structuredClone(t0.data), t0.message, { diceResult: dice });
   assert.ok(!r.session.log.some(l => l.startsWith('시스템: 목표 완료')));
+});
+
+test('a mid-reply gesture at a carried item reads as the item clue', () => {
+  const inv = ['낡은 롱소드', '잿빛 갈매기 인장 반지'];
+  assert.deepEqual(asideClue('에드리아 하르트', ['인장 반지를 잠시 바라보다'], inv), { item: '잿빛 갈매기 인장 반지', text: '에드리아 하르트가 인장 반지를 잠시 바라본다.' });
+  assert.equal(asideClue('넬', ['반지를 들다'], ['은 반지'])?.text, '넬이 반지를 든다.');
+  assert.equal(asideClue('넬', ['고개를 끄덕이다'], inv), null);
 });

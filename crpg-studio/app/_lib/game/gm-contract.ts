@@ -6,14 +6,14 @@
 export type GmStateKey =
   | 'adjacentLocationIds' | 'adjacentLocations' | 'availableImages' | 'cast' | 'characterValues' | 'completedGoalSteps'
   | 'currentGoal' | 'currentInteractionEvent' | 'currentMapId' | 'directorNotes' | 'equipped' | 'event' | 'eventTrigger'
-  | 'finalGoal' | 'finalGoalMode' | 'finalGoalSteps' | 'flags' | 'goalCompleted' | 'gold' | 'handledNpcs' | 'hp' | 'inventory'
+  | 'finalGoal' | 'finalGoalMode' | 'finalGoalSteps' | 'flags' | 'goalCompleted' | 'goalPath' | 'gold' | 'handledNpcs' | 'hp' | 'inventory'
   | 'items' | 'knownNpcs' | 'level' | 'localStories' | 'locationDescription' | 'locationName' | 'locations' | 'mapName'
   | 'mapPin' | 'maxHp' | 'maxQuests' | 'monsters' | 'npcProfiles' | 'party' | 'partyLevels' | 'placeSeed' | 'quests'
   | 'recentFoes' | 'relationships' | 'reputation' | 'reputationRank' | 'reservedNpcs' | 'roll' | 'safePlace' | 'sceneNpcs'
-  | 'storyPlan' | 'trainableStats' | 'unanswered' | 'whereabouts' | 'xp';
+  | 'storyCastFull' | 'storyPlan' | 'trainableStats' | 'unanswered' | 'whereabouts' | 'xp';
 export type GmState = { [K in GmStateKey]?: any };
 export type GmBodyKey =
-  | 'action' | 'closeTalk' | 'combat' | 'debug' | 'diceResult' | 'genre' | 'history' | 'initialEquipment'
+  | 'action' | 'closeTalk' | 'combat' | 'debug' | 'diceResult' | 'genre' | 'hero' | 'history' | 'initialEquipment'
   | 'interfere' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
   | 'previousChoices' | 'prologue' | 'prompt' | 'recentCheck' | 'reroll' | 'ruleEquipment' | 'sceneText' | 'talkTurns'
   | 'talkPurpose' | 'withThisNpc';
