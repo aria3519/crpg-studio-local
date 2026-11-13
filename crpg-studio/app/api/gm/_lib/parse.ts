@@ -44,7 +44,12 @@ export function readWritten(c: Ctx) {
     const talkable = [...onStage, ...[...(Array.isArray(state.knownNpcs) ? state.knownNpcs : []), ...(Array.isArray(state.cast) ? state.cast : []).map((c: unknown) => String(c || '').replace(/^\[GM\]\s*/, '').split(/[(:：]/)[0].trim())].filter((n: string) => story.includes(n))]
       .filter((n: string) => n.length >= 1 && !(Array.isArray(state.reservedNpcs) ? state.reservedNpcs : []).includes(n) && !(Array.isArray(state.party) ? state.party : []).includes(n));
     // A one-letter name (넬) counts only when exact; partial matches need two letters so 넬 isn't read into another name.
-    data.talkTo = !talkName ? '' : talkable.find((n: string) => n === talkName) || (talkName.length < 2 ? '' : talkable.find((n: string) => n.length >= 2 && (talkName.includes(n) || n.includes(talkName)))) || '';
+    // Someone the scene itself brought on (개척민 하나, a gate guard) is talked to as they are, not dropped: the scene stopped
+    // at that talk, so dropping it left no talk and no choices. Not a later act's person, a companion or a monster.
+    const foes = (Array.isArray(body.monsters) ? body.monsters : []).map((m: { name?: unknown }) => String(m?.name || ''));
+    const extra = talkName.length >= 2 && talkName.length <= 12 && story.includes(talkName) && !(Array.isArray(state.reservedNpcs) ? state.reservedNpcs : []).includes(talkName)
+      && !(Array.isArray(state.party) ? state.party : []).includes(talkName) && !foes.some((n: string) => n && (n.includes(talkName) || talkName.includes(n))) ? talkName : '';
+    data.talkTo = !talkName ? '' : talkable.find((n: string) => n === talkName) || (talkName.length < 2 ? '' : talkable.find((n: string) => n.length >= 2 && (talkName.includes(n) || n.includes(talkName)))) || extra;
     if (data.talkTo) data.choices = [];
     // The player sets off: the game makes the move on the map (not on an arrival the map already made).
     const goName = tail.match(/\[이동:\s*([^\]|]+)/)?.[1].trim().slice(0, 40) || '';

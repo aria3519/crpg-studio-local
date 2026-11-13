@@ -273,7 +273,7 @@ export function placeBackground(g: Game, pin?: MapPin): string {
 }
 export type Game = { npcPortraits?:NpcPortrait[]; npcStyle?:string; finalGoalMode?: 'single' | 'progress'; finalGoalSteps?: string[]; prologue?: string; prologueTitle?:string; prologueImage?:string; profileDone?: boolean; promptDone?: boolean; mapDone?: boolean; assetsDone?: boolean; settingsDone?: boolean; wizardType?: string; wizardWorld?: string; wizardStage?: number; wizardMain?: string; wizardMainDraw?: string[]; wizardStart?: string; wizardBasePrompt?: string; playerMarker?: string; playerPortrait?: string; customPromptSections?: CustomPromptSection[]; removedPromptSections?: string[]; promptDrafts?: PromptDrafts; compressedPrompt?: string; characterConfig?: CharacterConfig; showHpBar?: boolean; showEquipment?: boolean; showDice?: boolean; startingEquipment?: string; maps?: BoardMap[]; startMapId?: string; startPinId?: string; registrationDescription?: string; genre?: string; gameType?: string; cooperation?: string; progression?: string; playTime?: string; hashtags?: string[]; audience?: string; playMode?: 'single' | 'multi'; minPlayers?: number; maxPlayers?: number; imageRows?: ImageRow[]; imageColumns?: ImageColumn[]; imageCells?: ImageCell[]; prompt?: string; mapImage?: string; assets?: Asset[]; id: string; name: string; description: string; world: string; rules: string; gm: string; hp: number; size: number; created: number; cover?: string };
 // foeBleed/foeBleedTurns/foePoison: the player's 출혈 and 독 still working on the foe.
-export type CombatState = { openCut?: number; castGauge?: number; foeBleed?: number; foeBleedTurns?: number; foePoison?: number; level?: number; boss?: boolean; enemyAtk?: number; enemySkill?: EnemySkill; enemyShield?: number; shield?: number; lethal?: boolean; monster?: boolean; foeDesc?: string; power?: number; npc: string; enemyHp: number; enemyMaxHp: number; enemyDc: number; enemyDamage: number; round: number; itemUse?: string; lastDealt?: number; lastTaken?: number; last?: { allies?: string[]; dealt: number; critDealt: boolean; taken: number | null; critTaken: boolean }; totalDealt?: number; totalTaken?: number; result?: 'win' | 'lose' };
+export type CombatState = { respect?: boolean; openCut?: number; castGauge?: number; foeBleed?: number; foeBleedTurns?: number; foePoison?: number; level?: number; boss?: boolean; enemyAtk?: number; enemySkill?: EnemySkill; enemyShield?: number; shield?: number; lethal?: boolean; monster?: boolean; foeDesc?: string; power?: number; npc: string; enemyHp: number; enemyMaxHp: number; enemyDc: number; enemyDamage: number; round: number; itemUse?: string; lastDealt?: number; lastTaken?: number; last?: { allies?: string[]; dealt: number; critDealt: boolean; taken: number | null; critTaken: boolean }; totalDealt?: number; totalTaken?: number; result?: 'win' | 'lose' };
 export type DiceCheck = { ability: string; label: string; dc: number; weight?: Weight; reason: string; action: string; success?: string; failure?: string; back?: string[] };
 export type DiceResult = { ability: string; label: string; dc: number; weight?: Weight; die: number; modifier: number; total: number; success: boolean; critical: string; onSuccess?: string; onFailure?: string };
 // A roll in the last few actions: the GM is told not to ask for another one right away.
@@ -502,6 +502,20 @@ export const storyFoes = (g: Game, s: Session) => {
   const reached = Math.max(0, ...steps.map((st, i) => seen.some(q => alikeQuest(st.q, q)) ? i : 0));
   const now = foes(stepOf(g, currentGoalOf(s))?.beats || []);
   return { now, later: [...new Set(steps.slice(reached + 1).flatMap(st => foes(st.beats)))].filter(n => !now.includes(n)) };
+};
+// How far the main story has come: main steps done (a step counts once it is closed in the log or a later step is
+// open; the log alone forgets as it is trimmed) and the act of the step now under way. undefined for stories with no steps.
+export const storyProgress = (g: Game, s: Session) => {
+  const steps = mainSteps(g);
+  if (!steps.length) return undefined;
+  const closed = s.log.flatMap(l => l.match(/^시스템: 목표 완료 — (.+?)(?: \(의뢰인 .*\))?$/)?.[1] || []), open = questsOf(s);
+  const done = Math.max(0, ...steps.map((st, i) => closed.some(q => alikeQuest(st.q, q)) ? i + 1 : open.some(q => alikeQuest(st.q, q)) ? i : 0));
+  let act = 1;
+  const actOf = steps.map(st => { const a = act; if (st.act) act = st.act + 1; return a; });
+  const acts = Math.max(1, ...steps.map(st => st.act || 0));
+  // ends: the step count at which each act is through, for the act marks on the bar.
+  const ends = Array.from({ length: acts }, (_, a) => actOf.lastIndexOf(a + 1) + 1);
+  return { done, total: steps.length, act: Math.min(acts, actOf[done] ?? acts), acts, ends, percent: Math.round(done / steps.length * 100) };
 };
 // The level a foe is met at. The current goal's foe matches the player: the story puts it on that step, so its tier's
 // minimum (Lv.10 for 다이어울프 우두머리) doesn't apply.
@@ -752,6 +766,11 @@ export const debugFoe = (g: Game, s: Session, command: string): Foe | undefined 
 };
 // At or below this an NPC attacks on sight instead of talking.
 export const HOSTILE_AFFECTION = -60;
+// People who take a fight as a test of strength: picking one with them doesn't make them enemies, and beating them
+// raises their opinion of the player (RESPECT_WIN) instead of lowering it. Names are the built-in cast's.
+export const RESPECTS_STRENGTH = ['에드리아 하르트', '브리아', '우르술라', '남궁세린', '팽소연', '홍랑'];
+export const RESPECT_WIN = 15;
+export const respectsStrength = (name: string) => RESPECTS_STRENGTH.includes(name.trim());
 export const CLASH_GAP = 8;
 // Max HP grows with level on top of the game's base HP.
 // The mana pool: the sheet's 마나 value (fantasy) grows 2 a level, plus what robes add; 0 when the sheet has no mana.

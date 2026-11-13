@@ -477,7 +477,7 @@
 .sceneLocation:active:not(:disabled)>b{transform:scale(.96)}
 .sceneLocation:focus-visible{outline:2px solid #fca5a1;outline-offset:2px}
 .sceneLocation.open>b{background:#f26861;border-color:#f26861}
-.sceneLocation:disabled{display:none}
+.sceneLocation:disabled{opacity:.45;cursor:not-allowed}
 /* The stage takes the map image ratio while open (set inline once the image loads), so the map fills it and pin percentages land on the art. */
 .stageMap{position:absolute;inset:0;z-index:6;background:#1f2430}
 .stageMap>.miniMap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;container-type:size;background:none;border-radius:0;overflow:hidden}
@@ -501,12 +501,12 @@
 /* NPC encounter, talk mode, combat mode */
 .encounterPanel{border:1px solid #e5e9ef;border-radius:12px;padding:14px;background:#fff}
 .encounterPanel p{margin:0 0 12px;font-size:14px;color:#3b4658}
-.encounterActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.encounterActions{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px}
 .encounterAction{display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 8px;border-radius:12px;border:1px solid #e5e9ef;background:#fff;color:#3b4658;font-size:14px;cursor:pointer;transition:background .15s,border-color .15s}
 .encounterTalk:hover:not(:disabled){background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
 .encounterFight:hover:not(:disabled){background:#fff1f1;border-color:#f2a7a7;color:#c53340}
-.encounterIgnore:hover:not(:disabled){background:#f4f6f9;border-color:#cfd5de}
 .encounterTalk svg{color:#3b82f6}.encounterFight svg{color:#e0525d}.encounterIgnore svg{color:#8b94a3}
+.playPage .encounterPanel .encounterIgnore svg{color:#cbd5e1}
 .talkPanel,.combatPanel{border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
 .talkPanel{border:1px solid #bfdbfe;background:#f8fbff}
 .combatPanel{border:1px solid #f3c1c4;background:#fff8f8}
@@ -1126,6 +1126,13 @@ button.gearSlot:disabled{cursor:default}
 .statusFact>svg{flex:none;color:#c27a1a}.statusFact b{font-weight:700}
 .statusFact em{font-style:normal;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;background:#c27a1a;color:#fff}
 .statusFact.infamy em{background:#b4232c}
+/* Story progress in the status banner: the main story's steps as a gold gauge, act marks on the bar. */
+.statusStory>svg{color:#c27a1a}
+.storyAct{display:inline-block;margin-right:3px;padding:0 7px;border-radius:6px;background:#c27a1a;color:#fff;font-size:11px;font-weight:800}
+.storyTrack{position:relative}
+.storyTrack i{background:linear-gradient(90deg,#f6a623,#ffd166);box-shadow:0 0 6px rgba(246,166,35,.6)}
+.storyTrack em{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#c9ced6}
+.storyTrack em.reached{background:rgba(122,75,18,.5)}
 .statusPlace{margin-left:auto;padding-left:clamp(0px,1vw,14px);border-left:1px solid #ececf0}
 .statusPlace>svg{color:#f26861}
 .statusPlace>span{display:flex;flex-direction:column;line-height:1.35;min-width:0}.statusPlace b{overflow:hidden;text-overflow:ellipsis}.statusPlace small{font-size:11px;color:#6f7a89;overflow:hidden;text-overflow:ellipsis}
@@ -1179,7 +1186,7 @@ button.gearSlot:disabled{cursor:default}
 /* Its buttons share the dark glass of the action choices; icons keep their own hue, brightened for the dark. */
 .playPage .encounterPanel .encounterAction{border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(18,20,28,.68);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#f4f5f8;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:background .15s,border-color .15s,box-shadow .15s}
 .playPage .encounterPanel .encounterAction:hover:not(:disabled),.playPage .encounterPanel .encounterAction:focus-visible{background:rgba(28,30,42,.82);border-color:#f5c542;color:#fff;box-shadow:0 0 0 1px rgba(245,197,66,.5),0 0 16px rgba(245,197,66,.4);outline:none}
-.playPage .encounterPanel .encounterFlee svg{color:#86efac}.playPage .encounterPanel .encounterTalk svg{color:#93c5fd}.playPage .encounterPanel .encounterFight svg{color:#fca5a5}.playPage .encounterPanel .encounterIgnore svg{color:#cbd5e1}
+.playPage .encounterPanel .encounterFlee svg{color:#86efac}.playPage .encounterPanel .encounterTalk svg{color:#93c5fd}.playPage .encounterPanel .encounterFight svg{color:#fca5a5}
 .playPage .combatPanel{gap:4px;padding:8px 10px}.playPage .talkPanel{gap:6px;padding:8px 10px}
 .diceCheckPanel,.diceCheckResult{margin:0}
 .diceCheckActions{display:flex;gap:8px;flex-wrap:wrap}
@@ -1279,8 +1286,8 @@ details[open]>summary .storyPreview{display:none}
 .miniMapPin i{display:block;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px #0007}
 .miniMapPin span{max-width:88px;padding:1px 5px;border-radius:4px;background:rgba(30,25,20,.82);color:#fff6de;font-size:10px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .miniMapPin.far{cursor:not-allowed}
-.miniMapPin.far i{background:#9aa1ab;opacity:.75}
-.miniMapPin.far span{display:none}
+.miniMapPin.far i{background:#9aa1ab}
+.miniMapPin.far{opacity:.45;filter:grayscale(1)}
 .miniMapPin.near{cursor:pointer}
 .miniMapPin.near i{background:#f26861;box-shadow:0 0 0 4px rgba(242,104,97,.28),0 1px 4px #0007}
 .miniMapPin.near:hover i,.miniMapPin.near:focus-visible i{transform:scale(1.3)}
@@ -1291,6 +1298,5 @@ details[open]>summary .storyPreview{display:none}
 .miniMapPin.current span{background:#14532d;border:1px solid #fde68a}
 .miniMapPin[aria-disabled="true"].near{cursor:wait}
 .stageMapFollow .miniMapPin{transform:translate(-50%,-50%) scale(calc(1 / var(--mapZoom,1)))}
-.stageMapFollow .miniMapPin.far{display:none}
 .stageMapFollow .miniMapPin.current i{display:none}
 .diceGain{font-style:normal;font-weight:700;margin-left:4px;opacity:.85;white-space:nowrap}

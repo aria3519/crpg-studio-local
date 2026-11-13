@@ -14,7 +14,7 @@ export type GmStateKey =
 export type GmState = { [K in GmStateKey]?: any };
 export type GmBodyKey =
   | 'action' | 'closeTalk' | 'combat' | 'debug' | 'diceResult' | 'genre' | 'hero' | 'history' | 'initialEquipment'
-  | 'interfere' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
+  | 'fromTalk' | 'interfere' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
   | 'previousChoices' | 'prologue' | 'prompt' | 'recentCheck' | 'reroll' | 'ruleEquipment' | 'sceneText' | 'talkTurns'
   | 'talkPurpose' | 'withThisNpc';
 export type GmBody = { [K in GmBodyKey]?: any } & { state?: GmState };

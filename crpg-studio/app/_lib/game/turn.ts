@@ -2,7 +2,7 @@
 // on the player next (a monster, a hostile NPC). Pure: no React, no network. The play screen applies the result and
 // shows the effects; tests replay recorded replies through it (tests/turn.test.ts).
 import { TRAVEL_VERB } from '../travel';
-import { storyNpcsAfter, storyFoes, foeLevel, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, getGameGoal, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, snapMainQuest, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, defaultActions, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
+import { storyNpcsAfter, storyFoes, foeLevel, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, getGameGoal, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, snapMainQuest, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
 import { GRADE_LABELS, KIND_LABELS, SKILLS, infoOf, gearOf, bonusText, skillText, enemyGear, gradeForTier, dropChance, rollGrade, rollSkill, randomGearKind, gearName, POTIONS, healShareOf, enemySkill, enemySkillText, type EnemySkill, type Grade, type ItemInfo, type ItemKind, type Equipped } from '../items';
 import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, type Foe } from '../monsters';
 import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, battleXp, questXp, mainQuestXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from '../progression';
@@ -98,7 +98,9 @@ export function applyReply(game: Game, current: Session, data: any, message: str
         else if (relationships.length < 100) relationships.push(person);
       }
     }
-    const questLog = snapMainQuest(game, applyQuests(questsOf(current), data, current.questGivers || {}));
+    const questLog0 = snapMainQuest(game, applyQuests(questsOf(current), data, current.questGivers || {}));
+    // A quest with no recorded giver (the story's opening main quest) that closes in a talk counts the talk partner as its giver.
+    const questLog = { ...questLog0, doneGivers: questLog0.doneGivers.map(g => g || (current.mode === 'talk' ? current.talkNpc || '' : '')) };
     // Each finished goal pays by its weight (where it came from), not one fixed purse for all.
     const questPays = questLog.done.map(q => questStakes(questWeight(game, q), current.level || 1));
     const questSum = (k: 'xp' | 'gold' | 'rep') => questPays.reduce((a, p) => a + p[k], 0);
@@ -144,7 +146,8 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const knownFoe = current.combat ? current.npcCombat?.[current.combat.npc] : undefined;
     const combat = current.mode === 'combat' && current.combat ? (current.combat.round === 0 ? startCombat(current.combat, knownFoe || data.enemy) : { ...current.combat, itemUse: undefined }) : current.combat;
     const npcCombat = current.mode === 'combat' && current.combat?.round === 0 && combat && !knownFoe ? { ...(current.npcCombat || {}), [combat.npc]: { hp: combat.enemyMaxHp, dc: combat.enemyDc, damage: combat.enemyDamage, power: combat.power } } : current.npcCombat;
-    const nextActions = current.mode === 'combat' ? [] : current.mode === 'talk' ? suggestedActions.slice(0, 3) : (suggestedActions.length ? suggestedActions : defaultActions(game, current.mapId, current.pinId));
+    // No stand-in choices: a scene that ends without any gets them drawn by the play screen (drawChoicesIfStuck).
+    const nextActions = current.mode === 'combat' ? [] : current.mode === 'talk' ? suggestedActions.slice(0, 3) : suggestedActions;
     // A voice is fixed the first time an NPC speaks and never rewritten afterwards.
     const npcVoices = { ...(current.npcVoices || {}) };
     for (const v of Array.isArray(data.npcVoices) ? data.npcVoices : []) if (v && typeof v.name === 'string' && typeof v.style === 'string' && !npcVoices[v.name]) npcVoices[v.name] = v.style;
