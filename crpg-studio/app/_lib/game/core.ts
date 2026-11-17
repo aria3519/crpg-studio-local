@@ -1,7 +1,7 @@
 // Game rules shared by the play screen: session shape, constants and pure helpers (no React).
 // Moved out of app/page.tsx unchanged so the turn logic can be tested without the screen.
 import { mainPrologue, mainChain } from '../prologues';
-import { type Beat } from '../quest-beats';
+import { type Beat, beatGoal } from '../quest-beats';
 import { TRAVEL_VERB } from '../travel';
 import { REGION_QUESTS, type RegionQuest } from '../regional-quests';
 import GENRE_REF from '../../api/prompt/_lib/genre-reference.json';
@@ -69,11 +69,13 @@ export const DEFAULT_MAP_NAMES: Record<string,string[]> = {
 // Places inside a city (its detail-map pins and the prompt's city locations) point to that city, so a scene heading
 // like 【북문 초소 · 낮】 puts the player at 레븐홀트 on the world map. The longest matching place name wins.
 export const GENRE_REF_KEY: Record<string, string> = { fantasy: '정통 판타지' };
+// A reference place that belongs to its own world pin, not the city it is listed under (user 2026-11-17: 변경백 성채 is at 변경백가 영지, not 레븐홀트).
+const PLACE_HOME: Record<string, string> = { '변경백 성채': '변경백가 영지' };
 export const cityPlaceCache: Record<string, [string, string][]> = {};
 export const cityPlaces = (genre: string): [string, string][] => cityPlaceCache[genre] ??= [
   ...(DEFAULT_MAP_PLACES[genre] || []).slice(1).flatMap((pins, k) => pins.map(([name]) => [name, DEFAULT_MAP_NAMES[genre]?.[k + 1] || ''] as [string, string])),
   ...((GENRE_REF as Record<string, { cities?: { name: string; locations: string[] }[] }>)[GENRE_REF_KEY[genre]]?.cities || [])
-    .flatMap(c => c.locations.map(l => [l.replace(/^\{\w+\}\s*/, '').replace(/\(.*$/, '').trim(), c.name] as [string, string])),
+    .flatMap(c => c.locations.map(l => { const n = l.replace(/^\{\w+\}\s*/, '').replace(/\(.*$/, '').trim(); return [n, PLACE_HOME[n] || c.name] as [string, string]; })),
   // A place with its own pin on the world map isn't inside a city: 회색 탑 폐허 counted as 레븐홀트, so its fight started there.
 ].filter(([name, city]) => name.length >= 2 && !!city && !(DEFAULT_MAP_PLACES[genre]?.[0] || []).some(([pin]) => pin === name)).sort((a, b) => b[0].length - a[0].length);
 export const cityOfPlace = (genre: string, heading: string) => cityPlaces(genre).find(([name]) => heading.includes(name))?.[1];
@@ -476,13 +478,43 @@ export const storyNpcsAfter = (s: Session, relationships: { name: string }[]) =>
 };
 // There is no main story (user, 2026-11-16: "메인스토리 개념이 있으면 안돼"): the story is made wherever the player goes,
 // from the world's material. What stays fixed is the progress (acts, %) and the ending, the world's final boss.
-const storySteps = (g: Game) => { const m = mainPrologue(g.wizardMain); return [...(m?.firstQuest ? [{ q: m.firstQuest, beats: m.firstBeats }] : []), ...regionQuestsOf(g).flatMap(r => [{ q: r.title, beats: r.steps.flatMap(x => x.beats) }, ...r.steps])]; };
+// The main's whole chain is prepared story too: its later steps come back as goals (preparedGoal), so they need their path.
+const storySteps = (g: Game) => { const m = mainPrologue(g.wizardMain); return [...(mainChain(g) || (m?.firstQuest ? [{ q: m.firstQuest, beats: m.firstBeats }] : [])), ...regionQuestsOf(g).flatMap(r => [{ q: r.title, beats: r.steps.flatMap(x => x.beats) }, ...r.steps])]; };
 const stepOf = (g: Game, q: string) => q ? storySteps(g).find(x => alikeQuest(x.q, q)) : undefined;
-export const goalPath = (g: Game, q: string): string[] => {
+export const goalPath = (g: Game, q: string, s?: Session): string[] => {
   const b = lastBeat(g), place = bossPlace(g);
   // The finale's path: go to where the boss waits, then fight it (user: "자연스럽게 최종 보스 위치로 가게").
   if (b?.do === 'defeat' && place && alikeQuest(finaleQuest(g) || '', q)) return [`${place}에서 ${b.foe}${josa(b.foe, '이')} 기다린다`, b.then];
-  return (stepOf(g, q)?.beats || []).map(b => b.then);
+  const beats = stepOf(g, q)?.beats || [], done = s ? beatsDone(beats, s.log, goalStart(s, q)) : 0;
+  // Done beats go as what already happened (so they are not asked for again, 에드리아's 지원서 three times); the rest keep
+  // where and what (without it the writer had the hero mark the wolf site for 에드리아 instead of going back to report).
+  return beats.map((b, i) => i < done ? `이미 일어남: ${b.then}` : `${beatGoal(b)} → ${b.then}`);
+};
+// Where a goal starts in the log: its "새 목표" line, else the start (a main's first goal is there from the opening).
+const goalStart = (s: Session, q: string) => s.log.map(e => e.startsWith('시스템: 새 목표 — ') && alikeQuest(e.slice(12).replace(/ (의뢰인 .*)$/, ''), q)).lastIndexOf(true);
+// How many of a goal's beats the log shows, in order, from the game's own lines: a talk with that person ended, that foe
+// beaten, a scene at the place (search: one the player acted in, not the arrival), an option picked. A first talk may come
+// before the goal's line (the talk that gave it). shortcut: a talk counts whatever was said, a search whatever was done there.
+export const beatsDone = (beats: Beat[], log: string[], from: number) => {
+  const place = (e: string) => e.match(/^GM: 【([^】]*)】/)?.[1] || '';
+  const acted = (i: number) => { for (let k = i - 1; k >= 0 && !log[k].startsWith('GM:'); k--) { if (log[k].endsWith('이동했습니다.')) return false; if (log[k].startsWith('플레이어:')) return true; } return false; };
+  const hit = (b: Beat, e: string, i: number) => {
+    const here = () => !!place(e) && (!('at' in b) || !b.at?.length || b.at.some(w => place(e).includes(w)));
+    switch (b.do) {
+      case 'talk': return e.match(/^시스템: (.+?)[와과]의 대화가 끝났습니다.$/)?.[1] === b.npc;
+      case 'defeat': return e.startsWith('전투: 승리 — ') && e.includes(b.foe);
+      case 'reach': return here();
+      case 'search': return here() && acted(i);
+      case 'choose': return e.startsWith('플레이어:') && b.options.some(o => e.includes(o));
+    }
+  };
+  let at = Math.max(0, from), done = 0;
+  for (const [n, b] of beats.entries()) {
+    const i = log.findIndex((e, k) => k >= (n === 0 && b.do === 'talk' ? 0 : at) && hit(b, e, k));
+    if (i < 0) break;
+    done++; at = i + 1;
+  }
+  return done;
 };
 // The final boss: material of the chosen world (the foe its story data ends on). The game ends only when it falls.
 const lastBeat = (g: Game) => (mainChain(g) || []).slice(-1)[0]?.beats.filter(b => b.do === 'defeat').pop();
@@ -698,7 +730,8 @@ export const nearbyPins = (map: BoardMap | undefined, pinId?: string): MapPin[] 
 export const AFTERMATH = /^전투 결과:|에게서 간신히 도망쳤다\.|의 대화가 방금 끝났다\./;
 export const FIGHT_INTENT = /(싸운다|맞서 싸|맞선다|공격한다|베어 넘|베어낸다|덤벼든다|덤빈다|휘두른다|맞받아친다|전투를 벌)/;
 export const BEAST_SCENE = /(마물|늑대|괴물|짐승|야수|습격|덮치|돌진|달려들|으르렁|트롤|거미|고블린|해골|구울)/;
-export const GENERIC_PLACE = /^(입구|광장|거리|마을|도시|근처|안쪽|바깥|가장자리)$/;
+// 지하: "지하로 내려가" in 변경백 성채 went to 옛 왕조 지하 묘지; the full name still travels there.
+export const GENERIC_PLACE = /^(입구|광장|거리|마을|도시|근처|안쪽|바깥|가장자리|지하)$/;
 // Places next to each other (user, 2026-11-12: a far place is reached through the near ones, like a real journey): the map's
 // own links when it has any, else each place's NEAR_PINS nearest; separate groups are joined at their closest pair.
 const NEAR_PINS = 3;
@@ -909,16 +942,44 @@ export const personalStories = (g: Game, s: Session): string[] => {
 // (endTalk) — or, if it just ended, the latest older one; with nothing older, the offer is all there is.
 export const heldGoal = (before: string, quests: string[], added: string[]) => { const old = quests.filter(q => !added.includes(q)); return old.includes(before) ? before : old.at(-1) || added.at(-1) || ''; };
 const questsDone = (s: Session) => s.log.flatMap(l => l.match(/^시스템: 목표 완료 — (.+?)(?: (의뢰인 .+))?$/)?.[1] || []);
-// Scenes written since the current goal became current. A goal with no prepared steps that has run this many scenes is
-// brought to its outcome in the next one (found, fought, or failed), so a search can't drag on for ten turns.
-export const SETTLE_SCENES = 3;
-// Counted from when the goal became current, not from the last talk's task: a companion's talk every two or three scenes set a new
-// task each time (발자국 찾기 → 마물 추적하기 → 소리의 정체 확인하기), so the count never reached three.
-export const goalScenes = (s: Session) => { const goal = currentGoalOf(s), from = s.focus === goal && s.focusAt !== undefined ? s.focusAt : s.log.lastIndexOf(`시스템: 새 목표 — ${goal}`); return from < 0 ? 0 : s.log.slice(from).filter(l => l.startsWith('GM:')).length; };
 // The open quest that is one of this person's prepared stories (its title or a step). A job the same person offers while it is open
 // joins that story instead of becoming a goal of its own: 넬's improvised "세 갈래 발자국의 주인 추적" took the focus from
 // 넬의 마지막 사냥, so the writer got none of its steps and spun clues with no answer for six turns.
 export const ownStoryOpen = (g: Game, quests: string[], giver: string) => giver ? quests.find(q => regionQuestsOf(g).some(r => r.kind === 'story' && r.giver === giver && (alikeQuest(r.title, q) || r.steps.some(x => alikeQuest(x.q, q))))) : undefined;
+// Every goal is a prepared story (user 2026-11-17: a story with no goal is a design miss). An improvised errand had no
+// ending, so the scenes spun clues around it (넬's "화살의 주인", 4 scenes of "놓쳤어"). An offered job becomes, in order:
+// the prepared title it names; the next main step when the giver hands it (who closed the last step or opens this one, as
+// 에드리아 does 장물 단속); the giver's own story or job not yet taken (rank aside for stories); else no goal at all.
+// The last main step done (-1 before any).
+const mainAt = (chain: { q: string }[], done: string[]) => chain.map(st => done.some(d => alikeQuest(st.q, d))).lastIndexOf(true);
+// No scene runs without a goal (user 2026-11-17): when the list empties, the next main step not given up becomes the goal,
+// as the main's first step is from the opening.
+// A finished region-story step hands on to that story's next step, so the story goes on as its own goals.
+export const withNextMain = <T extends { quests: string[]; added: string[]; done: string[] }>(g: Game, s: Session, log0: T): T => {
+  const done = [...questsDone(s), ...log0.done], dropped = s.log.flatMap(l => l.match(/^시스템: 목표 포기 — (.+)$/)?.[1] || []);
+  const after = log0.done.flatMap(d => { const r = regionQuestsOf(g).find(r => r.steps.some(st => alikeQuest(st.q, d))), n = r?.steps[r.steps.findIndex(st => alikeQuest(st.q, d)) + 1]?.q; return n && ![...log0.quests, ...done].some(q => alikeQuest(q, n)) ? [n] : []; });
+  const log = after.length ? { ...log0, quests: [...log0.quests, ...after], added: [...log0.added, ...after] } : log0;
+  if (log.quests.length) return log;
+  const chain = mainChain(g) || [], next = chain.slice(mainAt(chain, done) + 1).find(st => !dropped.some(d => alikeQuest(st.q, d)))?.q;
+  return next ? { ...log, quests: [next], added: [...log.added, next] } : log;
+};
+// doneNow: goals this same turn closes (the exam closed in the talk that handed out 장물 단속, and was read as still running).
+// A goal is always a step's wording ("성채 지하 냉실 문 열기"), never a story's title ("성채 지하 냉실").
+export const preparedGoal = (g: Game, s: Session, text: string, giver: string, doneNow: string[] = []): string => {
+  const open = questsOf(s).filter(q => !doneNow.includes(q)), done = [...questsDone(s), ...doneNow], reserved = reservedNpcs(g, s), chain = mainChain(g) || [];
+  const free = (q: string) => !open.some(o => alikeQuest(o, q)) && !done.some(d => alikeQuest(d, q));
+  // A region story's goal: its first step not done yet, while none of its steps is running.
+  const stepOf = (r: ReturnType<typeof regionQuestsOf>[number]) => [r.title, ...r.steps.map(st => st.q)].some(q => open.some(o => alikeQuest(o, q))) ? '' : r.steps.find(st => free(st.q))?.q || '';
+  const mainNamed = chain.find(st => alikeQuest(st.q, text))?.q, regionNamed = regionQuestsOf(g).find(r => alikeQuest(r.title, text) || r.steps.some(st => alikeQuest(st.q, text)));
+  if (mainNamed) return free(mainNamed) ? mainNamed : '';
+  if (regionNamed || !giver) return regionNamed ? stepOf(regionNamed) : '';
+  const at = mainAt(chain, done), next = chain[at + 1];
+  const talkers = (beats: Beat[] = []) => beats.flatMap(b => b.do === 'talk' ? [b.npc] : []);
+  if (next && free(next.q) && [talkers(next.beats)[0], talkers(chain[at]?.beats).at(-1)].includes(giver)) return next.q;
+  const own = regionQuestsOf(g).filter(r => r.giver === giver && stepOf(r) && !reserved.some(n => n !== giver && JSON.stringify(r).includes(n)) && (r.kind === 'story' || regionOpen(s, r)));
+  const pick = own.find(r => r.kind === 'story') || own[0];
+  return pick ? stepOf(pick) : '';
+};
 export const regionOpen = (s: Session, r: RegionQuest) => Math.max(0, s.reputation || 0) >= RANK_FLOORS[r.minRank || 0] && actsDone(s) >= (r.minAct || 0);
 // Cast members the main story brings in only at a later step (and the player hasn't met yet). Nothing may pull them in early:
 // region stories they appear in stay shut, and the GM and the director use a new person for such a role instead
@@ -1192,7 +1253,7 @@ export const PLACE_NPCS: Record<string, string[]> = {
   레븐홀트: ['에드리아 하르트', '브리아', '한나'], 사레타: ['바레나', '오틸리에 마른', '우르술라'], 아스테라: ['테오도라', '오르벨라'],
   '금지된 상회 본거지': ['오틸리에 마른'], '마탑 본부': ['리오네 아스크', '미라벨 크로우'], '태양교단 총본산': ['오르벨라', '세라핀'],
   그림우드: ['넬', '실바엘', '엘로이즈'], '은염 숲': ['실바엘'], '철망치 씨족 본거지': ['그리마 철망치'], '그림자 숲의 거점': ['카시아'], '변경백가 영지': ['레지나 발트'],
-  '변경왕 성채': ['레지나 발트'], '진흙 골목': ['핍'], '성문 앞 장터': ['한나', '말라키아'], '변경병 성채': ['에드리아 하르트'], '마탑 출장소': ['미라벨 크로우'],
+  '진흙 골목': ['핍'], '성문 앞 장터': ['한나', '말라키아'], '변경병 성채': ['에드리아 하르트'], '마탑 출장소': ['미라벨 크로우'],
   '북문 초소': ['에드리아 하르트', '브리아'], 대장간: ['그리마 철망치'],
   '상인 주거지': ['오틸리에 마른'], '소금 골목': ['핍', '카시아'], '모험가 길드 사레타 지부': ['우르술라'], '항구 선창': ['바레나'], '7번 부두': ['바레나'],
   '마탑 본탑': ['리오네 아스크', '미라벨 크로우'], 왕궁: ['테오도라', '아우렐리아'], '귀족가 주거지': ['아우렐리아'], '왕도 대시장': ['오틸리에 마른'],

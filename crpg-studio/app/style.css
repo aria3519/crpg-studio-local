@@ -1344,13 +1344,12 @@ details[open]>summary .storyPreview{display:none}
 .vnBox{position:absolute;z-index:8;left:0;right:0;bottom:0;padding:44px 6% 48px;background:linear-gradient(180deg,rgba(8,10,16,0) 0%,rgba(8,10,16,.74) 22%,rgba(8,10,16,.9) 100%);color:#f5f6f8}
 .vnBox.vnReady{cursor:pointer}
 .vnBox:focus-visible{outline:2px solid #fde68a;outline-offset:-4px}
-.vnName{font-weight:800;font-size:17px;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.35)}
 .vnText{margin:0;font-size:15.5px;line-height:1.75;white-space:pre-wrap;min-height:7em}
 .vnNext{position:absolute;right:5%;bottom:18px;font-size:16px;animation:vnBlink 1.2s ease-in-out infinite}
 .vnCount{position:absolute;right:calc(5% + 28px);bottom:20px;font-size:11px;opacity:.7}
 .sceneBodyReading{display:none !important}
 @keyframes vnBlink{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(3px)}}
-@media(max-width:520px){.vnBox{padding:28px 5% 36px}.vnName{font-size:15px}.vnText{font-size:14px;min-height:6em}}
+@media(max-width:520px){.vnBox{padding:28px 5% 36px}.vnText{font-size:14px;min-height:6em}}
 @media(prefers-reduced-motion:reduce){.vnNext{animation:none}}
 .vnNext.vnWait{opacity:.25;animation:none}
 /* Map pins: nearby places are buttons that move there (restored). */
