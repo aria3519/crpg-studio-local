@@ -77,10 +77,13 @@ function StoryProse({ text }: { text: string }) {
 function PrologueOpening({game}:{game:Game}) {const image=prologueImage(game);return <div className="prologueOpening">{image&&<img className="prologueHero" src={image} alt={prologueTitle(game)}/>}<div className="prologueOpeningBody"><span className="prologueEyebrow">PROLOGUE</span><h3>{prologueTitle(game)}</h3><PrologueRichText text={prologueText(game)} game={game}/></div></div>;}
 
 /** Shared renderer for prologue preview and the actual play log. */
+// Dev auto-play runs like fast-forward: every wait (typing, cut-ins, fight rounds, dice, pop-ups) shrinks to a blink.
+let fastForward = false;
+const wait = (ms: number) => fastForward ? Math.min(ms, 80) : ms;
 function TypeText({ text }: { text: string }) {
   const [shown, setShown] = useState(0);
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { setShown(text.length); return; }
+    if (fastForward || (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)) { setShown(text.length); return; }
     setShown(0);
     const id = setInterval(() => setShown(n => { if (n >= text.length) { clearInterval(id); return n; } return n + 1; }), 28);
     return () => clearInterval(id);
@@ -112,7 +115,7 @@ function FinalBossIntro({ name, art, level, desc }: { name: string; art?: string
   </div>;
 }
 function NpcCutIn({ npc, art, onDone }: { npc: string; art?: string; onDone: () => void }) {
-  useEffect(() => { const t = setTimeout(onDone, 1250); return () => clearTimeout(t); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const t = setTimeout(onDone, wait(1250)); return () => clearTimeout(t); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="cutIn cutInSweep" aria-hidden="true">
     <i className="cutInScrim"/>
     <div className="cutInBand"><i className="cutInHalftone"/><i className="cutInSpeed"/></div>
@@ -572,7 +575,7 @@ export default function Home() {
       // If the GM never answered, fight an average foe rather than stall.
       if (s.combat.round < 1) { const combat = startCombat(s.combat, s.npcCombat?.[s.combat.npc] || null);return { ...s, combat, log: [...s.log, battleIntro(combat, s.hp, maxHpOf(game, s))] }; }
       return autoBattleStep(game, s);
-    }), c.round < 1 ? 1700 : 1150);
+    }), wait(c.round < 1 ? 1700 : 1150));
     return () => clearTimeout(timer);
   }, [view, session.mode, session.combat, busy, game]);
   const update = (patch: Partial<Game>) => setGames(old => old.map(g => g.id === game.id ? { ...g, ...patch } : g));
@@ -724,7 +727,7 @@ export default function Home() {
     setDiceRoll({ result, statName, score, face: 1 + Math.floor(Math.random() * 20), done: false });
     const started = Date.now();
     const tick = setInterval(() => {
-      if (Date.now() - started >= DICE_ROLL_MS) { clearInterval(tick); setDiceRoll(r => r && { ...r, face: die, done: true }); return; }
+      if (Date.now() - started >= wait(DICE_ROLL_MS)) { clearInterval(tick); setDiceRoll(r => r && { ...r, face: die, done: true }); return; }
       setDiceRoll(r => r && { ...r, face: 1 + Math.floor(Math.random() * 20) });
     }, 70);
   }
@@ -768,7 +771,7 @@ export default function Home() {
   const [mapOpen, setMapOpen] = useState(false);
   const [repBurst, setRepBurst] = useState<{ delta: number; total: number; key: number } | null>(null);
   const [awakenBurst, setAwakenBurst] = useState<{ level: number; key: number } | null>(null);
-  useEffect(() => { if (awakenBurst) { const t = setTimeout(() => setAwakenBurst(null), 4200); return () => clearTimeout(t); } }, [awakenBurst]);
+  useEffect(() => { if (awakenBurst) { const t = setTimeout(() => setAwakenBurst(null), wait(4200)); return () => clearTimeout(t); } }, [awakenBurst]);
   const [levelBurst, setLevelBurst] = useState<{ level: number; key: number } | null>(null);
   // Affection changes pop up pink in the middle, like the other rewards (user: not a corner toast). Lines come from turn.ts
   // affectionNotes: "이름 호감도 +2 (우호)".
@@ -788,10 +791,10 @@ export default function Home() {
   const free = !awakenBurst && !questClear;
   const levelOut = free && burstOut(levelBurst), itemOut = free && !levelBurst && burstOut(itemBurst), repOut = free && !levelBurst && !itemBurst && burstOut(repBurst);
   const affOut = free && !levelBurst && !itemBurst && !repBurst && burstOut(affBurst);
-  useEffect(() => { if (affBurst && affOut) { const t = setTimeout(() => setAffBurst(null), 2800); return () => clearTimeout(t); } }, [affBurst, affOut]);
-  useEffect(() => { if (levelBurst && levelOut) { const t = setTimeout(() => setLevelBurst(null), 3200); return () => clearTimeout(t); } }, [levelBurst, levelOut]);
-  useEffect(() => { if (repBurst && repOut) { const t = setTimeout(() => setRepBurst(null), 3200); return () => clearTimeout(t); } }, [repBurst, repOut]);
-  useEffect(() => { if (itemBurst && itemOut) { const t = setTimeout(() => setItemBurst(null), 4200); return () => clearTimeout(t); } }, [itemBurst, itemOut]);
+  useEffect(() => { if (affBurst && affOut) { const t = setTimeout(() => setAffBurst(null), wait(2800)); return () => clearTimeout(t); } }, [affBurst, affOut]);
+  useEffect(() => { if (levelBurst && levelOut) { const t = setTimeout(() => setLevelBurst(null), wait(3200)); return () => clearTimeout(t); } }, [levelBurst, levelOut]);
+  useEffect(() => { if (repBurst && repOut) { const t = setTimeout(() => setRepBurst(null), wait(3200)); return () => clearTimeout(t); } }, [repBurst, repOut]);
+  useEffect(() => { if (itemBurst && itemOut) { const t = setTimeout(() => setItemBurst(null), wait(4200)); return () => clearTimeout(t); } }, [itemBurst, itemOut]);
   // The player's own action, typed as the last choice (apart from the creator's test command).
   const [ownAction, setOwnAction] = useState('');
   const [diceRoll, setDiceRoll] = useState<{ result: DiceResult; statName: string; score: number; face: number; done: boolean } | null>(null);
@@ -799,6 +802,7 @@ export default function Home() {
   // Dev only, for testing: plays by itself as fast as the GM answers. Choice 1 everywhere, pages and pop-ups skipped, a scene
   // person always talked to, a threat always fought; runs until clicked off, stuck, dead or the end (each line is a paid GM call).
   const [auto, setAuto] = useState(false);
+  fastForward = auto;
   useEffect(() => {
     if (!auto || view !== 'play' || busy || !titleDone) return;
     if (session.dead || session.goalCompleted) { setAuto(false); return; }
@@ -815,7 +819,7 @@ export default function Home() {
       const npc = (session.sceneNpcs || []).find(n => !(session.handledNpcs || []).includes(n) && !(session.party || []).includes(n));
       if (npc) return void startTalk(npc);
       say(session.suggestedActions?.[0], sendPlayerAction);
-    }, 250);
+    }, 30);
     return () => clearTimeout(t);
   });
   // While the map is open the stage takes the map image's own ratio, so the art fills it edge to edge.
@@ -1361,7 +1365,7 @@ export default function Home() {
       if (accepted) setSession(s => (s.party || []).includes(npc) || (s.party || []).length >= PARTY_LIMIT ? s : { ...s, party: [...(s.party || []), npc], sceneNpcs: (s.sceneNpcs || []).filter(n => n !== npc), handledNpcs: [...new Set([...(s.handledNpcs || []), npc])], companions: s.companions?.[npc] ? s.companions : { ...(s.companions || {}), [npc]: { level: npcLevel(s, npc) || 3, xp: 0 } } });
       else setSession(s => ({ ...s, inviteRefusals: { ...(s.inviteRefusals || {}), [npc]: s.log.length } }));
       setPartyResult(r => r && r.npc === npc ? { ...r, thinking: false } : r);
-    }, PARTY_THINK_MS);
+    }, wait(PARTY_THINK_MS));
   }
   // Abandoning frees a slot; the GM sees it in the log and stops steering toward it.
   function dropQuest(quest: string) {
@@ -2030,7 +2034,7 @@ export default function Home() {
     </>}
     </div>
   </section>
-  {session.mode === 'combat' && session.combat?.result && <div className="battleResultBackdrop battleResultLate" role="dialog" aria-modal="true" aria-labelledby="battle-result-title"><div className={`battleResultModal ${session.combat.result}`}>
+  {session.mode === 'combat' && session.combat?.result && <div className={`battleResultBackdrop${auto ? '' : ' battleResultLate'}`} role="dialog" aria-modal="true" aria-labelledby="battle-result-title"><div className={`battleResultModal ${session.combat.result}`}>
     <span className="battleResultIcon"><Swords size={28}/></span>
     <h2 id="battle-result-title">{session.combat.result === 'win' ? '승리!' : session.combat.lethal ? '사망' : '패배'}</h2>
     <p>{Math.max(0, session.combat.round - 1)}합 만에 {session.combat.npc}{session.combat.result === 'win' ? '을(를) 쓰러뜨렸습니다.' : '에게 쓰러졌습니다.'}</p>
