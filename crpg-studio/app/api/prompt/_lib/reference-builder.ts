@@ -4,7 +4,7 @@ type Genre=keyof typeof reference;
 type Choice={id:string;keyword:string;title?:string};
 const genres=Object.keys(reference) as Genre[];
 // Each main story is staged in a fixed city.
-const cityMap:Record<Genre,number[]>={'정통 무협':[2,0,1],'정통 판타지':[0,2,1],'현대 게이트·헌터':[0,0,2]};
+const cityMap:Record<Genre,number[]>={'정통 판타지':[0,2,1]};
 // A main may name its own city (mains[].city); older ones fall back to cityMap by position.
 const cityOf=(genre:Genre,main:object)=>{const src=reference[genre];const named=(main as {city?:string}).city;return src.cities.find(c=>c.name===named)||src.cities[cityMap[genre][(src.mains as object[]).indexOf(main)]]||src.cities[0];};
 const hash=(s:string)=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
@@ -83,7 +83,7 @@ function varied(items:string[],seed:number,count:number,main:string,city:Record<
 }
 // customMain: an AI-written main story (same line format as mains[].text, real place names instead of {slots}).
 export type CustomMain={name:string;text:string;city:string};
-export function buildReferencePrompt(input:{genre:string;gameName:string;gameDescription:string;choices:Choice[];goalMode?:string;mainName?:string;startName?:string;customMain?:CustomMain}){
+export function buildReferencePrompt(input:{genre:string;gameName:string;gameDescription:string;choices:Choice[];mainName?:string;startName?:string;customMain?:CustomMain}){
  const genre=genres.find(k=>input.genre.includes(k));if(!genre)throw Error('지원하지 않는 장르입니다.');
  const src=reference[genre];const seed=hash([genre,input.gameName,input.gameDescription,input.mainName||'',input.startName||'',...input.choices.map(c=>c.keyword)].join('|'));
  // The creator's picks win; the seed only fills in what was not chosen.
@@ -117,16 +117,6 @@ export function buildReferencePrompt(input:{genre:string;gameName:string;gameDes
  const starts=rank(src.starts,seed+19);
  const rawStart=src.starts.find(s=>startName(s)===input.startName)||starts[0];const startIdentity=startName(rawStart);
  const identity:Record<string,string>={};
- if(genre==='정통 무협'){
-  if(startIdentity==='문파 제자')identity.token='사문 신패';
-  if(startIdentity==='표국 신참 표사')identity.token='표국 패';
-  if(startIdentity==='몰락 세가의 서자'){
-   identity.token='가문 옥패';
-   const clans=['남궁세가','모용세가','제갈세가','사천당가','하북팽가'];
-   identity.clan=clans[seed%clans.length];
-   identity.clanWeapon=identity.clan==='하북팽가'?'도':identity.clan==='사천당가'?'암기 주머니':'검';
-  }
- }
  const start=materialize(cleanStart(rawStart),loc,identity);
  const mainText=materialize(main.text.split('\n').filter(x=>!x.startsWith('이 사건과 함께 쓰지 않을 재료')).join('\n'),loc,identity);
  const exclusions=main.exclusions||[];const exclusiveGroups=src.exclusiveGroups||[];
@@ -134,10 +124,8 @@ export function buildReferencePrompt(input:{genre:string;gameName:string;gameDes
  const events=varied(src.events,seed+13,6,mainText,loc,quests,exclusions,exclusiveGroups,selectedNames,startIdentity,identity);
  const opportunities=varied(src.opportunities,seed+17,3,mainText,loc,[...quests,...events],exclusions,exclusiveGroups,selectedNames,startIdentity,identity);
  let fixed=src.fixed;
- // Remove duplicate realm list from the genre paragraph, retain it in the growth paragraph.
- if(genre==='정통 무협')fixed=fixed.replace(/경지는 삼류→이류→일류→절정→초절정→화경→현경→생사경→자연경\.\s*/,'');
  const goalLines=mainText.split('\n').filter(l=>l.startsWith('최종 목표('));
- const goal=goalLines.find(l=>l.startsWith(input.goalMode==='progress'?'최종 목표(진행도형)':'최종 목표(최종 목표형)'))||goalLines[0]||main.name;
+ const goal=goalLines.find(l=>l.startsWith('최종 목표(최종 목표형)'))||goalLines[0]||main.name;
  const compactMain=mainText.split('\n').filter(l=>!l.startsWith('최종 목표(')).join('\n');
  const format=(xs:string[])=>xs.map((s,i)=>`${i+1}. ${s}`).join('\n');
  const sections:[string,string][]=[
@@ -179,17 +167,17 @@ export function referenceOptions(genreLabel:string){
 }
 // The main story's parts exactly as buildReferencePrompt writes them, so a saved game prompt can be brought up to
 // date when a story's text changes (the prompt is assembled once, when the game is made).
-export function mainSections(genreLabel:string,mainName:string,goalMode?:string){
+export function mainSections(genreLabel:string,mainName:string){
  const genre=genres.find(k=>genreLabel.includes(k));if(!genre)return null;
  const src=reference[genre];const main=src.mains.find(m=>m.name===mainName);if(!main)return null;
  const loc=locationMap(cityOf(genre,main).locations);
  let mainText='';
  try{mainText=materialize(main.text.split('\n').filter(x=>!x.startsWith('이 사건과 함께 쓰지 않을 재료')).join('\n'),loc);}catch{return null;}
- return storySections(main.name,mainText,goalMode);
+ return storySections(main.name,mainText);
 }
 // The same parts for a story whose text is already resolved (an AI-written one saved in the game).
-export function storySections(name:string,mainText:string,goalMode?:string){
+export function storySections(name:string,mainText:string){
  const goalLines=mainText.split('\n').filter(l=>l.startsWith('최종 목표('));
- const goal=goalLines.find(l=>l.startsWith(goalMode==='progress'?'최종 목표(진행도형)':'최종 목표(최종 목표형)'))||goalLines[0]||name;
+ const goal=goalLines.find(l=>l.startsWith('최종 목표(최종 목표형)'))||goalLines[0]||name;
  return {main:`${name}\n${mainText.split('\n').filter(l=>!l.startsWith('최종 목표(')).join('\n')}`,goal:goal.replace(/^최종 목표\([^)]+\):\s*/,''),hook:mainText.match(/^시작 계기:\s*(.+)$/m)?.[1]||''};
 }

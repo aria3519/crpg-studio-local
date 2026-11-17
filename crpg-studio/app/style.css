@@ -832,11 +832,6 @@
 .questCard.questRegion{border-left-color:#2f7d5b}
 .questCard.questRegion .questBadge{width:auto;padding:0 7px;border-radius:999px;background:#2f7d5b}
 .questCard.questMain .questBadge{width:auto;padding:0 7px;border-radius:999px;background:#b4232c}
-.questClearList li.main{background:#fff1f1;border-color:#f3b4b8}
-.questMainTag{font-style:normal;font-size:11px;font-weight:800;color:#fff;background:#b4232c;border-radius:999px;padding:1px 7px;margin-right:6px;vertical-align:1px}
-.questClearNext{width:100%;text-align:left;display:flex;flex-direction:column;gap:3px;background:#fff8f1;border:1px dashed #e7b08a;border-radius:10px;padding:9px 11px;margin-bottom:6px}
-.questClearNext strong{font-size:12px;color:#b4232c}
-.questClearNext span{font-size:14px;font-weight:700;color:#1f2937}
 /* Item grades: 일반 gray, 고급 green, 희귀 blue, 영웅 purple, 전설 orange, 신화 red-gold. */
 .grade0{--grade:#6b7280;--gradeBg:#f6f7f9}
 .grade1{--grade:#15803d;--gradeBg:#effaf2}
@@ -872,6 +867,8 @@ button.gearSlot:disabled{cursor:default}
 .itemCardEquip:hover{background:var(--grade);color:#fff}
 .itemName{color:var(--grade)}
 .foeCard{display:flex;flex-direction:column;gap:6px;margin:4px 0 10px}
+.foeCardFinal{border-left:3px solid #a21caf;padding-left:8px}
+.foeFinalTag{align-self:flex-start;padding:2px 8px;border-radius:6px;background:linear-gradient(90deg,#581c87,#a21caf);color:#fde68a;font-size:11.5px;font-weight:800;letter-spacing:.08em}
 .foeDesc{margin:0;font-size:12.5px;color:#6b7280}
 .foeStats{display:flex;flex-wrap:wrap;gap:6px}
 .foeStats span{font-size:12px;color:#6b7280;background:#f6f7f9;border-radius:8px;padding:4px 8px}
@@ -1044,6 +1041,10 @@ button.gearSlot:disabled{cursor:default}
 .cutInBoss .cutInMe{background:linear-gradient(115deg,#05060f,#27272a 62%,#52525b)}
 .cutInBoss .cutInFoe{background:linear-gradient(245deg,#000,#7f1d1d 60%,#dc2626)}
 .cutInBoss .cutInBanner{padding:9px 0;background:repeating-linear-gradient(-45deg,#facc15 0 20px,#0a0a0a 20px 40px);color:#fff;text-shadow:0 0 6px #000,0 2px 0 #000,2px 0 0 #000,-2px 0 0 #000,0 -2px 0 #000;letter-spacing:.4em}
+/* The final boss: violet and gold instead of the red-and-hazard boss look, so the last fight reads as the climax. */
+.cutInFinal .cutInFoe{background:linear-gradient(245deg,#000,#3b0764 55%,#a21caf)}
+.cutInFinal .cutInTagFoe{border-left-color:#facc15}
+.cutInFinal .cutInBanner{background:linear-gradient(90deg,transparent,#1e0533 18%,#581c87 50%,#1e0533 82%,transparent);color:#fde68a;text-shadow:0 0 12px #facc15,0 2px 0 #000;letter-spacing:.5em}
 @keyframes cutFromLeft{from{transform:translateX(-105%)}}
 @keyframes cutFromRight{from{transform:translateX(105%)}}
 @keyframes cutToLeft{to{transform:translateX(-105%)}}
@@ -1093,7 +1094,78 @@ button.gearSlot:disabled{cursor:default}
   .cutInPlate{left:5%;top:auto;bottom:11%;margin:0;max-width:90vw}
   .cutInPlace .cutInPlate{bottom:30%}
 }
-@media(prefers-reduced-motion:reduce){.playIntro,.cutIn,.sceneRibbon{display:none}.sceneArrive{animation:none}}
+/* Final boss entrance (FinalBossIntro), 3.6s: dark, three lightning strikes, the silhouette flares into the boss, the name is struck in. */
+.bossIntro{animation:wipeGone 3.6s step-end forwards,bossShake .6s 1.1s linear}
+.bossDark{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 62%,rgba(88,28,135,.6),#05010a 72%);animation:bossDark 3.6s ease both}
+.bossRunes{position:absolute;left:50%;top:52%;width:min(92vmin,780px);aspect-ratio:1;translate:-50% -50%;border-radius:50%;border:4px dashed rgba(253,230,138,.75);box-shadow:0 0 40px rgba(192,132,252,.7),inset 0 0 70px rgba(162,28,175,.55);background:repeating-conic-gradient(rgba(253,230,138,.16) 0 2deg,transparent 2deg 15deg);opacity:0;animation:bossRunes 3.6s linear both}
+.bossRunes::after{content:'';position:absolute;inset:11%;border-radius:50%;border:2px solid rgba(233,213,255,.7);box-shadow:0 0 18px rgba(192,132,252,.6)}
+.bossArt{position:absolute;left:50%;bottom:0;width:min(84vw,760px);height:80%;translate:-50% 0;animation:bossRise 3.6s cubic-bezier(.2,.8,.2,1) both}
+.bossArt img{width:100%;height:100%;object-fit:contain;object-position:bottom;animation:bossReveal 3.6s linear both}
+.bossBolt{position:absolute;top:-4%;width:clamp(44px,8vw,96px);height:78%;background:linear-gradient(#fff,#e9d5ff 45%,rgba(192,132,252,0));clip-path:polygon(48% 0,64% 0,53% 36%,72% 36%,32% 100%,45% 50%,26% 50%);filter:drop-shadow(0 0 12px #c084fc) drop-shadow(0 0 30px #a21caf);opacity:0;animation:bossBolt .34s steps(3) both}
+.bossEmber{position:absolute;left:var(--x);bottom:-3%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 10px #f59e0b,0 0 20px #a21caf;opacity:0;animation:bossEmber 2.2s var(--d) ease-out infinite}
+.bossTitle{position:absolute;left:0;right:0;top:9%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 16px;text-align:center}
+.bossTitle small{font-size:clamp(13px,2.4vmin,20px);font-weight:900;letter-spacing:.7em;color:#fde68a;text-shadow:0 0 12px #a21caf;animation:bossText 3.6s both}
+.bossTitle b{font-size:clamp(40px,10vmin,112px);font-weight:900;line-height:1.05;letter-spacing:.06em;color:#fff;text-shadow:0 0 18px #c084fc,0 0 44px #a21caf,0 4px 0 #3b0764;animation:bossName 3.6s both}
+.bossTitle span{font-size:clamp(16px,3vmin,26px);font-weight:900;font-style:italic;letter-spacing:.2em;color:#facc15;text-shadow:0 0 10px #000;animation:bossText 3.6s both}
+.bossTitle em{max-width:36em;font-style:normal;font-size:clamp(12px,2vmin,16px);color:#e9d5ff;text-shadow:0 1px 4px #000;animation:bossText 3.6s both}
+.bossFlash{position:absolute;inset:0;background:#f5f3ff;opacity:0;animation:bossFlash 3.6s linear both}
+@keyframes bossDark{0%{opacity:0}6%,86%{opacity:1}100%{opacity:0}}
+@keyframes bossRunes{0%,30%{opacity:0;transform:rotate(0) scale(.5)}42%{opacity:1;transform:rotate(50deg) scale(1)}86%{opacity:.9;transform:rotate(140deg) scale(1.04)}100%{opacity:0;transform:rotate(160deg) scale(1.25)}}
+@keyframes bossRise{0%{opacity:0;transform:translateY(16%) scale(1.15)}22%{opacity:1}44%{transform:none}86%{opacity:1;transform:scale(1.04)}100%{opacity:0;transform:scale(1.1)}}
+@keyframes bossReveal{0%,30%{filter:brightness(0) drop-shadow(0 0 22px #a21caf)}36%{filter:brightness(2.4) drop-shadow(0 0 46px #fde68a)}48%,100%{filter:brightness(1) drop-shadow(0 0 24px rgba(192,132,252,.85)) drop-shadow(0 10px 30px #000)}}
+@keyframes bossBolt{0%{opacity:1}60%{opacity:.4}100%{opacity:0}}
+@keyframes bossEmber{0%{opacity:0;transform:translateY(0) scale(var(--s))}15%{opacity:1}100%{opacity:0;transform:translate(24px,-92vh) scale(var(--s))}}
+@keyframes bossText{0%,46%{opacity:0;transform:translateY(8px)}54%,86%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes bossFlash{0%{opacity:.85}3%,9%{opacity:0}10%{opacity:.7}13%,19%{opacity:0}20%{opacity:.75}23%,31%{opacity:0}33%{opacity:.95}40%,100%{opacity:0}}
+@keyframes bossShake{10%,50%,90%{transform:translate(-12px,7px)}30%,70%{transform:translate(12px,-8px)}}
+/* Final boss battle cut-in: the usual slam plus a turning seal behind VS, a shockwave, lightning, embers and a heavier shake. */
+.cutInFinal{animation:wipeGone 1.75s step-end forwards,bossShake .7s .14s linear}
+.cutInFinal .cutInVs{color:#fde68a;text-shadow:0 0 .25em #c084fc,0 .03em 0 #7e22ce,.03em .06em 0 #3b0764}
+.cutInRunes{position:absolute;left:50%;top:50%;width:min(72vmin,620px);aspect-ratio:1;translate:-50% -50%;border-radius:50%;border:4px dashed rgba(253,230,138,.85);box-shadow:0 0 34px #a21caf,inset 0 0 44px rgba(192,132,252,.7);animation:cutRunes 1.75s linear both}
+.cutInRunes::after{content:'';position:absolute;inset:12%;border-radius:50%;border:2px solid rgba(233,213,255,.85)}
+.cutInShock{position:absolute;left:50%;top:50%;width:36vmin;aspect-ratio:1;translate:-50% -50%;border-radius:50%;border:6px solid #fde68a;box-shadow:0 0 30px #c084fc;opacity:0;animation:cutShock .75s .3s ease-out}
+.cutInBolt{height:100%;animation-duration:.26s}
+@keyframes cutRunes{0%,14%{opacity:0;transform:scale(.3) rotate(0)}24%{opacity:1;transform:scale(1) rotate(60deg)}78%{opacity:1;transform:scale(1.05) rotate(210deg)}88%,100%{opacity:0;transform:scale(1.5) rotate(240deg)}}
+@keyframes cutShock{0%{opacity:1;transform:scale(.2)}100%{opacity:0;transform:scale(4.5)}}
+/* The final boss on the stage and its panel keep a violet-gold aura while the player decides. */
+.sceneThreat.sceneThreatFinal img{animation:bossAura 2.2s ease-in-out infinite}
+.sceneThreat.sceneThreatFinal figcaption{color:#fde68a;text-shadow:0 0 10px #a21caf,0 1px 3px #000}
+.playPage .threatPanel.threatFinal{border-color:#a21caf;box-shadow:0 0 0 1px #a21caf,0 0 26px rgba(162,28,175,.55)}
+@keyframes bossAura{0%,100%{filter:drop-shadow(0 0 20px rgba(192,132,252,.85)) drop-shadow(0 8px 14px rgba(0,0,0,.6))}50%{filter:drop-shadow(0 0 34px rgba(253,230,138,.85)) drop-shadow(0 0 70px rgba(162,28,175,.8)) drop-shadow(0 8px 14px rgba(0,0,0,.6))}}
+/* Mobile-game flourishes for the final boss: turning god rays, scrolling hazard bands, twinkling stars, a gold name. */
+.bossRays{position:absolute;left:50%;top:55%;width:220vmax;aspect-ratio:1;translate:-50% -50%;background:repeating-conic-gradient(rgba(253,230,138,.22) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 8%,transparent 46%);mask:radial-gradient(circle,#000 8%,transparent 46%);opacity:0;animation:bossRays 3.6s linear both}
+.cutInRays{top:50%;animation:cutRays 1.75s linear both}
+@keyframes bossRays{0%,32%{opacity:0;transform:rotate(0)}40%{opacity:1}86%{opacity:.9;transform:rotate(40deg)}100%{opacity:0;transform:rotate(48deg)}}
+@keyframes cutRays{0%,16%{opacity:0;transform:rotate(0)}26%,76%{opacity:1}88%,100%{opacity:0;transform:rotate(30deg)}}
+.bossBand{position:absolute;left:0;right:0;height:clamp(30px,5.5vmin,46px);display:flex;align-items:center;overflow:hidden;background:repeating-linear-gradient(-45deg,#a21caf 0 18px,#3b0764 18px 36px);border-block:3px solid #facc15;box-shadow:0 0 22px rgba(162,28,175,.8);animation:bossBand 3.6s ease both}
+.bossBand span{white-space:nowrap;font-size:clamp(14px,2.6vmin,22px);font-weight:900;font-style:italic;letter-spacing:.18em;color:#fde68a;text-shadow:0 0 8px #000,0 2px 0 #000;animation:bossMarquee 3.6s linear both}
+.bossBandTop{top:3%}
+.bossBandBottom{bottom:3%}
+.bossBandBottom span{animation-direction:reverse}
+.cutInFinal .bossBand{animation:cutBand 1.75s ease both}
+.cutInFinal .bossBand span{animation-duration:1.75s}
+@keyframes bossBand{0%{opacity:0;transform:scaleY(0)}8%,86%{opacity:1;transform:none}100%{opacity:0;transform:scaleY(0)}}
+@keyframes cutBand{0%,10%{opacity:0;transform:scaleY(0)}18%,80%{opacity:1;transform:none}90%,100%{opacity:0;transform:scaleY(0)}}
+@keyframes bossMarquee{from{transform:translateX(0)}to{transform:translateX(-40%)}}
+.bossStar{position:absolute;width:clamp(18px,3.4vmin,34px);aspect-ratio:1;background:#fff;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 8px #fde68a) drop-shadow(0 0 16px #c084fc);opacity:0;animation:bossStar 1.1s ease-in-out infinite}
+@keyframes bossStar{0%,100%{opacity:0;transform:scale(.2) rotate(0)}50%{opacity:1;transform:scale(1) rotate(90deg)}}
+.bossTitle b{background:linear-gradient(180deg,#fffbeb 0%,#fde68a 38%,#f59e0b 62%,#fde68a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1.5px #3b0764;text-shadow:none;filter:drop-shadow(0 0 14px #c084fc) drop-shadow(0 0 30px #a21caf) drop-shadow(0 4px 0 #3b0764)}
+@keyframes bossName{0%,34%{opacity:0;transform:scale(2.6);filter:blur(10px)}41%{opacity:1;transform:scale(.94);filter:drop-shadow(0 0 30px #fde68a) drop-shadow(0 0 60px #c084fc)}45%,86%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 14px #c084fc) drop-shadow(0 0 30px #a21caf) drop-shadow(0 4px 0 #3b0764)}100%{opacity:0;transform:scale(1.05);filter:drop-shadow(0 0 14px #c084fc)}}
+/* Affection pop-up: a pink heart that bounces in the middle of the screen, hearts floating up around it. */
+.affBurst{position:fixed;left:50%;top:38%;z-index:45;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;min-width:220px;padding:22px 34px 18px;border-radius:22px;background:linear-gradient(#fff0f7,#ffd1e6);border:3px solid #f472b6;box-shadow:0 0 0 4px #fff,0 0 30px rgba(236,72,153,.55),0 18px 50px rgba(157,23,77,.3);color:#9d174d;cursor:pointer;animation:repBurst 2.8s ease both}
+.affHeart{color:#ec4899;filter:drop-shadow(0 0 10px rgba(236,72,153,.7));animation:affBeat .7s .2s ease-in-out 2}
+.affLine{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.affLine strong{font-size:16px}
+.affLine b{font-size:32px;line-height:1.1;font-weight:900;color:#db2777;-webkit-text-stroke:1px #fff;text-shadow:0 2px 0 #fff,0 0 12px rgba(236,72,153,.5)}
+.affLine span{font-size:13px;font-weight:700;color:#be185d}
+.affFloat{position:absolute;bottom:30%;left:calc(14% + var(--i) * 18%);color:#f9a8d4;opacity:0;animation:affFloat 1.8s calc(var(--i) * .18s) ease-out both}
+.affBurst.affDown{background:linear-gradient(#f5f3ff,#e2e8f0);border-color:#94a3b8;box-shadow:0 18px 50px rgba(30,41,59,.3);color:#334155}
+.affDown .affHeart,.affDown .affLine b,.affDown .affLine span{color:#64748b}.affDown .affFloat{display:none}
+@keyframes affBeat{0%,100%{transform:scale(1)}40%{transform:scale(1.25)}}
+@keyframes affFloat{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-90px) scale(1.1)}}
+.affPos,.relationshipDetails span b.affPos,[class*="attitude-"] b.affPos{color:#db2777}
+@media (prefers-reduced-motion:reduce){.affBurst,.affHeart,.affFloat{animation:none}.affFloat{display:none}}
+@media(prefers-reduced-motion:reduce){.playIntro,.cutIn,.sceneRibbon{display:none}.sceneThreatFinal img{animation:none}.sceneArrive{animation:none}}
 
 /* Play screen: status bar on top, stage and scene on the left, log and info tabs on the right. */
 .playPage{max-width:none;padding:8px 16px 12px}
@@ -1155,14 +1227,15 @@ button.gearSlot:disabled{cursor:default}
 /* Visual-novel layout: the stage always takes the whole height (never resizes); choices, encounters and talks float over its bottom. NPCs stand behind the box, z-index 5 keeps it above them and below the top bar (7). The open map hides the box so its pins stay reachable. */
 @media(min-width:1101px){
   .playBoard{--bodyH:0px}
-  .playScenePanel{position:relative}
+  /* The panel hugs the stage, which keeps the art's own ratio: filling the leftover height letterboxed it a few px. */
+  .playScenePanel{position:relative;align-self:start;max-height:100%}
   /* The stage fills the panel down to its bottom, so the floating boxes never hang below the art. */
-  .sceneStage{flex:1 1 auto}
+  .sceneStage{flex:0 1 auto;aspect-ratio:var(--sceneRatio,1.78)}
   .sceneBody{position:absolute;z-index:5;left:50%;bottom:14px;transform:translateX(-50%);width:min(760px,82%);max-height:60%;padding:0;border:0;background:transparent}
-  /* The talk box sits where the choices do and grows with the conversation, up to 46% of the stage. */
-  .sceneBody:has(>.talkPanel){max-height:46%}
+  /* The talk box sits where the choices do and grows up to 60% of the stage; the thread shrinks (down to 60px) and scrolls first, so a long reply never pushes the suggestions and input off the bottom. */
+  .sceneBody:has(>.talkPanel){max-height:60%;overflow-y:auto}
   .sceneBody>.talkPanel{flex:0 1 auto;border-radius:12px}
-  .playPage .sceneBody .talkPanel .talkThread{flex:0 1 auto}
+  .playPage .sceneBody .talkPanel .talkThread{flex:0 1 auto;min-height:60px}
   .sceneBody:has(>.encounterPanel){bottom:18%}
   .sceneStage.sceneMapMode+.sceneBody{display:none}
   /* Characters stand higher so the floating choices and talk box cover their legs, not their faces. */
@@ -1275,7 +1348,6 @@ details[open]>summary .storyPreview{display:none}
 .vnText{margin:0;font-size:15.5px;line-height:1.75;white-space:pre-wrap;min-height:7em}
 .vnNext{position:absolute;right:5%;bottom:18px;font-size:16px;animation:vnBlink 1.2s ease-in-out infinite}
 .vnCount{position:absolute;right:calc(5% + 28px);bottom:20px;font-size:11px;opacity:.7}
-.vnSkip{position:absolute;right:5%;top:40px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer}
 .sceneBodyReading{display:none !important}
 @keyframes vnBlink{0%,100%{opacity:.35;transform:translateY(0)}50%{opacity:1;transform:translateY(3px)}}
 @media(max-width:520px){.vnBox{padding:28px 5% 36px}.vnName{font-size:15px}.vnText{font-size:14px;min-height:6em}}
@@ -1300,3 +1372,54 @@ details[open]>summary .storyPreview{display:none}
 .stageMapFollow .miniMapPin{transform:translate(-50%,-50%) scale(calc(1 / var(--mapZoom,1)))}
 .stageMapFollow .miniMapPin.current i{display:none}
 .diceGain{font-style:normal;font-weight:700;margin-left:4px;opacity:.85;white-space:nowrap}
+/* The battle result waits ~1s so the last hit and the HP drain show first; hidden (not clickable) until then. */
+.battleResultBackdrop.battleResultLate{animation:battleResultLate .25s ease 1s both}
+@keyframes battleResultLate{from{opacity:0;visibility:hidden}to{opacity:1;visibility:visible}}
+/* People elsewhere reacting to what the hero did. */
+.storyEntry.storyWorld .storyEntryLabel{color:var(--accent,#6b7fd7)}
+
+/* Companions on the scene: game-style portrait cards with a 동행 / 임시 동행 ribbon (temp = teal). */
+.partyStrip{gap:14px}
+.partyTalk{--ring1:#ffe27a;--ring2:#f59e0b;--ring3:#b45309;--tag1:#fbbf24;--tag2:#d97706;animation:partyEnter .5s cubic-bezier(.2,1.5,.4,1) both}
+.partyTalk.temp{--ring1:#7ff6e4;--ring2:#22b8cf;--ring3:#6d28d9;--tag1:#2dd4bf;--tag2:#7c3aed}
+.partyStrip .partyTalkFace{width:60px;height:60px;border:0;padding:3px;background:conic-gradient(from 0deg,var(--ring1),var(--ring2),var(--ring3),var(--ring2),var(--ring1));box-shadow:0 0 0 2px rgba(255,255,255,.9),0 0 16px var(--ring2),0 4px 12px rgba(0,0,0,.55);animation:partyGlow 2.4s ease-in-out infinite}
+.partyStrip .partyTalkFace img{width:54px;height:54px;border:2px solid #10131c;background:#10131c}
+.partyStrip .partyTalkFace::after{content:"";position:absolute;inset:3px;border-radius:50%;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);background-size:250% 100%;animation:partyShine 3.2s ease-in-out infinite;pointer-events:none}
+.partyTag{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);z-index:1;padding:2px 7px;border-radius:999px;border:1.5px solid #fff;background:linear-gradient(180deg,var(--tag1),var(--tag2));color:#fff;font-size:10px;font-style:normal;font-weight:900;letter-spacing:-.2px;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.45);box-shadow:0 2px 6px rgba(0,0,0,.45)}
+.partyStrip .partyTalk small{margin-top:8px;padding:2px 8px;border-radius:6px;background:rgba(10,12,20,.72);font-size:11.5px}
+.partyLv{font-size:10px;font-weight:900;color:var(--ring1);text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.partyTalk:hover .partyTalkFace,.partyTalk:focus-visible .partyTalkFace{transform:scale(1.08)}
+@keyframes partyEnter{from{opacity:0;transform:translateY(-14px) scale(.6)}to{opacity:1;transform:none}}
+@keyframes partyGlow{0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,.9),0 0 10px var(--ring2),0 4px 12px rgba(0,0,0,.55)}50%{box-shadow:0 0 0 2px rgba(255,255,255,.9),0 0 22px var(--ring1),0 4px 12px rgba(0,0,0,.55)}}
+@keyframes partyShine{0%,60%{background-position:150% 0}100%{background-position:-100% 0}}
+.partyJoined.temp{background:linear-gradient(90deg,#14b8a6,#7c3aed)}
+
+/* Join fanfare: rays behind the portrait and a gold (or teal for 임시 동행) title. */
+.partyResult.accepted{position:relative;overflow:hidden}
+.partyResult.accepted .partyResultFace{position:relative;width:104px;height:104px;border:4px solid #fbbf24;box-shadow:0 0 0 6px rgba(251,191,36,.25),0 0 30px rgba(251,191,36,.7)}
+.partyResult.accepted::before{content:"";position:absolute;left:50%;top:70px;width:420px;height:420px;margin:-210px 0 0 -210px;background:repeating-conic-gradient(rgba(251,191,36,.22) 0 10deg,transparent 10deg 20deg);border-radius:50%;animation:partyRays 9s linear infinite;pointer-events:none;z-index:0}
+.partyResult.accepted>*{position:relative;z-index:1}
+.partyResult.accepted h2{font-size:30px;font-weight:900;background:linear-gradient(180deg,#fde68a,#f59e0b 55%,#b45309);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(120,53,15,.35))}
+.partyResult.partyTemp .partyResultFace{border-color:#2dd4bf;box-shadow:0 0 0 6px rgba(45,212,191,.25),0 0 30px rgba(124,58,237,.6)}
+.partyResult.partyTemp::before{background:repeating-conic-gradient(rgba(45,212,191,.2) 0 10deg,transparent 10deg 20deg)}
+.partyResult.partyTemp h2{background-image:linear-gradient(180deg,#99f6e4,#14b8a6 50%,#7c3aed)}
+@keyframes partyRays{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.partyTalk,.partyStrip .partyTalkFace,.partyStrip .partyTalkFace::after,.partyResult.accepted::before{animation:none}}
+
+/* Quest list on the play screen: a button at the top right of the scene opens the open quests, the current one first. */
+.sceneQuestsButton em{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#f26861;color:#fff;font-size:11px;font-style:normal;line-height:18px;text-align:center}
+.sceneQuestsButton.open em{background:#fff;color:#f26861}
+.sceneQuests{position:absolute;top:48px;left:0;width:min(320px,calc(100vw - 32px));max-height:min(60vh,420px);overflow:auto;padding:10px;border-radius:14px;background:rgba(20,22,30,.88);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,.4);color:#fff}
+.sceneQuests ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.sceneQuests li{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.07);border-left:3px solid rgba(255,255,255,.3)}
+.sceneQuests li.now{background:rgba(242,104,97,.18);border-left-color:#f26861}
+.sceneQuests li small{display:block;margin-bottom:2px;font-size:10.5px;font-weight:800;color:#fca5a1}
+.sceneQuests li p{margin:0;font-size:13px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.sceneQuests li span{display:block;margin-top:2px;font-size:11px;color:rgba(255,255,255,.65)}
+.sceneQuests li span b{color:#fff}
+.sceneQuestsEmpty{margin:4px 2px;font-size:13px;color:rgba(255,255,255,.7)}
+.sceneQuests li{position:relative;padding-right:32px}
+.sceneQuestDrop{position:absolute;top:6px;right:6px;display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:rgba(255,255,255,.55);cursor:pointer}
+.sceneQuestDrop:hover{background:rgba(255,255,255,.15);color:#fff}
+.sceneQuestDrop:focus-visible{outline:2px solid #fca5a1;outline-offset:1px}
+/* A new quest gets the same "!" dot as the info tab (.newDot), until the window is opened. */

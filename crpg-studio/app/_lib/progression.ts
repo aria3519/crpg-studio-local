@@ -16,10 +16,11 @@ export const tierOfLevel = (level: number) => { let t = 1; while (t < MAX_POWER 
 // A roaming foe grows with the player: it starts at its tier's level and can be met up to two tiers higher
 // (wolves Lv.2-10, a troll Lv.20-48, a wyvern Lv.48-82). Bosses keep their tier's level.
 export const foeLevelRange = (tier: number, boss = false): [number, number] => [levelForTier(tier), boss ? levelForTier(tier) : levelForTier(Math.min(MAX_POWER, Math.round(tier) + 2))];
-// The level a foe is met at: a level or so under the player, within its range, so ordinary fights stay winnable.
+// The level a foe is met at: a level or so under the player, within its range, so ordinary fights stay winnable. A
+// roaming foe may be met one level under its tier's floor: a Lv.1 player otherwise met every forest foe above them.
 export const encounterLevel = (tier: number, boss: boolean, playerLevel: number, rand = Math.random) => {
   const [min, max] = foeLevelRange(tier, boss);
-  return Math.max(min, Math.min(max, Math.round(playerLevel - 1 + (rand() * 3 - 1.5))));
+  return Math.max(boss ? min : Math.max(1, min - 1), Math.min(max, Math.round(playerLevel - 1 + (rand() * 3 - 1.5))));
 };
 
 // What each level adds on top of the character sheet: HP and damage grow by a steady share per level.
@@ -66,7 +67,6 @@ export const xpToNext = (level: number) => Math.round(25 * Math.pow(level, 1.7) 
 // With ~3 fights, a side quest and a deed per main step (and earlyBoost) a player is about Lv.5 after the first
 // errand, Lv.17 / 33 / 60 at the end of acts 1-3 and Lv.92 before the finale (simulated); one who only follows the
 // main quest is about Lv.64 there, and one who grinds hits the cap in act 4. Fights alone take ~9 to reach Lv.5.
-export const MAIN_QUEST_BASE = 0.5, MAIN_QUEST_STEP = 0.024;
 export const SIDE_QUEST_SHARE = 0.7;
 // Early levels come quickly: every reward counts up to 2.4× at Lv.1, easing to normal by Lv.15.
 export const earlyBoost = (level: number) => 1 + Math.max(0, 15 - Math.max(1, level)) * 0.1;
@@ -77,7 +77,6 @@ export const battleXp = (foeLevel: number, playerLevel: number) => {
   return Math.round(xpToNext(level) * share * earlyBoost(level));
 };
 export const questXp = (level: number) => Math.round(xpToNext(level) * SIDE_QUEST_SHARE * earlyBoost(level));
-export const mainQuestXp = (level: number, step = 0) => Math.round(xpToNext(level) * (MAIN_QUEST_BASE + MAIN_QUEST_STEP * Math.max(0, step) ** 2) * earlyBoost(level));
 // Deeds the GM recognises outside quests and fights; a finished regional story also pays an event.
 export const DEED_SHARES: Record<string, number> = { minor: 0.1, deed: 0.3, event: 0.6 };
 export const deedXp = (kind: unknown, level: number) => typeof kind === 'string' && DEED_SHARES[kind] ? Math.round(xpToNext(Math.max(1, level)) * DEED_SHARES[kind] * earlyBoost(level)) : 0;

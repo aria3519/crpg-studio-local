@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { GmBody, GmState } from '../../../_lib/game/gm-contract';
 import { FOREIGN_SCRIPT } from './speech';
-import { asideClue } from '../../../_lib/game/core';
+import { asideClue, impactOf } from '../../../_lib/game/core';
 
 type Ctx = { body: GmBody; state: GmState; data: any; prewritten: string; mode: string; partner: string };
 export function readWritten(c: Ctx) {
@@ -27,7 +27,8 @@ export function readWritten(c: Ctx) {
     data.line = lines.join('\n'); data.text = ''; data.playerLine = ''; data.gesture = gestureW || asides[0] || '';
     const clue = typeof data.howKnown === 'string' && data.howKnown.trim() ? null : asideClue(partner, asides, Array.isArray(state.inventory) ? state.inventory.filter((n: unknown): n is string => typeof n === 'string') : []);
     if (clue) { data.howKnown = clue.text; data.knownItem = clue.item; }
-    data.endTalk = !!end; data.nextAction = end?.[1]?.trim() || '';
+    const [act = '', ...rest] = (end?.[1] || '').split('|');
+    data.endTalk = !!end; data.nextAction = act.trim(); data.joins = rest.some(p => p.trim() === '함께'); data.task = rest.map(p => p.trim()).find(p => p && p !== '함께' && !FOREIGN_SCRIPT.test(p))?.slice(0, 60) || '';
     const numbered = tail.split('\n').map(l => (l.match(/^\s*\d\s*[.)]\s*(.+)$/)?.[1] || '').replace(/^["“”'「『]+|["“”'」』]+$/g, '').trim()).filter(Boolean).slice(0, 3);
     data.choices = end ? [] : numbered;
     // The talk ended on the partner's word: the ways on are the player's to pick, not played for them.
@@ -57,7 +58,10 @@ export function readWritten(c: Ctx) {
     if (data.goTo) data.choices = [];
     const roll = body.diceResult || data.talkTo || data.goTo ? null : tail.match(/\[판정:\s*([^\]]+)\]/);
     if (roll) {
-      const [ab = '', dcPart = '', what = '', ...rest]: string[] = roll[1].split('|').map((x: string) => x.trim());
+      const [ab = '', dcPart = '', ...more]: string[] = roll[1].split('|').map((x: string) => x.trim());
+      // The impact field (전투/이후/최종보스) may sit anywhere after the weight.
+      const impactPart = more.find(x => !!impactOf(x)) || '';
+      const [what = '', ...rest] = more.filter(x => x !== impactPart);
       const cv = (state.characterValues || {}) as Record<string, unknown>;
       const ids = Object.keys(cv).filter(k => cv[k] !== '' && Number.isFinite(Number(cv[k])));
       const id = ab.replace(/\(.*$/, '').trim();
@@ -65,7 +69,7 @@ export function readWritten(c: Ctx) {
       const tail2 = (k: string) => rest.find(r => r.startsWith(k))?.replace(new RegExp('^' + k + '하면\\s*'), '').trim() || '';
       // "사내를 밀쳐 고정쇠에 닿기; 실패하면 그가 종을 울린다" in one field also happens.
       const [tried, inlineFail = ''] = what.split(/[;,]?\s*실패하면\s*/);
-      data.check = { ability: ids.includes(id) ? id : byName || ids[0] || id, weight: dcPart.slice(0, 10), dc: Number(dcPart.match(/\d+/)?.[0]) || 11, label: tried.slice(0, 60) || '판정', reason: tried, success: tail2('성공'), failure: tail2('실패') || inlineFail.trim() };
+      data.check = { ability: ids.includes(id) ? id : byName || ids[0] || id, weight: dcPart.slice(0, 10), impact: impactOf(impactPart) || '', dc: Number(dcPart.match(/\d+/)?.[0]) || 11, label: tried.slice(0, 60) || '판정', reason: tried, success: tail2('성공'), failure: tail2('실패') || inlineFail.trim() };
       data.choices = [];
     }
   }

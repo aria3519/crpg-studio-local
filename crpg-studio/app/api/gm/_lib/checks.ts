@@ -54,20 +54,24 @@ export function checkReply(c: Ctx) {
     ability: String(data.check.ability || '').toLowerCase().slice(0, 50),
     label: String(data.check.label || '').slice(0, 60),
     reason: String(data.check.reason || '').slice(0, 200),
-    dc: Number(data.check.dc) || 11, weight: String(data.check.weight || '').slice(0, 10),
+    dc: Number(data.check.dc) || 11, weight: String(data.check.weight || '').slice(0, 10), impact: String(data.check.impact || '').slice(0, 10),
     // What hangs on the roll, shown before the player rolls.
     success: String(data.check.success || '').slice(0, 80),
     failure: String(data.check.failure || '').slice(0, 80),
   } : null;
-  const relationshipUpdates = Array.isArray(data.relationshipUpdates) ? data.relationshipUpdates.slice(0, 12).filter((item: unknown) => !!item && typeof item === 'object' && typeof (item as {name?:unknown}).name === 'string').map((item: {name:string;met?:boolean;relation?:string;affection?:number;affectionChange?:number}) => ({name:item.name.trim().slice(0,50),met:item.met===true,relation:typeof item.relation==='string'?item.relation.slice(0,30):'',affection:typeof item.affection==='number'&&Number.isFinite(item.affection)?Math.max(-100,Math.min(100,Math.round(item.affection))):undefined,affectionChange:typeof item.affectionChange==='number'&&Number.isFinite(item.affectionChange)?Math.max(-25,Math.min(25,Math.round(item.affectionChange))):undefined})) : [];
+  const relationshipUpdates0 = Array.isArray(data.relationshipUpdates) ? data.relationshipUpdates.slice(0, 12).filter((item: unknown) => !!item && typeof item === 'object' && typeof (item as {name?:unknown}).name === 'string').map((item: {name:string;met?:boolean;relation?:string;affection?:number;affectionChange?:number}) => ({because:String((item as {because?:unknown}).because??'').trim().slice(0,80),name:item.name.trim().slice(0,50),met:item.met===true,relation:typeof item.relation==='string'?item.relation.slice(0,30):'',affection:typeof item.affection==='number'&&Number.isFinite(item.affection)?Math.max(-100,Math.min(100,Math.round(item.affection))):undefined,affectionChange:typeof item.affectionChange==='number'&&Number.isFinite(item.affectionChange)?Math.max(-25,Math.min(25,Math.round(item.affectionChange))):undefined})) : [];
+  // Goodwill grows only on what this person likes (a sheet like, named in `because`): being around them or talking earns
+  // none (user, 2026-11-17). No sheet, no likes, no rise. Falls are the GM's call as before.
+  const relationshipUpdates = relationshipUpdates0.map((u: { name: string; because: string; affectionChange?: number }) => {
+    if (!(Number(u.affectionChange) > 0)) return u;
+    const like = (sheets[u.name]?.likes || []).find(l => l === u.because || (u.because.length >= 6 && (l.includes(u.because) || u.because.includes(l))));
+    return like ? { ...u, because: like, affectionChange: Math.min(10, Number(u.affectionChange)) } : { ...u, affectionChange: undefined };
+  });
   const questStrings = (v: unknown) => Array.isArray(v) ? v.filter((x: unknown): x is string => typeof x === 'string' && !!x.trim() && !FOREIGN_SCRIPT.test(x)).map((x: string) => x.trim().slice(0, 80)).slice(0, 3) : [];
   const completedQuests = questStrings(data.completedQuests), failedQuests = questStrings(data.failedQuests);
   // A giver outside the known cast (an unnamed extra) is dropped, like any other invented person.
   const addQuests = (Array.isArray(data.addQuests) ? data.addQuests : []).map((x: unknown) => typeof x === 'string' ? { text: x, giver: '' } : x && typeof x === 'object' ? { text: String((x as { text?: unknown; quest?: unknown }).text || (x as { quest?: unknown }).quest || ''), giver: String((x as { giver?: unknown }).giver || '') } : null)
     .filter((q: { text: string; giver: string } | null): q is { text: string; giver: string } => !!q && !!q.text.trim() && !FOREIGN_SCRIPT.test(q.text)).map((q: { text: string; giver: string }) => ({ text: q.text.trim().slice(0, 80), giver: (Array.isArray(state.knownNpcs) ? state.knownNpcs : []).includes(q.giver.trim()) ? q.giver.trim() : '' })).slice(0, 3);
-  const finalGoalCompleted = !check && state.finalGoalMode !== 'progress' && data.finalGoalCompleted === true && !!String(state.finalGoal||'').trim();
-  const steps=Array.isArray(state.finalGoalSteps)?state.finalGoalSteps.filter((v:unknown)=>typeof v==='string'&&v.trim()):[];
-  const completedGoalSteps=!check&&state.finalGoalMode==='progress'&&Array.isArray(data.completedGoalSteps)?data.completedGoalSteps.filter((v:unknown):v is number=>typeof v==='number'&&Number.isInteger(v)&&v>=0&&v<steps.length):[];
   const rawEnemy = data.enemy && typeof data.enemy === 'object' ? data.enemy : null;
   // A built-in NPC always fights at its sheet tier; anyone else gets the tier the GM judged from their profile.
   const sheetPower = Number(sheets[partner]?.power);
@@ -202,5 +206,5 @@ export function checkReply(c: Ctx) {
   const spokenChoices = mode === 'talk' && talkWritten ? [...(choices as string[])] : mode === 'talk' ? (choices as string[]).map((v: string) => v.replace(/^["“”'「『]+|["“”'」』]+$/g, '').trim()).filter(spoken) : [];
   if (mode === 'talk' && spokenChoices.length) choices.splice(0, choices.length, ...spokenChoices);
   const playerLine = mode === 'talk' && typeof data.playerLine === 'string' && !FOREIGN_SCRIPT.test(data.playerLine) ? data.playerLine.trim().replace(/^["“”'「『]+|["“”'」』]+$/g, '').slice(0, 300) : '';
-  return { addQuests, ambush, check, choices, completedGoalSteps, completedQuests, enemy, failedQuests, finalGoalCompleted, gesture, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain };
+  return { addQuests, ambush, check, choices, completedQuests, enemy, failedQuests, gesture, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain };
 }

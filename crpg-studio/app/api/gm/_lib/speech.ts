@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 
 // The model occasionally slips a word from another language into Korean (e.g. Russian "слух" for 소문).
-export const FOREIGN_SCRIPT = /[\u0400-\u04FF\u0600-\u06FF\u0E00-\u0E7F\u3040-\u30FF]/;
+export const FOREIGN_SCRIPT = /[\u0400-\u04FF\u0600-\u06FF\u0E00-\u0E7F\u3040-\u30FF\u3400-\u9FFF\uF900-\uFAFF]/; // Han too (\u6551\u51FA slipped into a goal)
 export const VOICE_LENGTH = 200;
 // A medieval setting pulled the model toward translated-drama speech (~이오, ~하시오). Wuxia keeps its authored 하오체 characters, so it skips this.
 export const NATURAL_SPEECH = '인물은 모두 오늘날 한국 사람이 실제로 입으로 하는 자연스러운 말로 이야기합니다. 세계관이 중세여도 번역극이나 사극처럼 말하지 않습니다.';
@@ -13,7 +13,7 @@ export type NpcSheet = { identity?: string; personality?: string; speech?: strin
 export type Profile = { name?: unknown; inScene?: unknown; inParty?: unknown; profile?: unknown; speechStyle?: unknown };
 export const sheetCache = new Map<string, Record<string, NpcSheet>>();
 export function npcSheets(genre: string): Record<string, NpcSheet> {
-  if (!['fantasy', 'wuxia', 'modern'].includes(genre)) return {};
+  if (genre !== 'fantasy') return {};
   if (!sheetCache.has(genre)) {
     try { sheetCache.set(genre, JSON.parse(readFileSync(path.join(process.cwd(), 'app', 'api', 'gm', '_data', 'npc-sheets', `${genre}.json`), 'utf8'))); }
     catch { return {}; }
@@ -21,7 +21,7 @@ export function npcSheets(genre: string): Record<string, NpcSheet> {
   return sheetCache.get(genre) || {};
 }
 // One small request decides each new NPC's speech register and habits; the result is stored and reused for the whole playthrough.
-export async function assignVoices(npcs: { name: string; profile: string }[], genre: string, wuxia: boolean): Promise<{ name: string; style: string }[]> {
+export async function assignVoices(npcs: { name: string; profile: string }[], genre: string): Promise<{ name: string; style: string }[]> {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'x-usage-tag': 'voices' },
@@ -29,8 +29,8 @@ export async function assignVoices(npcs: { name: string; profile: string }[], ge
         messages: [
           { role: 'system', content: [
             '한국어 CRPG의 NPC마다 게임 내내 고정될 말투를 정합니다.',
-            `style 형식: "어체: <${wuxia ? '하십시오체|해요체|하오체|하게체|해체|해라체' : '하십시오체|해요체|해체|해라체'} 중 하나만> | 어미: <자주 쓰는 어미 2~3개> | 버릇: <말버릇·자주 쓰는 표현> | 예: <그 인물다운 짧은 대사 하나>" 120자 이내.`,
-            wuxia ? '성별·나이·신분·성격에 맞추고, 인물끼리 서로 구분되게 하세요. 여성 인물은 profile에 근거가 없으면 하오체·하게체를 쓰지 마세요.' : `성별·나이·신분·성격에 맞추고, 인물끼리 서로 구분되게 하세요. 젊은 인물은 해요체·해체가 자연스럽습니다. ${NATURAL_SPEECH}`,
+            `style 형식: "어체: <하십시오체|해요체|해체|해라체 중 하나만> | 어미: <자주 쓰는 어미 2~3개> | 버릇: <말버릇·자주 쓰는 표현> | 예: <그 인물다운 짧은 대사 하나>" 120자 이내.`,
+            `성별·나이·신분·성격에 맞추고, 인물끼리 서로 구분되게 하세요. 젊은 인물은 해요체·해체가 자연스럽습니다. ${NATURAL_SPEECH}`,
             '{"voices":[{"name":"정확한 이름","style":"..."}]} JSON만 반환하세요.',
           ].join('\n') },
           { role: 'user', content: JSON.stringify({ genre: genre.slice(0, 300), npcs }) },

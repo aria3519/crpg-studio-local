@@ -1,6 +1,6 @@
 // Hostile foes per genre: creatures and hostile groups that are enemies on sight.
 // They are not NPCs: no conversation, no relationship entry, and they only ever appear as fights.
-// Each genre keeps to its own concept — no goblins in wuxia, no demonic-cult elders in a gate city.
+// Fantasy is the only roster left (wuxia and modern removed 2026-11-16).
 import { foeLevelRange } from './progression';
 
 // Art: public/_default_monsters/<genre>/<name>.png (Korean name), or <image>.png as a fallback.
@@ -40,46 +40,6 @@ const ROSTERS: Record<string, Roster> = {
       { name: '홍염 마인', image: 'crimson-fiend', power: 8, desc: '홍염의 패왕이 먼저 보낸 불꽃의 마인. 몸에서 불길이 솟는다', trophy: '홍염 마인의 불씨 핵', habitat: [], boss: true },
     ],
   },
-  wuxia: {
-    danger: /천마신교|석굴|폐사찰|고분|수로채|흑염곡|혈석관|관문|사막|정상|하오문|나루터|감숙관|은남|오아시스|산채|밀림/,
-    habitats: { mountain: /산|석굴|폐사찰|고분|곡|정상|산채|밀림/, water: /수로채|나루터|운하|강/, demon: /천마신교|흑염곡|혈석관/, desert: /사막|관문|감숙|오아시스|서역/, street: /하오문|은남/ },
-    foes: [
-      { name: '산적 떼', image: 'bandits', power: 2, desc: '도끼와 몽둥이를 든 산길의 산적들', habitat: ['mountain'] },
-      { name: '독물 떼', image: 'venom-swarm', power: 2, desc: '독사와 독지네가 들끓는 독물 무리', habitat: ['mountain', 'desert'] },
-      { name: '수적 무리', image: 'river-pirates', power: 3, desc: '작은 배를 몰고 나루를 터는 수적들', habitat: ['water'] },
-      { name: '흑도 낭인', image: 'black-ronin', power: 3, desc: '돈만 주면 칼을 뽑는 흑도의 낭인 무리', habitat: ['street', 'water'] },
-      { name: '산중 맹호', image: 'mountain-tiger', power: 4, desc: '사람을 해친 적 있는 거대한 범', habitat: ['mountain'] },
-      { name: '서역 마적단', image: 'western-raiders', power: 4, desc: '말을 타고 상단을 노리는 서역 마적', habitat: ['desert'] },
-      { name: '마교 교도', image: 'demon-cult-disciple', power: 4, desc: '천마를 섬기는 마교의 무사들', habitat: ['demon'] },
-      { name: '강시', image: 'jiangshi', power: 5, desc: '부적이 떨어진 채 뛰어다니는 강시', habitat: ['mountain', 'demon'] },
-      { name: '사파 살수', image: 'unorthodox-assassin', power: 5, desc: '암기와 독을 쓰는 사파의 살수', habitat: ['street', 'desert'] },
-      { name: '혈교 무사', image: 'blood-cult-warrior', power: 5, desc: '피로 무공을 닦는 혈교의 무사', habitat: ['demon', 'desert'] },
-      { name: '마교 호법', image: 'demon-cult-guardian', power: 6, desc: '마교 교주를 지키는 호법', habitat: ['demon'] },
-      { name: '사파 마두', image: 'unorthodox-fiend', power: 10, desc: '강호를 피로 물들인 천하 최악의 사파 마두', habitat: [], boss: true },
-      { name: '혈마 장로', image: 'blood-demon-elder', power: 10, desc: '혈공을 극한까지 익힌 혈교의 장로', habitat: [], boss: true },
-      { name: '천마', image: 'heavenly-demon', power: 10, desc: '마교의 정점, 천하를 노리는 천마', habitat: [], boss: true },
-    ],
-  },
-  modern: {
-    danger: /게이트|폐쇄구역|연구소|산악|섬 지역|야적장|폐교|던전|브레이크/,
-    habitats: { gate: /게이트|던전/, wild: /산악|섬/, ruin: /폐쇄구역|연구소|브레이크/, urban: /야적장|폐교|구도심/ },
-    foes: [
-      { name: '가시쥐 떼', image: 'spine-rats', power: 1, desc: 'E급 게이트에서 흘러나온 가시 돋친 쥐 떼', habitat: ['gate', 'urban'] },
-      { name: '고블린 척후조', image: 'goblin-scouts', power: 2, desc: '게이트 안을 정찰하는 고블린 무리', habitat: ['gate'] },
-      { name: '게이트 늑대', image: 'gate-wolf', power: 3, desc: '눈이 붉게 빛나는 게이트산 늑대', habitat: ['gate', 'wild'] },
-      { name: '오크 돌격병', image: 'orc-charger', power: 3, desc: '도끼를 휘두르며 돌진하는 오크', habitat: ['gate'] },
-      { name: '불법 헌터 패거리', image: 'rogue-hunters', power: 3, desc: '마정석을 노리고 사람을 터는 무등록 헌터들', habitat: ['urban'] },
-      { name: '문지기회 광신도', image: 'gatekeeper-cultist', power: 3, desc: '게이트 개방을 숭배하는 사교 신도들', habitat: ['urban', 'ruin'] },
-      { name: '철갑 하이에나', image: 'armored-hyena', power: 4, desc: '총알도 튕겨 내는 갑각을 두른 하이에나', habitat: ['wild', 'gate'] },
-      { name: '리자드맨 전사', image: 'lizardman-warrior', power: 4, desc: '창을 든 비늘 전사. 물가 게이트에 많다', habitat: ['gate'] },
-      { name: '브레이크 마수 군집', image: 'break-swarm', power: 5, desc: '게이트 브레이크로 쏟아져 나온 마수 떼', habitat: ['ruin', 'gate'] },
-      { name: '연구소 변이체', image: 'lab-mutant', power: 5, desc: '인공 각성 실험이 낳은 뒤틀린 변이체', habitat: ['ruin'] },
-      { name: '미노타우로스', image: 'minotaur', power: 6, desc: 'B급 게이트의 보스급 우두인', habitat: ['gate'] },
-      { name: '심해 크라켄', image: 'kraken', power: 10, desc: '해상 게이트 깊은 곳에서 불려 나온 거대 두족류', habitat: [], boss: true },
-      { name: 'S급 드래곤', image: 's-rank-dragon', power: 10, desc: '도시 하나를 불태울 수 있는 S급 게이트의 용', habitat: [], boss: true },
-      { name: '재앙급 게이트 군주', image: 'gate-overlord', power: 10, desc: '세계를 잇는 게이트의 지배자', habitat: [], boss: true },
-    ],
-  },
 };
 
 const rosterOf = (genre: string) => ROSTERS[genre] || ROSTERS.fantasy;
@@ -93,17 +53,8 @@ export const isFoeName = (genre: string, name: string) => !!findFoe(genre, name)
 // Stand-in art until a foe has its own picture: the fantasy picture that looks closest (public/_default_monsters/
 // fantasy/<name>.png). A file of the foe's own, by name or slug, always wins over this.
 export const ART_STAND_IN: Record<string, string> = {
-  // fantasy
+
   '산적 두목': '뒷골목 불량배', '마왕군 척후대': '심연의 하수인', '마왕군 장군': '마왕', '흑철 기사': '망령 기사', '홍염 마인': '홍염의 패왕',
-  // wuxia
-  '산적 떼': '뒷골목 불량배', '독물 떼': '거대 거미', '수적 무리': '머맨 약탈자', '흑도 낭인': '청부 암살자', '산중 맹호': '다이어울프 우두머리',
-  '서역 마적단': '고블린 약탈대', '마교 교도': '심연의 사도 광신도', '강시': '구울', '사파 살수': '청부 암살자', '혈교 무사': '심연의 사도 광신도',
-  '마교 호법': '망령 기사', '사파 마두': '홍염의 패왕', '혈마 장로': '마왕', '천마': '마왕',
-  // modern
-  '가시쥐 떼': '굶주린 늑대 무리', '고블린 척후조': '고블린 약탈대', '게이트 늑대': '다이어울프 우두머리', '오크 돌격병': '숲 트롤',
-  '불법 헌터 패거리': '뒷골목 불량배', '문지기회 광신도': '심연의 사도 광신도', '철갑 하이에나': '다이어울프 우두머리', '리자드맨 전사': '머맨 약탈자',
-  '브레이크 마수 군집': '심연의 하수인', '연구소 변이체': '촉수 마물', '미노타우로스': '숲 트롤', '심해 크라켄': '촉수 마물',
-  'S급 드래곤': '고대 고룡', '재앙급 게이트 군주': '마왕',
 };
 
 // Places whose name or description sounds dangerous (forests, ruins, gates...) can ambush the player.
@@ -117,10 +68,10 @@ export const pickEncounter = (genre: string, place: string, playerLevel: number,
   const tags = Object.entries(roster.habitats).filter(([, re]) => re.test(place)).map(([tag]) => tag);
   const local = roster.foes.filter(f => !f.boss && !banned.includes(f.name) && f.habitat.some(h => tags.includes(h)));
   const pool = local.length ? local : roster.foes.filter(f => !f.boss && !banned.includes(f.name) && f.power <= 3);
-  // Foes whose level range starts at most a few levels above the player (they are met near the player's level, see
-  // encounterLevel); those whose range covers the player are the most common.
+  // Foes whose level range starts at most one level above the player (at +4 a Lv.1 player met a Lv.4 giant spider); they are met near the player's level, see
+  // encounterLevel. Those whose range covers the player are the most common.
   const gapOf = (f: Foe) => { const [min, max] = foeLevelRange(f.power, f.boss); return playerLevel < min ? min - playerLevel : playerLevel > max ? playerLevel - max : 0; };
-  const fair = pool.filter(f => foeLevelRange(f.power, f.boss)[0] <= playerLevel + 4);
+  const fair = pool.filter(f => foeLevelRange(f.power, f.boss)[0] <= playerLevel + 1);
   const fresh = fair.filter(f => !recent.includes(f.name));
   const options = fresh.length ? fresh : fair.length ? fair : pool.slice().sort((a, b) => a.power - b.power).slice(0, 1);
   const weights = options.map(f => 1 / (1 + gapOf(f) / 6));

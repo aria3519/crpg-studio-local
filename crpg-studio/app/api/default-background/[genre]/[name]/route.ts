@@ -5,7 +5,7 @@ import fs from 'node:fs';
 export const runtime='nodejs';
 export async function GET(request:Request,{params}:{params:Promise<{genre:string;name:string}>}) {
  const {genre,name}=await params;
- if(!['wuxia','fantasy','modern'].includes(genre)||!/^[a-z0-9-]+$/.test(name))return new NextResponse('Not found',{status:404});
+ if(!['fantasy'].includes(genre)||!/^[a-z0-9-]+$/.test(name))return new NextResponse('Not found',{status:404});
  // Backgrounds are PNG, or WebP for the ones added later.
  const base=path.join(process.cwd(),'public','_default_backgrounds',genre,name);
  const webp=!fs.existsSync(base+'.png')&&fs.existsSync(base+'.webp');

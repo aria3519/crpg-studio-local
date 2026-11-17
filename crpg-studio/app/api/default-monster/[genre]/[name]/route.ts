@@ -9,7 +9,7 @@ export const runtime='nodejs';
 // Only names in the genre roster are served, so the path can't escape the folder.
 export async function GET(request:Request,{params}:{params:Promise<{genre:string;name:string}>}) {
  const {genre,name}=await params;
- const foe=['wuxia','fantasy','modern'].includes(genre)?findFoe(genre,decodeURIComponent(name)):undefined;
+ const foe=['fantasy'].includes(genre)?findFoe(genre,decodeURIComponent(name)):undefined;
  if(!foe)return new NextResponse('Not found',{status:404});
  const root=path.join(process.cwd(),'public','_default_monsters');
  const byName=path.join(root,genre,`${foe.name}.png`), bySlug=path.join(root,genre,`${foe.image}.png`);

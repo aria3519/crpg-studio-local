@@ -54,8 +54,6 @@ export const infoOf = (name: string, known?: Record<string, ItemInfo>): ItemInfo
 // start items and GM-given ones are recognised by name.
 export const POTIONS: Record<string, { name: string; desc: string }> = {
   fantasy: { name: '회복 물약', desc: '마시면 최대 HP의 30%를 회복한다.' },
-  wuxia: { name: '금창약', desc: '상처에 바르면 최대 HP의 30%를 회복한다.' },
-  modern: { name: '회복 포션', desc: '마시면 최대 HP의 30%를 회복한다.' },
 };
 export const POTION_SHARE = 0.3;
 export const healShareOf = (name: string, info: ItemInfo) => info.kind === 'item' && /물약|포션|금창약|회복약|치유약|성수/.test(name) ? POTION_SHARE : 0;
@@ -145,7 +143,7 @@ export const rollSkill = (kind: ItemKind, grade: Grade, name: string, rand = Mat
 // version. The gear they drop carries the same skill. Fixed per enemy name, so a foe always fights the same way.
 export type EnemySkill = { id: SkillId; value: number };
 // The final bosses fight in their own signature way; everyone else gets a skill fixed by name.
-const BOSS_SKILLS: Record<string, SkillId> = { 마왕: 'double', 홍염의_패왕: 'keen', 고대_고룡: 'lifesteal', 혈마_장로: 'lifesteal', 사파_마두: 'double', 천마: 'keen', 재앙급_게이트_군주: 'thorns', S급_드래곤: 'double', 심해_크라켄: 'regen' };
+const BOSS_SKILLS: Record<string, SkillId> = { 마왕: 'double', 홍염의_패왕: 'keen', 고대_고룡: 'lifesteal' };
 export const enemySkill = (name: string, tier: number): EnemySkill | undefined => {
   const grade = gradeForTier(tier);
   if (grade < 3) return undefined;

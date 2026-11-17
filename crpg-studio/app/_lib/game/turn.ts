@@ -2,10 +2,10 @@
 // on the player next (a monster, a hostile NPC). Pure: no React, no network. The play screen applies the result and
 // shows the effects; tests replay recorded replies through it (tests/turn.test.ts).
 import { TRAVEL_VERB } from '../travel';
-import { storyNpcsAfter, storyFoes, foeLevel, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, getGameGoal, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, snapMainQuest, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
+import { ownStoryOpen, heldGoal, currentGoalOf, alikeQuest, FIRST_LIKE_MAX, LIKE_GAP, dismissTemps, storyNpcsAfter, storyFoes, bossWaits, foeLevel, withStory, finalBoss, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
 import { GRADE_LABELS, KIND_LABELS, SKILLS, infoOf, gearOf, bonusText, skillText, enemyGear, gradeForTier, dropChance, rollGrade, rollSkill, randomGearKind, gearName, POTIONS, healShareOf, enemySkill, enemySkillText, type EnemySkill, type Grade, type ItemInfo, type ItemKind, type Equipped } from '../items';
 import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, type Foe } from '../monsters';
-import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, battleXp, questXp, mainQuestXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from '../progression';
+import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, battleXp, questXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from '../progression';
 
 // The map decides where the player is. A scene heading moves them only when they set off for a place one step away.
 export const scenePin = (game: Game, cur: Session, message: string, heading: string) => {
@@ -76,6 +76,7 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const suggestedActions = Array.isArray(data.choices) ? data.choices.filter((v: unknown): v is string => typeof v === 'string' && v.trim().length > 0).map((v: string) => v.trim().slice(0, 140)).slice(0, 4) : [];
     const relationships = [...(current.relationships || [])];
     let newcomers = 0;
+    const likedAt = { ...(current.likedAt || {}) };
     if (Array.isArray(data.relationshipUpdates)) {
       for (const raw of data.relationshipUpdates.slice(0, 12)) {
         if (!raw || typeof raw.name !== 'string' || isFoeName(defaultMapGenre(game), raw.name)) continue;
@@ -91,14 +92,22 @@ export function applyReply(game: Game, current: Session, data: any, message: str
         // adds it up. When the GM wrote the whole value, it echoed a stale one: a finished quest's +5 came back as -5.
         // One scene moves affection by at most AFFECTION_STEP, so a single line can't flip a friend into an enemy; test commands are exempt.
         const proposed = typeof raw.affection === 'number' && Number.isFinite(raw.affection) ? clampAffection(raw.affection) : undefined;
-        const change = typeof raw.affectionChange === 'number' && Number.isFinite(raw.affectionChange) ? raw.affectionChange : 0;
-        const affection = !previous ? (proposed === undefined ? 0 : debug ? proposed : clampAffection(Math.max(-40, Math.min(40, proposed)))) : debug && proposed !== undefined ? proposed : clampAffection(previous.affection + Math.max(-AFFECTION_STEP, Math.min(AFFECTION_STEP, change)));
+        const change0 = typeof raw.affectionChange === 'number' && Number.isFinite(raw.affectionChange) ? raw.affectionChange : 0;
+        // The same liked deed raises goodwill once per LIKE_GAP actions: doing it every scene doesn't farm affection.
+        const likeKey = change0 > 0 && typeof raw.because === 'string' && raw.because ? `${name}|${raw.because}` : '';
+        const change = likeKey && playerActs(current) - (likedAt[likeKey] ?? -LIKE_GAP) < LIKE_GAP ? 0 : change0;
+        if (likeKey && change > 0) likedAt[likeKey] = playerActs(current);
+        const affection = !previous ? (proposed === undefined ? 0 : debug ? proposed : clampAffection(Math.max(-40, Math.min(FIRST_LIKE_MAX, proposed)))) : debug && proposed !== undefined ? proposed : clampAffection(previous.affection + Math.max(-AFFECTION_STEP, Math.min(AFFECTION_STEP, change)));
         const person = { id: previous?.id || makeId(), name: previous?.name || name, relation, affection };
         if (index >= 0) relationships[index] = person;
         else if (relationships.length < 100) relationships.push(person);
       }
     }
-    const questLog0 = snapMainQuest(game, applyQuests(questsOf(current), data, current.questGivers || {}));
+    const offeredBy = (x: unknown) => x && typeof x === 'object' ? String((x as { giver?: unknown }).giver || '').trim() || (current.mode === 'talk' ? current.talkNpc || '' : '') : '';
+    const addQuests = Array.isArray(data.addQuests) ? data.addQuests.filter((x: unknown) => !ownStoryOpen(game, questsOf(current), offeredBy(x))) : data.addQuests;
+    const questLog0 = applyQuests(questsOf(current), { ...data, addQuests }, current.questGivers || {});
+    // The hidden task (a talk's settled job) ends quietly when the GM closes it: no goal line, no purse.
+    const taskText = current.task?.text || '', taskEnds = !!taskText && [data.completedQuests, data.failedQuests].flat().some((c: unknown) => typeof c === 'string' && (c.trim() === taskText || alikeQuest(taskText, c.trim())));
     // A quest with no recorded giver (the story's opening main quest) that closes in a talk counts the talk partner as its giver.
     const questLog = { ...questLog0, doneGivers: questLog0.doneGivers.map(g => g || (current.mode === 'talk' ? current.talkNpc || '' : '')) };
     // Each finished goal pays by its weight (where it came from), not one fixed purse for all.
@@ -123,10 +132,8 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     // A companion who has come to dislike the player walks out.
     const deserters = (current.party || []).filter(n => (relationships.find(r => r.name.trim() === n.trim())?.affection ?? 0) < 0);
     const party = (current.party || []).filter(n => !deserters.includes(n));
-    const configuredSteps=(game.finalGoalSteps||[]).map(x=>x.trim()).filter(Boolean);
-    const validStepIndices=Array.isArray(data.completedGoalSteps)?data.completedGoalSteps.filter((n:unknown):n is number=>typeof n==='number'&&Number.isInteger(n)&&n>=0&&n<configuredSteps.length):[];
-    const completedGoalSteps=[...new Set([...(current.completedGoalSteps||[]),...validStepIndices])].filter(n=>n<configuredSteps.length).sort((a,b)=>a-b);
-    const goalCompleted = current.goalCompleted === true || ((game.finalGoalMode==='progress' ? (configuredSteps.length>0 && completedGoalSteps.length===configuredSteps.length) : (data.finalGoalCompleted === true && !!getGameGoal(game).trim())));
+    // The game ends only when its final boss falls (finishBattle sets bossDown), whichever way the player came.
+    const goalCompleted = current.goalCompleted === true || current.bossDown === true;
     // Named people come from the game's cast (portraits, prompt NPC list, people already met) or were just met in this scene (relationships above).
     const knownNpcs = knownNpcNames(game, current);
     const sceneNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => v.trim()).filter((v: string) => !!v && (debug || !knownNpcs.length || knownNpcs.includes(v) || relationships.some(r => r.name === v))))].slice(0, 3) as string[] : (current.sceneNpcs || []);
@@ -154,8 +161,8 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const curMap = (game.maps || []).find(m => m.id === current.mapId);
     const storyPin = !heading || current.mode || debug ? undefined : scenePin(game, current, message, heading);
     const manaMax = maxManaOf(game, current);
-    const result: Session = { ...train(current, exercised), typed: undefined, ...(!current.mode ? { talkPurpose: talkTo && !/^(시스템|전투 결과)/.test(message) ? { npc: talkTo, action: message } : undefined } : {}), ...(manaMax > 0 && current.mode !== 'combat' ? { mana: Math.min(manaMax, (current.mana ?? manaMax) + Math.round(manaMax * MANA_REGEN_TURN)) } : {}), ...(heading ? { scenePlace: heading } : {}), ...(storyPin ? { pinId: storyPin.id } : {}), npcVoices, relationships, storyNpcs: storyNpcsAfter(current, relationships), quests: questLog.quests, questGivers: questLog.givers, reputation, characterGold, party, npcCombat, completedGoalSteps,goalCompleted, sceneNpcs: stageNpcs, handledNpcs: debug ? handledNpcs.filter(n => !stageNpcs.includes(n)) : handledNpcs, combat, suggestedActions: nextActions, hp, inventory, flags, activeImageKey, ...(debugPin ? { pinId: debugPin.id } : {}),
-      log: [...(carriedOpening(current) ? openWithCue(current.log, current.talkNpc ? talkEntries(current.talkNpc, data) : []) : withPlayerLine(current.log, current.mode === 'talk' ? data.playerLine : '')), ...(current.mode === 'talk' && current.talkNpc && !data.talkLeft ? (carriedOpening(current) ? [] : talkEntries(current.talkNpc, data)) : [`GM: ${String(data.text || 'GM 응답이 없습니다.')}`]), ...(current.mode === 'combat' && current.combat?.round === 0 && combat ? [battleIntro(combat, hp, maxHpOf(game, current))] : []), ...(drinkNote ? [drinkNote] : []), ...(restNote ? [restNote] : []), ...(debugPin ? [`시스템: [테스트] ${debugPin.name}${josa(debugPin.name, '로')} 이동했습니다.`] : []), ...(storyPin && curMap ? [`시스템: ${curMap.name} / ${storyPin.name}${josa(storyPin.name, '로')} 이동했습니다.`] : []), ...questLog.done.map((q, i) => `시스템: 목표 완료 — ${q}${questLog.doneGivers[i] ? ` (의뢰인 ${questLog.doneGivers[i]})` : ''}`), ...questLog.failed.map(q => `시스템: 목표 실패 — ${q}`), ...affectionNotes.map(n => `시스템: ${n}`), ...(repDelta ? [`시스템: 명성 ${formatReputation(repDelta)} (${reputation.toLocaleString('ko-KR')} · ${reputationRank(reputation)})`] : []), ...(goldDelta ? [`시스템: 골드 ${goldDelta > 0 ? '+' : ''}${goldDelta} (보유 ${characterGold.toLocaleString('ko-KR')})`] : []), ...deserters.map(n => `시스템: ${n}${josa(n, '이')} 실망해 파티를 떠났습니다.`),...questLog.added.map(q => `시스템: 새 목표 — ${q}`), ...(hp !== current.hp && !restNote && !drinkNote ? [`시스템: HP ${current.hp} → ${hp}`] : []),...(add.length ? [`시스템: 획득 — ${add.join(', ')}`] : []), ...(remove.filter((x: string) => !drunk.includes(x)).length ? [`시스템: 사용 — ${remove.filter((x: string) => !drunk.includes(x)).join(', ')}`] : []), ...(goalCompleted && !current.goalCompleted ? ['시스템: 최종 목표 달성 — 게임 완료'] : [])] };
+    const result: Session = dismissTemps({ ...train(current, exercised), likedAt, ...(taskEnds ? { task: undefined } : {}), typed: undefined, ...(!current.mode ? { talkPurpose: talkTo && !/^(시스템|전투 결과)/.test(message) ? { npc: talkTo, action: message } : undefined } : {}), ...(manaMax > 0 && current.mode !== 'combat' ? { mana: Math.min(manaMax, (current.mana ?? manaMax) + Math.round(manaMax * MANA_REGEN_TURN)) } : {}), ...(heading ? { scenePlace: heading } : {}), ...(storyPin ? { pinId: storyPin.id } : {}), npcVoices, relationships, storyNpcs: storyNpcsAfter(current, relationships), quests: questLog.quests, questGivers: questLog.givers, ...(questLog.added.length ? { focus: heldGoal(currentGoalOf(current), questLog.quests, questLog.added) } : {}), reputation, characterGold, party, npcCombat, goalCompleted, sceneNpcs: stageNpcs, handledNpcs: debug ? handledNpcs.filter(n => !stageNpcs.includes(n)) : handledNpcs, combat, suggestedActions: nextActions, hp, inventory, flags, activeImageKey, ...(debugPin ? { pinId: debugPin.id } : {}),
+      log: [...(carriedOpening(current) ? openWithCue(current.log, current.talkNpc ? talkEntries(current.talkNpc, data) : []) : withPlayerLine(current.log, current.mode === 'talk' ? data.playerLine : '')), ...(current.mode === 'talk' && current.talkNpc && !data.talkLeft ? (carriedOpening(current) ? [] : talkEntries(current.talkNpc, data)) : [`GM: ${String(data.text || 'GM 응답이 없습니다.')}`]), ...(current.mode === 'combat' && current.combat?.round === 0 && combat ? [battleIntro(combat, hp, maxHpOf(game, current))] : []), ...(drinkNote ? [drinkNote] : []), ...(restNote ? [restNote] : []), ...(debugPin ? [`시스템: [테스트] ${debugPin.name}${josa(debugPin.name, '로')} 이동했습니다.`] : []), ...(storyPin && curMap ? [`시스템: ${curMap.name} / ${storyPin.name}${josa(storyPin.name, '로')} 이동했습니다.`] : []), ...questLog.done.map((q, i) => `시스템: 목표 완료 — ${q}${questLog.doneGivers[i] ? ` (의뢰인 ${questLog.doneGivers[i]})` : ''}`), ...questLog.failed.map(q => `시스템: 목표 실패 — ${q}`), ...affectionNotes.map(n => `시스템: ${n}`), ...(repDelta ? [`시스템: 명성 ${formatReputation(repDelta)} (${reputation.toLocaleString('ko-KR')} · ${reputationRank(reputation)})`] : []), ...(goldDelta ? [`시스템: 골드 ${goldDelta > 0 ? '+' : ''}${goldDelta} (보유 ${characterGold.toLocaleString('ko-KR')})`] : []), ...deserters.map(n => `시스템: ${n}${josa(n, '이')} 실망해 파티를 떠났습니다.`),...questLog.added.map(q => `시스템: 새 목표 — ${q}`), ...(hp !== current.hp && !restNote && !drinkNote ? [`시스템: HP ${current.hp} → ${hp}`] : []),...(add.length ? [`시스템: 획득 — ${add.join(', ')}`] : []), ...(remove.filter((x: string) => !drunk.includes(x)).length ? [`시스템: 사용 — ${remove.filter((x: string) => !drunk.includes(x)).join(', ')}`] : []), ...(goalCompleted && !current.goalCompleted ? ['시스템: 최종 목표 달성 — 게임 완료'] : [])] });
     // Experience: deeds the GM recognised, plus every quest finished this turn.
     const lv = current.level || 1;
     const acts = current.log.filter(e => e.startsWith('플레이어:')).length;
@@ -191,8 +198,9 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     for (let k = gmGear; k < Math.min(2, gearDue.length); k++) grant(rollGrade(gearDue[k].src!, rewardBase(lv)), gearDue[k].why);
     if (extra.length) grown.session = { ...grown.session, inventory: [...(grown.session.inventory || []), ...extra], log: [...grown.session.log, `시스템: 획득 — ${extra.map(n => `[${GRADE_LABELS[itemInfo[n].grade]}] ${n}`).join(', ')}`] };
     if (eventPays && deed === 'event') grown.session = { ...grown.session, lastEventXp: acts };
+    grown.session = withStory(game, grown.session, questLog.done);
     grown.session = { ...grown.session, itemInfo, equipped:Object.fromEntries(Object.entries(grown.session.equipped || {}).filter(([, n]) => n && (grown.session.inventory || []).includes(n))) };
-    if (questLog.done.length) fx.questClear = { quests: questLog.done.map((name, i) => ({ name, giver: questLog.doneGivers[i] || '', main: false })), next: undefined, xp: earned, reputation: repDelta, total: reputation, items: [...add, ...extra], levelFrom: current.level || 1, levelTo: grown.session.level || 1 };
+    if (questLog.done.length) fx.questClear = { quests: questLog.done.map((name, i) => ({ name, giver: questLog.doneGivers[i] || '' })), xp: earned, reputation: repDelta, total: reputation, items: [...add, ...extra], levelFrom: current.level || 1, levelTo: grown.session.level || 1 };
     else if (grown.levelsGained) fx.levelBurst = grown.session.level || 1;
     // Test command "레벨 50": jump straight to that level, with the stat growth those levels would have given, at full HP.
     const wantLevel = debug ? (typeof data.setLevel === 'number' && data.setLevel > 0 ? data.setLevel : Number((message.match(/(?:레벨|lv\.?)\s*(\d{1,3})/i) || [])[1]) || 0) : 0;
@@ -222,6 +230,10 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const settled = grown.session, major = data.majorScene === true || offPlan || !!diceResult || tierMoved || deserters.length > 0 || questLog.done.length + questLog.failed.length + questLog.added.length > 0;
     if (!grown.session.mode && !grown.session.goalCompleted && !grown.session.dead) {
       // A foe met on the move blocks the way only after the arrival scene is read (user: no fight straight off the map).
+      // At 100% the final boss waits at its place: there (after the arrival scene, not right after a fight or a flight) it
+      // comes out; it falling ends the game.
+      const bossFoe = !aftermath && bossWaits(game, grown.session) ? findFoe(defaultMapGenre(game), finalBoss(game)!) : undefined;
+      if (bossFoe) return { ...fx, settled, major: true, session: { ...grown.session, threat: { npc: bossFoe.name, monster: true, level: foeLevel(game, grown.session, bossFoe) }, log: [...grown.session.log, `시스템: 최종 보스 ${bossFoe.name}${josa(bossFoe.name, '이')} 모습을 드러냅니다!`] } };
       if (met) return { ...fx, settled, major: true, session: { ...grown.session, threat: met, log: [...grown.session.log, `시스템: 습격! ${met.npc}${josa(met.npc, '이')} 앞을 막아섭니다.`] } };
       const genre = defaultMapGenre(game);
       // A monster the GM set on the player, or an NPC who hates the player, means a fight with no talking first.

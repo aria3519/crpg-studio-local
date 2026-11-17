@@ -4,17 +4,17 @@
 // State fields the route never names still reach the bookkeeping GM, which reads the whole state (modelState).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type GmStateKey =
-  | 'adjacentLocationIds' | 'adjacentLocations' | 'availableImages' | 'cast' | 'characterValues' | 'completedGoalSteps'
+  | 'adjacentLocationIds' | 'adjacentLocations' | 'availableImages' | 'cast' | 'characterValues'
   | 'currentGoal' | 'currentInteractionEvent' | 'currentMapId' | 'directorNotes' | 'equipped' | 'event' | 'eventTrigger'
-  | 'finalGoal' | 'finalGoalMode' | 'finalGoalSteps' | 'flags' | 'goalCompleted' | 'goalPath' | 'gold' | 'handledNpcs' | 'hp' | 'inventory'
+  | 'flags' | 'goalCompleted' | 'goalPath' | 'gold' | 'handledNpcs' | 'hp' | 'inventory'
   | 'items' | 'knownNpcs' | 'level' | 'localStories' | 'locationDescription' | 'locationName' | 'locations' | 'mapName'
-  | 'mapPin' | 'maxHp' | 'maxQuests' | 'monsters' | 'npcProfiles' | 'party' | 'partyLevels' | 'placeSeed' | 'quests'
+  | 'mapPin' | 'maxHp' | 'maxQuests' | 'monsters' | 'npcProfiles' | 'comingBack' | 'party' | 'partyLevels' | 'placeSeed' | 'quests'
   | 'recentFoes' | 'relationships' | 'reputation' | 'reputationRank' | 'reservedNpcs' | 'roll' | 'safePlace' | 'sceneNpcs'
-  | 'storyCastFull' | 'storyPlan' | 'trainableStats' | 'unanswered' | 'whereabouts' | 'xp';
+  | 'storyCastFull' | 'storyNext' | 'storyPlan' | 'trainableStats' | 'whereabouts' | 'xp';
 export type GmState = { [K in GmStateKey]?: any };
 export type GmBodyKey =
   | 'action' | 'closeTalk' | 'combat' | 'debug' | 'diceResult' | 'genre' | 'hero' | 'history' | 'initialEquipment'
-  | 'fromTalk' | 'interfere' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
+  | 'fromTalk' | 'interfere' | 'settle' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
   | 'previousChoices' | 'prologue' | 'prompt' | 'recentCheck' | 'reroll' | 'ruleEquipment' | 'sceneText' | 'talkTurns'
   | 'talkPurpose' | 'withThisNpc';
 export type GmBody = { [K in GmBodyKey]?: any } & { state?: GmState };
