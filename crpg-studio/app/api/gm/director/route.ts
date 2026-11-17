@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const location = String(body.location || '').slice(0, 60), nearby = strings(body.nearby, 8, 60);
     const cast = strings(body.cast, 45, 260), newPeople = strings(body.newPeople, 8, 40), threads = strings(body.threads, 6, 160);
     const seeds: Record<string, string> = body.seeds && typeof body.seeds === 'object' ? Object.fromEntries(Object.entries(body.seeds as Record<string, unknown>).filter(([, v]) => typeof v === 'string').slice(0, 9).map(([k, v]) => [k.slice(0, 60), String(v).slice(0, 400)])) : {};
-    const unseeded = strings(body.unseeded, 9, 60), reacted = strings(body.reacted, 6, 200), stories = strings(body.stories, 8, 300);
+    const unseeded = strings(body.unseeded, 9, 60), reacted = strings(body.reacted, 6, 200), stories = strings(body.stories, 8, 300), steps = strings(body.steps, 12, 1200);
     const placeStories: Record<string, string[]> = body.placeStories && typeof body.placeStories === 'object' ? Object.fromEntries(Object.entries(body.placeStories as Record<string, unknown>).slice(0, 9).map(([k, v]) => [k.slice(0, 60), strings(v, 4, 300)])) : {};
     // The people fixed to each place (PLACE_NPCS): a place's sketch uses them and no one else, and a place without any gets none.
     const placePeople: Record<string, string[]> = body.placePeople && typeof body.placePeople === 'object' ? Object.fromEntries(Object.entries(body.placePeople as Record<string, unknown>).slice(0, 9).map(([k, v]) => [k.slice(0, 60), strings(v, 6, 40)])) : {};
@@ -40,6 +40,7 @@ export async function POST(request: Request) {
       'places: placePeople는 장소마다 그곳에 사는 사람(이름) 목록이고, guides의 장소에는 그 사람이 늘 있으니 그 장소 설정에 꼭 들어갑니다. 장소마다 "그곳에서 지금 벌어지고 있는 일"을 그 목록의 사람들로만 짜 둡니다. 장면을 쓰는 GM은 플레이어가 그곳에 가면 이 설정의 인물과 사건만 꺼내 씁니다. unseeded의 장소는 새로 쓰고, location은 recentScenes에서 이미 일어난 일을 반영해 지금 상태로 고쳐 씁니다(seeds에 있는 다른 장소는 쓰지 마세요). 장소마다: 그 목록의 사람 각자가 지금 그곳에서 하고 있는 일, 원하는 것과 숨기는 것, 그 일에 걸린 것(목숨·돈·명예·비밀). placeStories에 그 장소의 지역 이야기·의뢰가 있으면 그 사람의 일로 쓰되 결과는 앞당기지 말고, 그 일이 왜 생겼는지까지 씁니다. world의 갈등과 finalFoe의 세력이 progress에 맞는 만큼 그 사람의 일에 닿아 있을 수 있고, ties·consequences·threads에서 주인공과 얽힌 일이 그 사람에게 남아 있으면 그것도 씁니다. 사건을 움직이는 사람은 그 목록의 이름뿐입니다. 장소마다 500자 이내, memory·keyFacts·cast·seeds와 어긋나면 안 되고, 흑막의 정체와 결말은 쓰지 마세요.',
       'arrive: places에 쓴 장소마다, 주인공이 그곳에 닿았을 때 그곳 사람의 일이 주인공 눈앞에 보이는 첫 모습 한 줄입니다("그 장소 목록의 이름 — 무엇을 하고 있는지", 150자 이내).',
       'fixes: recentScenes가 memory·keyFacts·cast(인물들의 설정)·앞선 장면과 어긋난 점. 죽거나 떠난 인물이 다시 나옴, 이미 끝난 일을 다시 함, 이름·관계·장소·소지품이 바뀜, 인물 말투가 바뀜 같은 것입니다. 어긋남마다 "무엇이 맞는지"를 한 줄로 쓰세요. recentScenes의 대가와 보상(시스템 줄의 HP·골드·명성·획득·호감도 포함)이 플레이어의 행동과 위험에 맞지 않은 것도 여기에 씁니다: 예고 없이 큰 벌을 받음, 별 노력 없이 큰 보상을 받음, 같은 행동의 결과가 앞과 다름. 이런 것은 "무엇이 어긋났고 다음 장면에서 어떻게 맞출지"를 한 줄로 씁니다. 없으면 빈 배열입니다.',
+      'steps는 이 이야기에 준비된 단계와 게임이 센 진행 상황입니다: "끝남"은 이미 이룬 단계, "지금"은 주인공이 하고 있는 단계와 그 남은 일("어디서 무엇을 하면 → 벌어지는 일", "이미 일어남"은 벌어진 일), "앞으로"는 그다음 단계입니다. 지금 단계의 남은 일이 이야기의 다음 순서이고, 주인공이 벌인 다른 일(threads)은 그 순서와 엮어 이어 갑니다.',
       'story: 이 이야기의 설계도입니다. 장면을 쓰는 GM이 매 장면 이것을 뼈대로 씁니다. 입력 story가 비어 있으면 새로 씁니다. 있으면 recentScenes에서 플레이어가 내린 결정을 따라 고쳐 씁니다: 이야기는 미리 정한 길이 아니라 플레이어의 결정으로 만들어집니다. 결정이 누군가와의 관계, 주인공의 목표나 편을 바꿨으면 핵심 인물까지 그 결정에 맞게 새로 짜고, 그렇지 않으면 그대로 둡니다. 담을 것: (1) 주인공이 원하는 것과 짊어진 것(prologue·hero·world에서), (2) 주인공이 쫓는 것: finalFoe와 world의 흑막 중 지금까지 드러난 만큼, 그리고 주인공과 그 사이에 놓인 것, (3) 주인공과 얽힐 핵심 인물 3~4명: cast에서 고르고(reserved 제외), 각자 원하는 것, 숨기는 것, 주인공에게서 얻으려는 것. 앞으로 일어날 일은 쓰지 않습니다(장면을 쓰는 GM이 정합니다). 1,000자 이내.',
       'act: world의 메인 사건에서 recentScenes까지의 이야기가 지금 있는 막의 번호(입력 act가 지금까지의 번호)입니다. 그 막의 일이 이야기 속에서 실제로 매듭지어졌을 때 다음 번호를 씁니다.',
       'fixes·cards·threads는 기록에 근거한 것만 쓰고(places·story는 새로 짓습니다), fixes는 각 항목 150자 이내, 최대 3개입니다.',
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: JSON.stringify({ memory: String(body.memory || '').slice(0, 9000), keyFacts: strings(body.keyFacts, 100, 200), quests, task: String(body.task || '').slice(0, 80), location, nearby, placePeople, guides, world, act: Number(body.act) || 1, hero, prologue, story, finalFoe, progress, ties, reacted, stories, reserved, consequences, cast, newPeople, threads, seeds, unseeded, placeStories, recentScenes: recent }) },
+          { role: 'user', content: JSON.stringify({ memory: String(body.memory || '').slice(0, 9000), keyFacts: strings(body.keyFacts, 100, 200), quests, task: String(body.task || '').slice(0, 80), location, nearby, placePeople, guides, world, act: Number(body.act) || 1, hero, prologue, steps, story, finalFoe, progress, ties, reacted, stories, reserved, consequences, cast, newPeople, threads, seeds, unseeded, placeStories, recentScenes: recent }) },
         ],
       }),
       cache: 'no-store', signal: AbortSignal.timeout(85000),

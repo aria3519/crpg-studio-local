@@ -42,7 +42,7 @@ export function extractRuleItems(prompt: string): RuleItem[] {
     for (const part of m[1].split(/\s+\/\s+/)) {
       const [rawName, ...rest] = part.split(/\s*[:：]\s*/);
       const name = (rawName || '').trim().replace(/[.。]+$/, '');
-      if (!name || name.length > 40 || /^(은화|금화|동화|은자|동전|현금)|주머니|꾸러미|\d+\s*(닢|냥|문|원)$|(닢|냥|문|원)$/.test(name) || result.some(x => x.name === name)) continue;
+      if (!name || name.length > 40 || /^(은화|금화|동화|은자|동전|현금|골드)|주머니|꾸러미|\d+\s*(닢|냥|문|원|골드)$|(닢|냥|문|원|골드)$/.test(name) || result.some(x => x.name === name)) continue;
       result.push({ name, detail: rest.join(': ').trim(), source: '시작 소지품' });
     }
   }
@@ -262,7 +262,7 @@ export type DirectorNotes = { fixes: string[]; upTo: number; at: number; hooks?:
 // tempSince: the player-action count when each temporary companion joined (they stay at least TEMP_MIN_ACTS).
 // likedAt: when each liked deed last raised someone's goodwill ("이름|like" → player-action count).
 // task: the job the last talk settled ("늑대 무리 처리하기"). It runs behind: never shown as a goal, but the writer and director work to it.
-export type Session = { task?: { text: string; at: number }; talkTask?: string; likedAt?: Record<string, number>; tempSince?: Record<string, number>; tempPending?: { npc: string; goal: string }; talkJoin?: boolean; tempParty?: Record<string, string>; echoes?: { text: string; at: number }[]; bossEdge?: number; placeArrive?: Record<string, string>; shownNext?: string[]; storyPoints?: number; bossDown?: boolean; storyNpcs?: { goal: string; names: string[] }; runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; act?: number; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; ambushNext?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
+export type Session = { task?: { text: string; at: number }; delivered?: string[]; talkTask?: string; likedAt?: Record<string, number>; tempSince?: Record<string, number>; tempPending?: { npc: string; goal: string }; talkJoin?: boolean; tempParty?: Record<string, string>; echoes?: { text: string; at: number }[]; bossEdge?: number; placeArrive?: Record<string, string>; shownNext?: string[]; storyPoints?: number; bossDown?: boolean; storyNpcs?: { goal: string; names: string[] }; runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; act?: number; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; ambushNext?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
 export type View = 'library' | 'edit' | 'play';
 export type Tab = 'prompt' | 'map' | 'assets' | 'settings' | 'register';
 export const initial: Game = { characterConfig: defaultCharacterConfig(), showHpBar: true, showEquipment: true, showDice: true, startingEquipment: '낡은 검, 가죽 갑옷, 회복 물약', playMode: 'single', minPlayers: 2, maxPlayers: 4, id: 'sample', name: '잊혀진 던전', description: '고대 유적을 탐험하는 판타지 TRPG', world: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.', rules: 'D20 판정. 10 이상 보통 성공, 15 이상 어려운 성공. 같은 맵 안에서는 장소를 자유롭게 선택하고 다른 맵으로는 포탈을 통해 이동한다. 전투 및 아이템 사용은 추후 규칙 모듈로 확장.', gm: '몰입감 있는 한국어 판타지 TRPG GM. 플레이어의 행동을 임의로 확정하지 말고 결과를 설명한다.', hp: 100, size: 7, created: 0, prompt: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.\nD20 판정을 사용한다.\nGM은 플레이어의 행동을 임의로 확정하지 않는다.', assets: [], imageRows: [], imageColumns: [], imageCells: [], mapImage: '', registrationDescription: '', genre: 'RPG / 탐험', gameType: 'RPG / 탐험', cooperation: '협동', progression: '턴제', playTime: '장기 캠페인', hashtags: [], audience: '전체 이용가' };
@@ -485,26 +485,57 @@ export const goalPath = (g: Game, q: string, s?: Session): string[] => {
   const b = lastBeat(g), place = bossPlace(g);
   // The finale's path: go to where the boss waits, then fight it (user: "자연스럽게 최종 보스 위치로 가게").
   if (b?.do === 'defeat' && place && alikeQuest(finaleQuest(g) || '', q)) return [`${place}에서 ${b.foe}${josa(b.foe, '이')} 기다린다`, b.then];
-  const beats = stepOf(g, q)?.beats || [], done = s ? beatsDone(beats, s.log, goalStart(s, q)) : 0;
+  const beats = stepOf(g, q)?.beats || [], done = s ? beatsDone(beats, s.log, goalStart(s, q), s.delivered) : 0;
   // Done beats go as what already happened (so they are not asked for again, 에드리아's 지원서 three times); the rest keep
   // where and what (without it the writer had the hero mark the wolf site for 에드리아 instead of going back to report).
   return beats.map((b, i) => i < done ? `이미 일어남: ${b.then}` : `${beatGoal(b)} → ${b.then}`);
+};
+// Open goals whose every prepared beat the log shows: the game closes them itself. Left to the bookkeeper, 장물 단속 (last
+// beat a fight, no talk to say "done") stayed open for ~40 turns with nothing left, and the writer made up 핍's errands.
+// A goal with no prepared beats that names a foe (a 토벌 job like "숲 트롤 토벌하기") is finished by a win over that foe since it was set.
+// This is the one place the game judges goals: the turn (turn.ts) closes, pays and celebrates what it returns.
+export const goalsFinished = (g: Game, s: Session) => questsOf(s).filter(q => {
+  const beats = stepOf(g, q)?.beats || [], from = goalStart(s, q);
+  if (beats.length) return beatsDone(beats, s.log, from, s.delivered) >= beats.length;
+  return s.log.slice(Math.max(0, from)).some(l => { const foe = l.match(/^전투: 승리 — (.+?)[을를] 쓰러뜨렸다/)?.[1]; return !!foe && q.includes(foe); });
+});
+// The beat the hero's move reaches now, which the writer is told must happen (mustHappen) and which counts once told: the
+// current goal's next beat when the hero talks with its person, or stands at its place (a search needs an action, not the
+// arrival). The game decides when a beat happens; the writer only tells it (quest-beats.ts).
+export const dueBeat = (g: Game, s: Session, arriving = false): Beat | undefined => {
+  const goal = currentGoalOf(s), beats = stepOf(g, goal)?.beats || [], b = beats[beatsDone(beats, s.log, goalStart(s, goal), s.delivered)];
+  if (!b) return undefined;
+  if (b.do === 'talk') return s.mode === 'talk' && s.talkNpc === b.npc ? b : undefined;
+  if (s.mode || (b.do !== 'search' && b.do !== 'reach') || (b.do === 'search' && arriving)) return undefined;
+  const where = regionWhere(g, s);
+  return !b.at.length || b.at.some(w => where.includes(w)) ? b : undefined;
+};
+// Where the prepared story stands, for the director: steps done, the current one with what is left, and the next ones.
+// The director planned from the scenes alone and never knew the steps: at 회색 탑 its plan followed the crates and the
+// letter to 핍 while the game had moved on to 다이어울프, and the writer, given both, pushed neither.
+export const storyStatus = (g: Game, s: Session) => {
+  const chain = mainChain(g) || [], done = questsDone(s), goal = currentGoalOf(s), at = chain.findIndex(st => alikeQuest(st.q, goal));
+  const lines = chain.flatMap((st, i) => done.some(d => alikeQuest(d, st.q)) ? [`끝남: ${st.q}`] : i === at ? [`지금: ${st.q} — ${goalPath(g, goal, s).join(' / ')}`] : i > at && i <= at + 2 ? [`앞으로: ${st.q}`] : []);
+  return at < 0 && goal ? [...lines, `지금: ${goal} — ${goalPath(g, goal, s).join(' / ') || '준비된 단계 없음'}`] : lines;
 };
 // Where a goal starts in the log: its "새 목표" line, else the start (a main's first goal is there from the opening).
 const goalStart = (s: Session, q: string) => s.log.map(e => e.startsWith('시스템: 새 목표 — ') && alikeQuest(e.slice(12).replace(/ (의뢰인 .*)$/, ''), q)).lastIndexOf(true);
 // How many of a goal's beats the log shows, in order, from the game's own lines: a talk with that person ended, that foe
 // beaten, a scene at the place (search: one the player acted in, not the arrival), an option picked. A first talk may come
-// before the goal's line (the talk that gave it). shortcut: a talk counts whatever was said, a search whatever was done there.
-export const beatsDone = (beats: Beat[], log: string[], from: number) => {
+// before the goal's line (the talk that gave it). A talk, search or arrival also needs the writer to have been told its outcome
+// (delivered, see dueBeat): counted on any talk or any action there, 회색 탑 closed in 3 of 4 runs without its 맹세문 or
+// 에드리아's order ever told, and the next step came with no reason in the story. Sessions from before (no delivered) keep the old count.
+export const beatsDone = (beats: Beat[], log: string[], from: number, delivered?: string[]) => {
+  const told = (b: Beat) => !delivered || delivered.includes(b.then);
   const place = (e: string) => e.match(/^GM: 【([^】]*)】/)?.[1] || '';
   const acted = (i: number) => { for (let k = i - 1; k >= 0 && !log[k].startsWith('GM:'); k--) { if (log[k].endsWith('이동했습니다.')) return false; if (log[k].startsWith('플레이어:')) return true; } return false; };
   const hit = (b: Beat, e: string, i: number) => {
     const here = () => !!place(e) && (!('at' in b) || !b.at?.length || b.at.some(w => place(e).includes(w)));
     switch (b.do) {
-      case 'talk': return e.match(/^시스템: (.+?)[와과]의 대화가 끝났습니다.$/)?.[1] === b.npc;
+      case 'talk': return e.match(/^시스템: (.+?)[와과]의 대화가 끝났습니다.$/)?.[1] === b.npc && told(b);
       case 'defeat': return e.startsWith('전투: 승리 — ') && e.includes(b.foe);
-      case 'reach': return here();
-      case 'search': return here() && acted(i);
+      case 'reach': return here() && told(b);
+      case 'search': return here() && acted(i) && told(b);
       case 'choose': return e.startsWith('플레이어:') && b.options.some(o => e.includes(o));
     }
   };
@@ -530,15 +561,13 @@ export const bossPlace = (g: Game): string | undefined => {
 };
 // The goal the finale opens: the final boss, where it waits.
 export const finaleQuest = (g: Game): string | undefined => { const b = lastBeat(g), place = bossPlace(g); return b?.do === 'defeat' ? `${place ? `${place}에서 ` : ''}${b.foe}${josa(b.foe, '을')} 쓰러뜨리기` : undefined; };
-// The current goal names a place and the player is at none of them (the finale goal is never left behind).
-export const goalElsewhere = (g: Game, s: Session) => {
-  const goal = currentGoalOf(s), where = regionWhere(g, s);
-  if (!goal || alikeQuest(finaleQuest(g) || '', goal)) return false;
-  // A map place, or a place inside a city (북문 초소 in 레븐홀트, where anywhere in the city counts as there).
-  const at = (stepOf(g, goal)?.beats || []).flatMap(b => 'at' in b ? b.at || [] : []);
-  const named: string[][] = [...(g.maps || []).flatMap(m => m.pins).filter(p => p.kind !== 'exit' && p.name.length >= 2 && (goal.includes(p.name) || at.includes(p.name))).map(p => [p.name]),
-    ...cityPlaces(defaultMapGenre(g)).filter(([n]) => n.length >= 2 && (goal.includes(n) || at.includes(n))).map(([n, city]) => [n, city].filter(Boolean))];
-  return named.length > 0 && !named.some(ns => ns.some(n => where.includes(n)));
+// What the GM is told to steer by, every turn and wherever the player is: the current goal and what is left of it (the steps
+// name their places, so choice 1 leads there). Goals were blanked when the hero stood somewhere the goal didn't name; at
+// 회색 탑 the writer then had nothing to steer by and circled for 13 turns, in three runs. A talk's job is told as other work
+// beside the goals, never as the current goal (넬's "look for tracks" steered 6 turns away from reporting to 에드리아).
+export const gmGoal = (g: Game, s: Session) => {
+  const goal = currentGoalOf(s), task = s.task?.text || '', open = questsOf(s);
+  return { currentGoal: goal, goalPath: goal ? goalPath(g, goal, s) : [], quests: [...open, ...(task && !open.some(q => alikeQuest(q, task)) ? [task] : [])] };
 };
 // The final boss comes out once the story is at 100% and the player is at its place; before that it isn't there yet.
 export const bossWaits = (g: Game, s: Session) => { const p = storyProgress(g, s), place = bossPlace(g); return !!p && !!place && p.done >= p.total && regionWhere(g, s).includes(place); };
@@ -923,7 +952,9 @@ export const actsDone = (s: Session) => Math.max(0, (s.act || 1) - 1);
 // Edria at 북문 초소 was still due).
 // Games built before still carry the old speech rules ("말투는 신분과 종족에 맞추고 현대 어휘는 쓰지 않는다",
 // "총기·전기·현대 어휘와 상태창은 없다"); the modern-word ban and the rank-based speech hint go as the prompt is sent.
-export const withoutOldSpeechRules = (prompt: string) => prompt.replace(/말투는 [^.\n]*현대 어휘는 쓰지 않는다\./g, '인물의 말투(어체)는 각자의 설정 말투를 따른다.').replace(/·현대 어휘와/g, '와');
+// They also count money in 금화·은화·동화 while the purse holds 골드 (an NPC asked "은화 두 닢", the log said "골드 +30"): one currency.
+export const MONEY_RULE = '돈의 단위는 골드 하나다. 여관 한 끼 1골드, 하룻밤 3골드, 하급 치유 물약 10골드, 롱소드 30골드, 의뢰 보상은 몇 골드에서 몇십 골드다.';
+export const withoutOldSpeechRules = (prompt: string) => prompt.replace(/금화 한 닢은 은화 열 닢[^.\n]*\.\s*여관 한 끼[^.\n]*\./g, MONEY_RULE).replace(/\/ (?:금화 한 닢|은화 [가-힣]+ 닢)\./g, '/ 돈주머니.').replace(/말투는 [^.\n]*현대 어휘는 쓰지 않는다\./g, '인물의 말투(어체)는 각자의 설정 말투를 따른다.').replace(/·현대 어휘와/g, '와');
 export const promptUpToAct = (prompt: string, done: number) => prompt.split('\n').flatMap(line => {
   const act = line.match(/^(\s*-\s*)(\d)막\s+([^:：]+)[:：]/);
   if (act) { const n = Number(act[2]); return n <= done ? [line] : n === done + 1 ? [`${act[1]}${n}막 ${act[3].trim()}: 진행 중.`] : []; }
@@ -940,6 +971,8 @@ export const personalStories = (g: Game, s: Session): string[] => {
 };
 // A goal someone only offered joins the list without taking over (user, 2026-11-17): the current goal holds until the player accepts
 // (endTalk) — or, if it just ended, the latest older one; with nothing older, the offer is all there is.
+// A main step just added is the current goal: held on the older 성채 냉실 instead, the hero stood at 회색 탑 steered by another place's goal.
+export const focusAfter = (g: Game, before: string, quests: string[], added: string[]) => added.find(q => (mainChain(g) || []).some(st => alikeQuest(st.q, q))) || heldGoal(before, quests, added);
 export const heldGoal = (before: string, quests: string[], added: string[]) => { const old = quests.filter(q => !added.includes(q)); return old.includes(before) ? before : old.at(-1) || added.at(-1) || ''; };
 const questsDone = (s: Session) => s.log.flatMap(l => l.match(/^시스템: 목표 완료 — (.+?)(?: (의뢰인 .+))?$/)?.[1] || []);
 // The open quest that is one of this person's prepared stories (its title or a step). A job the same person offers while it is open
@@ -959,26 +992,36 @@ export const withNextMain = <T extends { quests: string[]; added: string[]; done
   const done = [...questsDone(s), ...log0.done], dropped = s.log.flatMap(l => l.match(/^시스템: 목표 포기 — (.+)$/)?.[1] || []);
   const after = log0.done.flatMap(d => { const r = regionQuestsOf(g).find(r => r.steps.some(st => alikeQuest(st.q, d))), n = r?.steps[r.steps.findIndex(st => alikeQuest(st.q, d)) + 1]?.q; return n && ![...log0.quests, ...done].some(q => alikeQuest(q, n)) ? [n] : []; });
   const log = after.length ? { ...log0, quests: [...log0.quests, ...after], added: [...log0.added, ...after] } : log0;
-  if (log.quests.length) return log;
-  const chain = mainChain(g) || [], next = chain.slice(mainAt(chain, done) + 1).find(st => !dropped.some(d => alikeQuest(st.q, d)))?.q;
-  return next ? { ...log, quests: [next], added: [...log.added, next] } : log;
+  // A main step done hands on to the next one even with other goals open: 장물 단속 done beside 브리아's wolf job left the
+  // hero at 회색 탑 with only the wolves as a goal, and the writer circled for ~15 turns.
+  // One main step is always open (unless given up): with none, the hero only had side jobs to steer by.
+  const chain = mainChain(g) || [];
+  if (log.quests.some(q => chain.some(st => alikeQuest(st.q, q)))) return log;
+  const next = chain.slice(mainAt(chain, done) + 1).find(st => !dropped.some(d => alikeQuest(st.q, d)))?.q;
+  return next && !log.quests.some(q => alikeQuest(q, next)) ? { ...log, quests: [...log.quests, next], added: [...log.added, next] } : log;
 };
 // doneNow: goals this same turn closes (the exam closed in the talk that handed out 장물 단속, and was read as still running).
 // A goal is always a step's wording ("성채 지하 냉실 문 열기"), never a story's title ("성채 지하 냉실").
 export const preparedGoal = (g: Game, s: Session, text: string, giver: string, doneNow: string[] = []): string => {
   const open = questsOf(s).filter(q => !doneNow.includes(q)), done = [...questsDone(s), ...doneNow], reserved = reservedNpcs(g, s), chain = mainChain(g) || [];
-  const free = (q: string) => !open.some(o => alikeQuest(o, q)) && !done.some(d => alikeQuest(d, q));
+  // A job whose beats the log already shows is over: 브리아's wolf job came after the wolves fell in the exam and could never clear.
+  const over = (q: string) => { const beats = stepOf(g, q)?.beats || []; return beats.length > 0 && beatsDone(beats, s.log, 0, s.delivered) >= beats.length; };
+  const free = (q: string) => !open.some(o => alikeQuest(o, q)) && !done.some(d => alikeQuest(d, q)) && !over(q);
   // A region story's goal: its first step not done yet, while none of its steps is running.
-  const stepOf = (r: ReturnType<typeof regionQuestsOf>[number]) => [r.title, ...r.steps.map(st => st.q)].some(q => open.some(o => alikeQuest(o, q))) ? '' : r.steps.find(st => free(st.q))?.q || '';
+  const firstStep = (r: ReturnType<typeof regionQuestsOf>[number]) => [r.title, ...r.steps.map(st => st.q)].some(q => open.some(o => alikeQuest(o, q))) ? '' : r.steps.find(st => free(st.q))?.q || '';
   const mainNamed = chain.find(st => alikeQuest(st.q, text))?.q, regionNamed = regionQuestsOf(g).find(r => alikeQuest(r.title, text) || r.steps.some(st => alikeQuest(st.q, text)));
-  if (mainNamed) return free(mainNamed) ? mainNamed : '';
-  if (regionNamed || !giver) return regionNamed ? stepOf(regionNamed) : '';
+  // A later main step named while an earlier one is still open waits its turn.
+  if (mainNamed) return free(mainNamed) && !open.some(o => chain.some(st => alikeQuest(st.q, o))) ? mainNamed : '';
+  if (regionNamed || !giver) return regionNamed ? firstStep(regionNamed) : '';
   const at = mainAt(chain, done), next = chain[at + 1];
   const talkers = (beats: Beat[] = []) => beats.flatMap(b => b.do === 'talk' ? [b.npc] : []);
   if (next && free(next.q) && [talkers(next.beats)[0], talkers(chain[at]?.beats).at(-1)].includes(giver)) return next.q;
-  const own = regionQuestsOf(g).filter(r => r.giver === giver && stepOf(r) && !reserved.some(n => n !== giver && JSON.stringify(r).includes(n)) && (r.kind === 'story' || regionOpen(s, r)));
+  // A main-story person speaks for the main story while a step of it is open: 에드리아's "clear 회색 탑" (a later step) fell
+  // through to her own 성채 냉실 twice. Her own story comes when the director names it.
+  if (chain.some(st => talkers(st.beats).includes(giver)) && open.some(o => chain.some(st => alikeQuest(st.q, o)))) return '';
+  const own = regionQuestsOf(g).filter(r => r.giver === giver && firstStep(r) && !reserved.some(n => n !== giver && JSON.stringify(r).includes(n)) && (r.kind === 'story' || regionOpen(s, r)));
   const pick = own.find(r => r.kind === 'story') || own[0];
-  return pick ? stepOf(pick) : '';
+  return pick ? firstStep(pick) : '';
 };
 export const regionOpen = (s: Session, r: RegionQuest) => Math.max(0, s.reputation || 0) >= RANK_FLOORS[r.minRank || 0] && actsDone(s) >= (r.minAct || 0);
 // Cast members the main story brings in only at a later step (and the player hasn't met yet). Nothing may pull them in early:
@@ -1139,9 +1182,9 @@ export const fightEdge = (g: Game, s: Session, foe: string): { openCut: number; 
   const hp = Math.max(1, s.hp - Math.max(1, Math.round(maxHpOf(g, s) * (c.critical ? 0.2 : 0.1))));
   return { openCut: 0, hp, log: [`시스템: 판정 ${c.critical || '실패'} — 허를 찔렸다! HP ${s.hp} → ${hp}`], note: ` 플레이어가 판정에 실패해 ${foe}에게 먼저 한 방 맞았으니 다친 채 싸움을 시작합니다.` };
 };
-export type QuestClear = { quests: { name: string; giver: string }[]; xp: number; reputation: number; total: number; items: string[]; levelFrom: number; levelTo: number; key: number };
+export type QuestClear = { quests: { name: string; giver: string }[]; xp: number; reputation: number; total: number; items: string[]; levelFrom: number; levelTo: number; next?: string; key: number };
 // A notice held back during a talk: one talk can finish more than one quest, and the later one mustn't erase the earlier.
-export const mergeClear = (prev: QuestClear | null, now: QuestClear): QuestClear => !prev ? now : { ...now, quests: [...prev.quests, ...now.quests], xp: prev.xp + now.xp, reputation: prev.reputation + now.reputation, items: [...prev.items, ...now.items], levelFrom: prev.levelFrom };
+export const mergeClear = (prev: QuestClear | null, now: QuestClear): QuestClear => !prev ? now : { ...now, quests: [...prev.quests, ...now.quests], xp: prev.xp + now.xp, reputation: prev.reputation + now.reputation, items: [...prev.items, ...now.items], levelFrom: prev.levelFrom, next: now.next || prev.next };
 export const INTRO_SECONDS = 2.4, INTRO_MAX_SECONDS = 10;
 // One pass of a GIF in seconds, from its frame delays (a delay under 2/100s plays as 1/10s in browsers).
 export const gifSeconds = (b: Uint8Array) => { let cs = 0; for (let i = 0; i + 7 < b.length; i++) if (b[i] === 0x21 && b[i + 1] === 0xf9 && b[i + 2] === 4 && b[i + 7] === 0) { const d = b[i + 4] | (b[i + 5] << 8); cs += d < 2 ? 10 : d; } return cs / 100; };
@@ -1259,6 +1302,22 @@ export const PLACE_NPCS: Record<string, string[]> = {
   '마탑 본탑': ['리오네 아스크', '미라벨 크로우'], 왕궁: ['테오도라', '아우렐리아'], '귀족가 주거지': ['아우렐리아'], '왕도 대시장': ['오틸리에 마른'],
   대신전: ['오르벨라', '세라핀', '이졸데'], '왕궁 외성': ['테오도라'], 밀동네: ['카시아', '핍'],
 };
+// How the hero sees someone not met yet. A choice names a person only once the hero has met them: before, choices sent the
+// hero "to find 넬" in a forest they had never met her in (17 times in recorded play), since every input names the cast.
+export const NPC_LOOKS: Record<string, string> = {
+  '에드리아 하르트': '은발의 기사단장', '레지나 발트': '변경백가의 젊은 영주 대리', 세라핀: '젊은 성기사', 오르벨라: '늙은 대신관',
+  '리오네 아스크': '마탑의 마도사', '미라벨 크로우': '견습 기록관', 브리아: '길드 지부장', 넬: '숲의 궁수', 카시아: '뒷골목의 여인',
+  핍: '골목의 정보통', '오틸리에 마른': '상회 대리인', 실바엘: '엘프 순찰자', '그리마 철망치': '드워프 대장장이', 우르술라: '용병단장',
+  바레나: '선장', 테오도라: '왕녀', 아우렐리아: '대공', 말라키아: '떠돌이 약장수', 이졸데: '신전 시녀', 한나: '여관 주인', 엘로이즈: '떠돌이 약초사',
+};
+const LOOK_JOSA: Record<string, '와' | '을' | '이' | '은' | '로'> = { 이: '이', 가: '이', 을: '을', 를: '을', 은: '은', 는: '은', 와: '와', 과: '와', 으로: '로', 로: '로' };
+export const withoutUnmetNames = (text: string, known: string[]) => Object.entries(NPC_LOOKS).reduce((t, [name, look]) => {
+  const first = name.split(' ')[0];
+  if (known.some(k => k === name || k.split(' ')[0] === first)) return t;
+  // A title already written before the name ("골목의 정보통 핍") is not doubled.
+  const tail = look.split(' ').at(-1)!;
+  return t.replace(new RegExp(`(?:(?:${look}|${tail})\\s+)?(?<![가-힣])(?:${name}|${first})(으로|로|이|가|을|를|은|는|와|과)?`, 'g'), (_m, p?: string) => look + (p ? josa(look, LOOK_JOSA[p]) : ''));
+}, text);
 export const placePeople = (g: Game, s: Session, place: string) => { const reserved = reservedNpcs(g, s); return (PLACE_NPCS[place] || []).filter(n => !reserved.includes(n)); };
 export const defaultNpcImage = (g: Game, name: string) => { const genre = defaultMapGenre(g); return DEFAULT_NPC_NAMES[genre]?.includes(name) ? `/api/default-npc/${encodeURIComponent(name)}?genre=${genre}` : undefined; };
 // Browsers held built-in NPC art for a day under the old cache header; a version tag fetches the replaced files.
@@ -1324,7 +1383,7 @@ export const makeSession = (g: Game): Session => withStoryItems(g, wearStartGear
   x: Math.floor(g.size / 2), y: Math.floor(g.size / 2), hp: g.hp,
   inventory: combinedStartingItems(g.prompt || '', g.startingEquipment || '').filter(n => !storyReplaces(g, n)),
   characterValues: startValues(g), characterEquipment: {}, characterGold: (g.characterConfig || defaultCharacterConfig()).initialGold,
-  flags: [], triggeredEvents: [], currentGoal: '', quests: mainPrologue(g.wizardMain)?.firstQuest ? [mainPrologue(g.wizardMain)!.firstQuest] : [], reputation: 0, party: [], goalCompleted:false, relationships: [], sceneNpcs: [], suggestedActions: prologueText(g).trim() ? openingActions(g) : defaultActions(g, getStartingLocation(g).mapId, getStartingLocation(g).pinId), activeImageKey: undefined, roll: null, pendingCheck: null, lastCheck: null,
+  flags: [], triggeredEvents: [], delivered: [], currentGoal: '', quests: mainPrologue(g.wizardMain)?.firstQuest ? [mainPrologue(g.wizardMain)!.firstQuest] : [], reputation: 0, party: [], goalCompleted:false, relationships: [], sceneNpcs: [], suggestedActions: prologueText(g).trim() ? openingActions(g) : defaultActions(g, getStartingLocation(g).mapId, getStartingLocation(g).pinId), activeImageKey: undefined, roll: null, pendingCheck: null, lastCheck: null,
   log: [prologueText(g).trim() ? `프롤로그: ${prologueText(g).trim()}` : 'GM: 모험의 첫 장이 열린다. 주변 풍경을 살피며 어디로 향할지 정할 수 있다.']
 }));
 

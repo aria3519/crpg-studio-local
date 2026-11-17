@@ -7,6 +7,7 @@ import { sceneWriter, talkWriter } from './_lib/prompt-writer';
 import { readWritten } from './_lib/parse';
 import { checkReply } from './_lib/checks';
 import { VOICE_LENGTH, type NpcSheet, type Profile, npcSheets, assignVoices, LEAVING, voiceFor, oldSpeech } from './_lib/speech';
+import { withoutUnmetNames } from '../../_lib/game/core';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -40,8 +41,9 @@ export async function POST(request: Request) {
     // ("늑대 상대는 내 전문이야") that the identity-free stories never fix.
     const partnerAffection = Number((Array.isArray(state.relationships) ? state.relationships : []).find((r: { name?: unknown }) => r?.name === partner)?.affection) || 0;
     const party: string[] = Array.isArray(state.party) ? state.party.filter((n: unknown): n is string => typeof n === 'string') : [];
+    // The register follows who the two are: a fixed 해요체 had a 견습 knight tell the 기사단장 "보고하겠어요".
     const playerVoice = [
-      `플레이어 대사의 말투: 세 대사 모두 같은 어체입니다. ${partnerAffection >= 40 || party.includes(partner) ? `${partner}와(과)는 가까운 사이라 편한 반말도 됩니다.` : `${partner}에게는 해요체(~요)로 말하고 반말은 쓰지 마세요.`}`,
+      `플레이어 대사의 말투: 세 대사 모두 같은 어체입니다. 어체는 주인공(신분은 주인공 자료)과 ${partner}(설정의 신분·나이)의 관계로 정합니다: 상관·윗사람·높은 신분에게는 하십시오체(~습니다, ~겠습니다), 그 밖의 사람에게는 해요체(~요). ${partnerAffection >= 40 || party.includes(partner) ? `${partner}와(과)는 가까운 사이라, 윗사람이 아니면 편한 반말도 됩니다.` : `${partner}에게 반말은 쓰지 않습니다.`}`,
       `지금 플레이어의 동료: ${party.length ? party.join(', ') : '없음(혼자)'}. 없는 동료나 "우리 둘" 같은 일행을 전제하지 말고, ${partner}가 함께 간다고 정해지지 않았으면 같이 가자는 전제도 하지 마세요.`,
       '주인공의 출신·직업·특기·과거는 주인공 자료(대화에서는 hero)에 있는 그대로만 말합니다.',
     ].join(' ');
@@ -155,6 +157,12 @@ export async function POST(request: Request) {
     if (typeof raw !== 'string') throw new Error('AI 응답이 비어 있습니다.');
     let data = JSON.parse(raw);
     const talkWritten = readWritten({ prewritten, mode, partner, data, state, body });
+    // Choices name only people the hero has met (or meets in this very reply); anyone else goes by how they look.
+    const named = (list: unknown, met: boolean) => (Array.isArray(list) ? list : []).filter((r: { met?: unknown }) => !met || r?.met === true).map((r: { name?: unknown }) => String(r?.name || ''));
+    const known = [partner, ...named(state.relationships, false), ...named(data.relationshipUpdates, true)].filter(Boolean);
+    const unname = (c: unknown) => typeof c === 'string' ? withoutUnmetNames(c, known) : c && typeof c === 'object' && typeof (c as { text?: unknown }).text === 'string' ? { ...c, text: withoutUnmetNames((c as { text: string }).text, known) } : c;
+    if (Array.isArray(data.choices)) data.choices = data.choices.map(unname);
+    if (Array.isArray(data.afterChoices)) data.afterChoices = data.afterChoices.map(unname);
     const { addQuests, ambush, check, choices, completedQuests, enemy, failedQuests, gesture, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain } = checkReply({ state, data, body, mode, fixedVoices, sheets, partner, profiles, itemUse, talkWritten, holdTalk, lastReply, playerLeaves, talkTurns, history });
     return NextResponse.json({ majorScene, nextAction, joins: mode === 'talk' && !!nextAction && data.joins === true, task: mode === 'talk' && !!nextAction && typeof data.task === 'string' ? data.task : '', afterChoices: Array.isArray(data.afterChoices) ? data.afterChoices : [], goTo: !mode && !check && typeof data.goTo === 'string' ? data.goTo : '', talkTo: !mode && !check && typeof data.talkTo === 'string' ? data.talkTo : '', setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, howKnown, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta, goldDelta: check ? 0 : goldDelta, addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
       addItems: !check && Array.isArray(data.addItems) ? data.addItems.slice(0, 5) : [], removeItems: !check && Array.isArray(data.removeItems) ? data.removeItems.slice(0, 5) : [],

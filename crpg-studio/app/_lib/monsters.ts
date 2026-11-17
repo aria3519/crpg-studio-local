@@ -85,7 +85,7 @@ export const pickEncounter = (genre: string, place: string, playerLevel: number,
 // Generic words that name a kind of person or a crowd, not one foe: never enough on their own.
 export const FOE_STOP = /^(무리|떼|거대|거대한|우두머리|병사|기사|전사|무사|마물|약탈대|약탈자|하수인|교도|패거리|광신도|부대|척후대|장군|두목|군집|조)$/;
 // A word standing as a word: followed by a space, punctuation, the end, or a particle (기사단·기사검 are other words).
-export const wordIn = (text: string, w: string) => new RegExp(`${w.replace(/[.*+?^${}()|[\]\\]/g, ch => '\\' + ch)}(?=$|[\\s.,!?…"'”』」)]|(들)?(이|가|을|를|은|는|의|에게|에|과|와|도|로|으로|만)(?![가-힣])|들(?![가-힣]))`).test(text);
+export const wordIn = (text: string, w: string) => new RegExp(`${w.replace(/[.*+?^${}()|[\]\\]/g, ch => '\\' + ch)}(?=$|[\\s.,!?…"'”』」)]|(들)?(이|가|을|를|은|는|의|에게|에|과|와|도|로|으로|만)(?![가-힣])|들(?![가-힣])|입니|이었|였|이라|라는|라고|한테|에게서|께서|님)`).test(text);
 export const namesFoe = (text: string, name: string) => text.includes(name) || name.split(/\s+/).some(w => w.length >= 2 && !FOE_STOP.test(w) && wordIn(text, w));
 export const foeInText = (genre: string, text: string): Foe | undefined => {
   const foes = rosterOf(genre).foes;

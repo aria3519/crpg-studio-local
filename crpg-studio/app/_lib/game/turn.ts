@@ -2,9 +2,9 @@
 // on the player next (a monster, a hostile NPC). Pure: no React, no network. The play screen applies the result and
 // shows the effects; tests replay recorded replies through it (tests/turn.test.ts).
 import { TRAVEL_VERB } from '../travel';
-import { withNextMain, preparedGoal, ownStoryOpen, heldGoal, currentGoalOf, alikeQuest, FIRST_LIKE_MAX, LIKE_GAP, dismissTemps, storyNpcsAfter, storyFoes, bossWaits, foeLevel, withStory, finalBoss, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
+import { dueBeat, focusAfter, goalsFinished, goalPath, withNextMain, preparedGoal, ownStoryOpen, currentGoalOf, alikeQuest, FIRST_LIKE_MAX, LIKE_GAP, dismissTemps, storyNpcsAfter, storyFoes, bossWaits, foeLevel, withStory, finalBoss, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, carriedOpening, openWithCue, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, MANA_REGEN_TURN, train } from './core';
 import { GRADE_LABELS, KIND_LABELS, SKILLS, infoOf, gearOf, bonusText, skillText, enemyGear, gradeForTier, dropChance, rollGrade, rollSkill, randomGearKind, gearName, POTIONS, healShareOf, enemySkill, enemySkillText, type EnemySkill, type Grade, type ItemInfo, type ItemKind, type Equipped } from '../items';
-import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, type Foe } from '../monsters';
+import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, wordIn, type Foe } from '../monsters';
 import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, battleXp, questXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from '../progression';
 
 // The map decides where the player is. A scene heading moves them only when they set off for a place one step away.
@@ -33,7 +33,8 @@ export type TurnContext = { event?: { id: string; text: string; trigger: string 
 export function applyReply(game: Game, current: Session, data: any, message: string, { event, diceResult, debug = false }: TurnContext = {}): TurnResult {
   const fx: TurnEffects = {};
   // A roll's numbers are the game's, by its weight; what the writer and the bookkeeper wrote is the story, not the payout.
-  const rollPay = diceResult ? checkStakes(diceResult.weight || weightOf(diceResult.dc) || 'normal', current.level || 1, maxHpOf(game, current)) : undefined;
+  // A small attempt that simply worked (no die thrown, page.tsx) pays nothing of its own.
+  const rollPay = diceResult && diceResult.die > 0 ? checkStakes(diceResult.weight || weightOf(diceResult.dc) || 'normal', current.level || 1, maxHpOf(game, current)) : undefined;
   const rollWon = !!rollPay && !!diceResult?.success;
   // A failed roll costs, it doesn't finish anything: the bookkeeper closed the entrance exam as done (with its full reward)
   // on the turn the hero was struck out of it. The goal stays open for another try or another way.
@@ -106,9 +107,36 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const offeredBy = (x: unknown) => x && typeof x === 'object' ? String((x as { giver?: unknown }).giver || '').trim() || (current.mode === 'talk' ? current.talkNpc || '' : '') : '';
     // Offers land on prepared stories only; one that matches none (or the giver's story already running) adds no goal.
     const offerText = (x: unknown) => typeof x === 'string' ? x : x && typeof x === 'object' ? String((x as { text?: unknown }).text || '') : '';
+    // This turn's own lines (the player's words, the scene or the talk reply), the same ones the log gets below.
+    const turnLog = [...(carriedOpening(current) ? openWithCue(current.log, current.talkNpc ? talkEntries(current.talkNpc, data) : []) : withPlayerLine(current.log, current.mode === 'talk' ? data.playerLine : '')), ...(current.mode === 'talk' && current.talkNpc && !data.talkLeft ? (carriedOpening(current) ? [] : talkEntries(current.talkNpc, data)) : [`GM: ${String(data.text || 'GM 응답이 없습니다.')}`])];
+    // The opening reply (the player hasn't said anything yet) never ends a talk.
+    const talking = current.mode === 'talk' && !!current.talkNpc ? talkTurns({ ...current, log: turnLog }) : 0;
+    const talkOver = talking >= 1 && (data.endTalk === true || talking >= TALK_LIMIT);
+    // Goals are judged on what this turn did, a talk ending now counting as ended: judged on the turn before, a goal
+    // whose last step was the report to 에드리아 closed only after the hero had set off for the next place.
+    // A goal with prepared beats closes only on those beats: the bookkeeper's word can't close it early.
+    // The beat this move reached (dueBeat) was handed to the writer as what must happen; it counts once this reply is written
+    // (a talk reply, or a scene set where the beat happens).
+    const due = debug ? undefined : dueBeat(game, current, message.startsWith('시스템이 이동을 확정'));
+    const sceneAt = !current.mode ? String(data.text || '').match(/^\s*【([^】·|]+)/)?.[1] || '' : '';
+    const told = !!due && (due.do === 'talk' || (!!sceneAt && (!('at' in due) || !due.at?.length || due.at.some(w => sceneAt.includes(w)))));
+    const delivered = told && current.delivered && !current.delivered.includes(due!.then) ? [...current.delivered, due!.then] : current.delivered;
+    const seen = { ...current, delivered, log: [...turnLog, ...(talkOver ? [`시스템: ${current.talkNpc}${josa(current.talkNpc!, '와')}의 대화가 끝났습니다.`] : [])] };
+    if (!debug) {
+      const finished = goalsFinished(game, seen), held = questsOf(current).filter(q => goalPath(game, q).length && !finished.includes(q));
+      const said = (Array.isArray(data.completedQuests) ? data.completedQuests : []).filter((c: unknown) => !held.some(q => applyQuests([q], { completedQuests: [c] }).done.length));
+      data.completedQuests = [...said, ...finished];
+    }
     const closing = applyQuests(questsOf(current), { completedQuests: data.completedQuests, failedQuests: data.failedQuests }).done;
     const addQuests = Array.isArray(data.addQuests) ? data.addQuests.flatMap((x: unknown) => { const giver = offeredBy(x), q = ownStoryOpen(game, questsOf(current).filter(q => !closing.includes(q)), giver) ? '' : preparedGoal(game, current, offerText(x), giver, closing); return q ? [{ text: q, giver }] : []; }) : [];
-    const questLog0 = withNextMain(game, current, applyQuests(questsOf(current), { ...data, addQuests }, current.questGivers || {}));
+    let questLog0 = withNextMain(game, current, applyQuests(questsOf(current), { ...data, addQuests }, current.questGivers || {}));
+    // A next step the log already shows done (it happened before it became the goal) closes as it comes, and the one after follows.
+    for (let k = 0; k < 8 && !debug; k++) {
+      const over = questLog0.added.filter(q => goalsFinished(game, { ...seen, quests: [q] }).length);
+      if (!over.length) break;
+      const left = (q: string) => !over.includes(q);
+      questLog0 = withNextMain(game, current, { ...questLog0, quests: questLog0.quests.filter(left), added: questLog0.added.filter(left), done: [...questLog0.done, ...over], doneGivers: [...questLog0.doneGivers, ...over.map(() => '')] });
+    }
     // The hidden task (a talk's settled job) ends quietly when the GM closes it: no goal line, no purse.
     const taskText = current.task?.text || '', taskEnds = !!taskText && [data.completedQuests, data.failedQuests].flat().some((c: unknown) => typeof c === 'string' && (c.trim() === taskText || alikeQuest(taskText, c.trim())));
     // A quest with no recorded giver (the story's opening main quest) that closes in a talk counts the talk partner as its giver.
@@ -139,7 +167,12 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const goalCompleted = current.goalCompleted === true || current.bossDown === true;
     // Named people come from the game's cast (portraits, prompt NPC list, people already met) or were just met in this scene (relationships above).
     const knownNpcs = knownNpcNames(game, current);
-    const sceneNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => v.trim()).filter((v: string) => !!v && (debug || !knownNpcs.length || knownNpcs.includes(v) || relationships.some(r => r.name === v))))].slice(0, 3) as string[] : (current.sceneNpcs || []);
+    // A newcomer goes on stage only when this scene names them: the bookkeeper guessed the next place's people in (핍 at 북문 초소
+    // while the player only set off for 진흙 골목), and they vanished on arrival without a word. Who meets the hero at a place is the
+    // director's arrival line, which the writer turns into this scene.
+    const sceneText = String(data.text || ''), onStage = current.sceneNpcs || [];
+    const inScene = (n: string) => onStage.includes(n) || [n, n.split(/\s+/)[0]].some(w => wordIn(sceneText, w));
+    const sceneNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => v.trim()).filter((v: string) => !!v && (debug || ((!knownNpcs.length || knownNpcs.includes(v) || relationships.some(r => r.name === v)) && (!!current.mode || inScene(v))))))].slice(0, 3) as string[] : onStage;
     // A talk or fight keeps its partner on stage; the encounter prompt only returns for newcomers.
     // Companions travel with the player, so the GM naming one in the scene never turns into a fresh encounter.
     const heading = !current.mode ? String(data.text || '').match(/^\s*【([^】·|]+)/)?.[1].trim().slice(0, 40) : undefined;
@@ -164,8 +197,8 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const curMap = (game.maps || []).find(m => m.id === current.mapId);
     const storyPin = !heading || current.mode || debug ? undefined : scenePin(game, current, message, heading);
     const manaMax = maxManaOf(game, current);
-    const result: Session = dismissTemps({ ...train(current, exercised), likedAt, ...(taskEnds ? { task: undefined } : {}), typed: undefined, ...(!current.mode ? { talkPurpose: talkTo && !/^(시스템|전투 결과)/.test(message) ? { npc: talkTo, action: message } : undefined } : {}), ...(manaMax > 0 && current.mode !== 'combat' ? { mana: Math.min(manaMax, (current.mana ?? manaMax) + Math.round(manaMax * MANA_REGEN_TURN)) } : {}), ...(heading ? { scenePlace: heading } : {}), ...(storyPin ? { pinId: storyPin.id } : {}), npcVoices, relationships, storyNpcs: storyNpcsAfter(current, relationships), quests: questLog.quests, questGivers: questLog.givers, ...(questLog.added.length ? { focus: heldGoal(currentGoalOf(current), questLog.quests, questLog.added) } : {}), reputation, characterGold, party, npcCombat, goalCompleted, sceneNpcs: stageNpcs, handledNpcs: debug ? handledNpcs.filter(n => !stageNpcs.includes(n)) : handledNpcs, combat, suggestedActions: nextActions, hp, inventory, flags, activeImageKey, ...(debugPin ? { pinId: debugPin.id } : {}),
-      log: [...(carriedOpening(current) ? openWithCue(current.log, current.talkNpc ? talkEntries(current.talkNpc, data) : []) : withPlayerLine(current.log, current.mode === 'talk' ? data.playerLine : '')), ...(current.mode === 'talk' && current.talkNpc && !data.talkLeft ? (carriedOpening(current) ? [] : talkEntries(current.talkNpc, data)) : [`GM: ${String(data.text || 'GM 응답이 없습니다.')}`]), ...(current.mode === 'combat' && current.combat?.round === 0 && combat ? [battleIntro(combat, hp, maxHpOf(game, current))] : []), ...(drinkNote ? [drinkNote] : []), ...(restNote ? [restNote] : []), ...(debugPin ? [`시스템: [테스트] ${debugPin.name}${josa(debugPin.name, '로')} 이동했습니다.`] : []), ...(storyPin && curMap ? [`시스템: ${curMap.name} / ${storyPin.name}${josa(storyPin.name, '로')} 이동했습니다.`] : []), ...questLog.done.map((q, i) => `시스템: 목표 완료 — ${q}${questLog.doneGivers[i] ? ` (의뢰인 ${questLog.doneGivers[i]})` : ''}`), ...questLog.failed.map(q => `시스템: 목표 실패 — ${q}`), ...affectionNotes.map(n => `시스템: ${n}`), ...(repDelta ? [`시스템: 명성 ${formatReputation(repDelta)} (${reputation.toLocaleString('ko-KR')} · ${reputationRank(reputation)})`] : []), ...(goldDelta ? [`시스템: 골드 ${goldDelta > 0 ? '+' : ''}${goldDelta} (보유 ${characterGold.toLocaleString('ko-KR')})`] : []), ...deserters.map(n => `시스템: ${n}${josa(n, '이')} 실망해 파티를 떠났습니다.`),...questLog.added.map(q => `시스템: 새 목표 — ${q}`), ...(hp !== current.hp && !restNote && !drinkNote ? [`시스템: HP ${current.hp} → ${hp}`] : []),...(add.length ? [`시스템: 획득 — ${add.join(', ')}`] : []), ...(remove.filter((x: string) => !drunk.includes(x)).length ? [`시스템: 사용 — ${remove.filter((x: string) => !drunk.includes(x)).join(', ')}`] : []), ...(goalCompleted && !current.goalCompleted ? ['시스템: 최종 목표 달성 — 게임 완료'] : [])] });
+    const result: Session = dismissTemps({ ...train(current, exercised), likedAt, delivered, ...(taskEnds ? { task: undefined } : {}), typed: undefined, ...(!current.mode ? { talkPurpose: talkTo && !/^(시스템|전투 결과)/.test(message) ? { npc: talkTo, action: message } : undefined } : {}), ...(manaMax > 0 && current.mode !== 'combat' ? { mana: Math.min(manaMax, (current.mana ?? manaMax) + Math.round(manaMax * MANA_REGEN_TURN)) } : {}), ...(heading ? { scenePlace: heading } : {}), ...(storyPin ? { pinId: storyPin.id } : {}), npcVoices, relationships, storyNpcs: storyNpcsAfter(current, relationships), quests: questLog.quests, questGivers: questLog.givers, ...(questLog.added.length ? { focus: focusAfter(game, currentGoalOf(current), questLog.quests, questLog.added) } : {}), reputation, characterGold, party, npcCombat, goalCompleted, sceneNpcs: stageNpcs, handledNpcs: debug ? handledNpcs.filter(n => !stageNpcs.includes(n)) : handledNpcs, combat, suggestedActions: nextActions, hp, inventory, flags, activeImageKey, ...(debugPin ? { pinId: debugPin.id } : {}),
+      log: [...turnLog, ...(current.mode === 'combat' && current.combat?.round === 0 && combat ? [battleIntro(combat, hp, maxHpOf(game, current))] : []), ...(drinkNote ? [drinkNote] : []), ...(restNote ? [restNote] : []), ...(debugPin ? [`시스템: [테스트] ${debugPin.name}${josa(debugPin.name, '로')} 이동했습니다.`] : []), ...(storyPin && curMap ? [`시스템: ${curMap.name} / ${storyPin.name}${josa(storyPin.name, '로')} 이동했습니다.`] : []), ...questLog.done.map((q, i) => `시스템: 목표 완료 — ${q}${questLog.doneGivers[i] ? ` (의뢰인 ${questLog.doneGivers[i]})` : ''}`), ...questLog.failed.map(q => `시스템: 목표 실패 — ${q}`), ...affectionNotes.map(n => `시스템: ${n}`), ...(repDelta ? [`시스템: 명성 ${formatReputation(repDelta)} (${reputation.toLocaleString('ko-KR')} · ${reputationRank(reputation)})`] : []), ...(goldDelta ? [`시스템: 골드 ${goldDelta > 0 ? '+' : ''}${goldDelta} (보유 ${characterGold.toLocaleString('ko-KR')})`] : []), ...deserters.map(n => `시스템: ${n}${josa(n, '이')} 실망해 파티를 떠났습니다.`),...questLog.added.map(q => `시스템: 새 목표 — ${q}`), ...(hp !== current.hp && !restNote && !drinkNote ? [`시스템: HP ${current.hp} → ${hp}`] : []),...(add.length ? [`시스템: 획득 — ${add.join(', ')}`] : []), ...(remove.filter((x: string) => !drunk.includes(x)).length ? [`시스템: 사용 — ${remove.filter((x: string) => !drunk.includes(x)).join(', ')}`] : []), ...(goalCompleted && !current.goalCompleted ? ['시스템: 최종 목표 달성 — 게임 완료'] : [])] });
     // Experience: deeds the GM recognised, plus every quest finished this turn.
     const lv = current.level || 1;
     const acts = current.log.filter(e => e.startsWith('플레이어:')).length;
@@ -203,7 +236,7 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     if (eventPays && deed === 'event') grown.session = { ...grown.session, lastEventXp: acts };
     grown.session = withStory(game, grown.session, questLog.done);
     grown.session = { ...grown.session, itemInfo, equipped:Object.fromEntries(Object.entries(grown.session.equipped || {}).filter(([, n]) => n && (grown.session.inventory || []).includes(n))) };
-    if (questLog.done.length) fx.questClear = { quests: questLog.done.map((name, i) => ({ name, giver: questLog.doneGivers[i] || '' })), xp: earned, reputation: repDelta, total: reputation, items: [...add, ...extra], levelFrom: current.level || 1, levelTo: grown.session.level || 1 };
+    if (questLog.done.length) fx.questClear = { quests: questLog.done.map((name, i) => ({ name, giver: questLog.doneGivers[i] || '' })), xp: earned, reputation: repDelta, total: reputation, items: [...add, ...extra], levelFrom: current.level || 1, levelTo: grown.session.level || 1, next: currentGoalOf(grown.session) };
     else if (grown.levelsGained) fx.levelBurst = grown.session.level || 1;
     // Test command "레벨 50": jump straight to that level, with the stat growth those levels would have given, at full HP.
     const wantLevel = debug ? (typeof data.setLevel === 'number' && data.setLevel > 0 ? data.setLevel : Number((message.match(/(?:레벨|lv\.?)\s*(\d{1,3})/i) || [])[1]) || 0) : 0;
@@ -213,8 +246,6 @@ export function applyReply(game: Game, current: Session, data: any, message: str
       grown.session = { ...jumped.session, hp: maxHpOf(game, jumped.session), log: [...jumped.session.log, `시스템: [테스트] 레벨 → Lv.${target} · 최대 HP ${maxHpOf(game, jumped.session)}`, ...(jumped.note ? [`시스템: ${jumped.note}`] : [])] };
       fx.levelBurst = target;
     }
-    // The opening reply (the player hasn't said anything yet) never ends a talk.
-    const talkOver = current.mode === 'talk' && !!current.talkNpc && talkTurns(result) >= 1 && (data.endTalk === true || talkTurns(result) >= TALK_LIMIT);
     // A finished talk stays on screen with its last line and the end divider; only 대화 끝내기 closes it.
     // A finished talk is where the player usually takes on something (the 7번 부두 salvage job), so the director reads it now
     // and the current goal follows; before, the first main step stayed on screen for 20 entries of dock work.
