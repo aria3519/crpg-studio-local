@@ -1,3 +1,4 @@
+import { aiAllowed, LIMIT_REPLY, logError } from '../../../_lib/beta';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY 환경변수가 없습니다.' }, { status: 500 });
   try {
     const body = await request.json();
+    if (!aiAllowed(request)) return NextResponse.json(LIMIT_REPLY, { status: 429 });
     const npc = String(body.npc || '').slice(0, 30);
     const previous = typeof body.note === 'string' ? body.note.slice(0, 800) : '';
     const lines = Array.isArray(body.lines) ? body.lines.filter((x: unknown): x is string => typeof x === 'string').map((x: string) => x.slice(0, 400)).slice(-30) : [];
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
     if (typeof note !== 'string' || !note.trim()) throw new Error('NPC 기억이 비어 있습니다.');
     return NextResponse.json({ note: note.trim().slice(0, 600) });
   } catch (error) {
+    void logError(request, 'npc-memory', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'NPC 기억 서버 오류' }, { status: 500 });
   }
 }

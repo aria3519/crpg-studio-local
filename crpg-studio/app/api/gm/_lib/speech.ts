@@ -8,7 +8,7 @@ export const VOICE_LENGTH = 200;
 // A medieval setting pulled the model toward translated-drama speech (~이오, ~하시오). Wuxia keeps its authored 하오체 characters, so it skips this.
 export const NATURAL_SPEECH = '인물은 모두 오늘날 한국 사람이 실제로 입으로 하는 자연스러운 말로 이야기합니다. 세계관이 중세여도 번역극이나 사극처럼 말하지 않습니다.';
 // Built-in NPC character sheets (personality, voice, likes/dislikes) live outside the 7000-char game prompt and are attached per NPC on stage.
-export type NpcSheet = { identity?: string; personality?: string; speech?: string; likes?: string[]; dislikes?: string[]; firstAttitude?: string; relations?: string[]; asCompanion?: string; power?: number };
+export type NpcSheet = { identity?: string; personality?: string; speech?: string; likes?: string[]; dislikes?: string[]; firstAttitude?: string; relations?: string[]; asCompanion?: string; power?: number; knows?: string };
 // An NPC as the play screen sends it in state.npcProfiles.
 export type Profile = { name?: unknown; inScene?: unknown; inParty?: unknown; profile?: unknown; speechStyle?: unknown };
 export const sheetCache = new Map<string, Record<string, NpcSheet>>();
@@ -29,7 +29,7 @@ export async function assignVoices(npcs: { name: string; profile: string }[], ge
         messages: [
           { role: 'system', content: [
             '한국어 CRPG의 NPC마다 게임 내내 고정될 말투를 정합니다.',
-            `style 형식: "어체: <하십시오체|해요체|해체|해라체 중 하나만> | 어미: <자주 쓰는 어미 2~3개> | 버릇: <말버릇·자주 쓰는 표현> | 예: <그 인물다운 짧은 대사 하나>" 120자 이내.`,
+            `style 형식: "어체: <하십시오체|해요체|해체|해라체 중 하나만> | 버릇: <말버릇·자주 쓰는 표현> | 예: <그 인물다운 짧은 대사 하나>" 120자 이내.`,
             `성별·나이·신분·성격에 맞추고, 인물끼리 서로 구분되게 하세요. 젊은 인물은 해요체·해체가 자연스럽습니다. ${NATURAL_SPEECH}`,
             '{"voices":[{"name":"정확한 이름","style":"..."}]} JSON만 반환하세요.',
           ].join('\n') },

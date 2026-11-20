@@ -16,11 +16,11 @@ export const tierOfLevel = (level: number) => { let t = 1; while (t < MAX_POWER 
 // A roaming foe grows with the player: it starts at its tier's level and can be met up to two tiers higher
 // (wolves Lv.2-10, a troll Lv.20-48, a wyvern Lv.48-82). Bosses keep their tier's level.
 export const foeLevelRange = (tier: number, boss = false): [number, number] => [levelForTier(tier), boss ? levelForTier(tier) : levelForTier(Math.min(MAX_POWER, Math.round(tier) + 2))];
-// The level a foe is met at: a level or so under the player, within its range, so ordinary fights stay winnable. A
-// roaming foe may be met one level under its tier's floor: a Lv.1 player otherwise met every forest foe above them.
+// The level a foe is met at: 1-3 levels over the player (user 2026-11-20), within its range. A roaming foe may be met one
+// level under its tier's floor: a Lv.1 player otherwise met every forest foe above them.
 export const encounterLevel = (tier: number, boss: boolean, playerLevel: number, rand = Math.random) => {
   const [min, max] = foeLevelRange(tier, boss);
-  return Math.max(boss ? min : Math.max(1, min - 1), Math.min(max, Math.round(playerLevel - 1 + (rand() * 3 - 1.5))));
+  return Math.max(boss ? min : Math.max(1, min - 1), Math.min(max, playerLevel + 1 + Math.floor(rand() * 3)));
 };
 
 // What each level adds on top of the character sheet: HP and damage grow by a steady share per level.
@@ -81,6 +81,28 @@ export const questXp = (level: number) => Math.round(xpToNext(level) * SIDE_QUES
 export const DEED_SHARES: Record<string, number> = { minor: 0.1, deed: 0.3, event: 0.6 };
 export const deedXp = (kind: unknown, level: number) => typeof kind === 'string' && DEED_SHARES[kind] ? Math.round(xpToNext(Math.max(1, level)) * DEED_SHARES[kind] * earlyBoost(level)) : 0;
 
+// The level the story's progress (0-1) calls for: Lv.17 / 33 / 60 at the end of acts 1-3, Lv.92 at the finale, 100 at
+// the end. A finished goal lifts the hero at least this far: per step the story brings ~1 fight and no side quests, not
+// the 3 fights, side quest and deed the curve above was built on (Lv.5 at 17%, 2026-11-19).
+const STORY_LEVELS: [number, number][] = [[0, 1], [0.25, 17], [0.5, 33], [0.75, 60], [0.9, 92], [1, 100]];
+// Fractional: Lv.8.4 is level 8 with 40% of the way to 9, so a finished goal leaves the hero partway into a level the way
+// the story stands, not always at 0 (user 2026-11-20: progress sets the level, 100% is Lv.100).
+export const storyLevelAt = (progress: number) => {
+  const p = Math.max(0, Math.min(1, progress)), i = STORY_LEVELS.findIndex(([at]) => at >= p);
+  if (i <= 0) return 1;
+  const [a, la] = STORY_LEVELS[i - 1], [b, lb] = STORY_LEVELS[i];
+  return la + (lb - la) * (p - a) / (b - a);
+};
+export const storyLevel = (progress: number) => Math.floor(storyLevelAt(progress));
+// Experience still needed to stand at `target` from `level` with `xp` into it.
+export const xpToReach = (level: number, xp: number, target: number) => {
+  let need = -Math.max(0, xp);
+  const whole = Math.min(MAX_LEVEL, Math.floor(target));
+  for (let l = Math.max(1, Math.floor(level)); l < whole; l++) need += xpToNext(l);
+  if (Math.floor(level) > whole) return 0;
+  if (whole < MAX_LEVEL) need += Math.round(xpToNext(whole) * (target - whole));
+  return Math.max(0, need);
+};
 // Adds experience and returns the new level and progress, with how many levels were gained.
 export const gainXp = (level: number, xp: number, gained: number) => {
   let l = Math.max(1, Math.floor(level)), x = Math.max(0, xp) + Math.max(0, Math.round(gained));

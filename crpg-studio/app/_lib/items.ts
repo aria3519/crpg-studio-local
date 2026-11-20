@@ -8,7 +8,8 @@ export type ItemKind = 'weapon' | 'armor' | 'accessory' | 'item';
 export const KIND_LABELS: Record<ItemKind, string> = { weapon: '무기', armor: '방어구', accessory: '장신구', item: '도구' };
 export type SkillId = 'lifesteal' | 'double' | 'keen' | 'thorns' | 'guard' | 'regen' | 'bleed' | 'poison' | 'stun' | 'parry';
 export type GearStats = { hit: number; damage: number; dodge: number; hp: number };
-export type ItemInfo = { grade: Grade; kind: ItemKind; desc?: string; skill?: { id: SkillId; name: string } };
+// trophy: a part taken from a foe, kept to sell (the inventory clean-up sells it with unworn gear).
+export type ItemInfo = { grade: Grade; kind: ItemKind; desc?: string; skill?: { id: SkillId; name: string }; trophy?: boolean };
 
 // What each equipped kind adds, by grade: the average piece of that grade (gear-table.ts spreads pieces around it).
 // Each grade is about 1.5× the one below, so better grades stand clearly apart.
@@ -122,10 +123,12 @@ type GearKind = Exclude<ItemKind, 'item'>;
 export const randomGearKind = (rand = Math.random): GearKind => (['weapon', 'armor', 'accessory'] as const)[Math.floor(rand() * 3)];
 // A piece the player doesn't already own: the same piece is never handed out twice (it used to come back as
 // "손질된 창 2"). The wanted kind first, then the others; none left means undefined.
-export const gearName = (genre: string, kind: GearKind, grade: Grade, owned: (name: string) => boolean, rand = Math.random): { kind: GearKind; name: string } | undefined => {
+// fits: what the hero can use (user 2026-11-20: a knight gets weapons, a mage staffs and robes).
+export const fitsHero = (caster: boolean) => (name: string, kind: GearKind) => kind === 'weapon' ? isStaff(name) === caster : kind === 'armor' ? caster || !isRobe(name) : true;
+export const gearName = (genre: string, kind: GearKind, grade: Grade, owned: (name: string) => boolean, rand = Math.random, fits: (name: string, kind: GearKind) => boolean = () => true): { kind: GearKind; name: string } | undefined => {
   const rows = GEAR_TABLE[genre as keyof typeof GEAR_TABLE] || GEAR_TABLE.fantasy;
   for (const k of [kind, ...(['weapon', 'armor', 'accessory'] as const).filter(x => x !== kind)]) {
-    const fresh = rows.filter(r => r[1] === k && r[2] === grade && !owned(r[0]));
+    const fresh = rows.filter(r => r[1] === k && r[2] === grade && !owned(r[0]) && fits(r[0], k));
     if (fresh.length) return { kind: k, name: fresh[Math.floor(rand() * fresh.length)][0] };
   }
   return undefined;

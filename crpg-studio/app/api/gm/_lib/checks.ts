@@ -6,7 +6,6 @@ import type { GmBody, GmState } from '../../../_lib/game/gm-contract';
 import { FOREIGN_SCRIPT, dropRepeatedQuotes, VOICE_LENGTH, sentences, repeats, addressesIn, pairShare, contentWords, LEAVING, plainEnd, type NpcSheet, type Profile } from './speech';
 import { namesFoe } from '../../../_lib/monsters';
 import { POWER_TIERS, MAX_POWER } from '../../../_lib/progression';
-import { TRAVEL_VERB } from '../../../_lib/travel';
 import { appendFileSync } from 'fs';
 import path from 'path';
 
@@ -93,7 +92,7 @@ export function checkReply(c: Ctx) {
   let parts: { type: 'scene' | 'speech'; text: string }[] = [];
   let talkLeft = false, nextAction = '';
   if (mode === 'talk' && talkWritten) {
-    parts = String(data.line).split('\n').map(text => ({ type: 'speech' as const, text: text.slice(0, 600) })).slice(0, 4);
+    parts = String(data.line).split('\n').filter(text => text.trim()).map(text => ({ type: 'speech' as const, text: text.slice(0, 600) })).slice(0, 4);
     line = parts.map(p => p.text).join(' ');
     if (holdTalk) { data.endTalk = false; data.nextAction = ''; }
     if (lastReply) data.endTalk = true;
@@ -183,16 +182,13 @@ export function checkReply(c: Ctx) {
     data.text = talkLeft ? leftText : parts.filter(p => p.type === 'scene').map(p => p.text).join(' ');
   }
   // The scene's choices are the writer's own. The game drops only what it can't carry out: going where the player already
-  // is, a trip past the next pin (the map moves one step), paying with an empty purse, or only resting (health comes back by itself).
+  // is (a far place is fine: the move goes through the places on the way), paying with an empty purse, or only resting (health comes back by itself).
   const here = [...contentWords(String(state.locationName || ''))].filter(w => !/^(입구|근처|안쪽|바깥|앞|가장자리)$/.test(w));
   const goesHere = (c: string) => /(가서|간다|향한다|이동한다|돌아간다|찾아간다)/.test(c) && here.some(w => c.includes(w));
-  const nextDoor = Array.isArray(state.adjacentLocations) ? state.adjacentLocations.map((l: { name?: unknown }) => String(l?.name || '')) : [];
-  const farPins = (Array.isArray(state.locations) ? state.locations.map((l: { name?: unknown }) => String(l?.name || '').trim()) : []).filter((n: string) => n.length >= 2 && !nextDoor.includes(n) && !here.some(w => n.includes(w)));
-  const farTrip = (c: string) => TRAVEL_VERB.test(c) && farPins.some((n: string) => c.includes(n));
   const broke = Number(state.gold ?? 1) <= 0;
-  const pays = (c: string) => broke && /(은화|금화|동화|동전|골드|돈|값|요금|[가-힣]료|삯|대금|사례금)[^.]{0,15}(내고|낸다|내며|내서|건네|치르고|치른다|치러|지불|갚|꺼내)/.test(c);
+  const pays = (c: string) => broke && /(골드|돈|값|요금|[가-힣]료|삯|대금|사례금)[^.]{0,15}(내고|낸다|내며|내서|건네|치르고|치른다|치러|지불|갚|꺼내)/.test(c);
   const RESTING = /(휴식|쉬며|쉬면서|쉰다|쉬어|잠을 ?청|눈을 붙|숨을 돌리|체력을 ?회복|회복하러|회복한다|기력을 ?회복|상처를 ?돌보|치료(를|하러) ?받)/;
-  const whyBad = (c: string) => [goesHere(c) && 'goes-here', farTrip(c) && 'far-trip', pays(c) && 'no-gold', RESTING.test(c) && 'rest'].filter(Boolean).join(',');
+  const whyBad = (c: string) => [goesHere(c) && 'goes-here', pays(c) && 'no-gold', RESTING.test(c) && 'rest'].filter(Boolean).join(',');
   const gmChoices = [...(choices as string[])];
   if (!mode && !check && !ambush) choices.splice(0, choices.length, ...gmChoices.filter(c => !whyBad(c)));
   // Dev only: what the writer offered and what went out (.next/choice-debug.jsonl).

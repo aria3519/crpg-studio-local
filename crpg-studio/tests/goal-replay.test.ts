@@ -1,6 +1,6 @@
 // Replays every recorded play turn (.next/turn-records.jsonl, written while playing in dev) through the current turn logic
 // and checks the goal rules. No AI calls. Skipped when there are no records.
-// Rules (2026-11-17 playtests): a prepared goal closes only once its beats are done, and on the turn that finishes it; the GM
+// Rules (2026-11-17 playtests): a prepared goal closes only once its beats are done (or the story ran past it to the next step), and on the turn that finishes it; the GM
 // always gets the current goal with steps left; one main step is always open; a main step
 // just added is the current goal; a main-story person never hands out their own story while a main step is open.
 import { test } from 'node:test';
@@ -10,6 +10,8 @@ import path from 'node:path';
 import { applyReply } from '../app/_lib/game/turn';
 import { alikeQuest, currentGoalOf, gmGoal, goalPath, goalsFinished, questsOf, regionQuestsOf, type Game, type Session } from '../app/_lib/game/core';
 import { mainChain } from '../app/_lib/prologues';
+// Beats left and not passed: the story running ahead (the next step done or gone after, goalsFinished) passes a goal with beats left.
+const passedLeft = (g: Game, q: string, s: Session) => goalPath(g, q, s).some(x => !x.startsWith('이미')) && !goalsFinished(g, s).includes(q);
 
 const root = path.resolve(__dirname, '..', '..');
 const file = path.join(root, '.next', 'turn-records.jsonl');
@@ -31,7 +33,7 @@ test('recorded turns keep the goal rules under the current code', { skip: !exist
     // A talk closing its goal mid-talk counts that talk as its talk beat.
     const talkEnd = r.session.mode === 'talk' && r.session.talkNpc ? [`시스템: ${r.session.talkNpc}와의 대화가 끝났습니다.`] : [];
     for (const q of before.filter(q => !after.includes(q) && goalPath(g, q).length && res.log.some(l => l.startsWith('시스템: 목표 완료 — ' + q))))
-      if (goalPath(g, q, { ...res, log: [...res.log, ...talkEnd], quests: [q] }).some(x => !x.startsWith('이미'))) broken.push(`${at} closed with beats left: ${q}`);
+      if (passedLeft(g, q, { ...res, log: [...res.log, ...talkEnd], quests: [q] })) broken.push(`${at} closed with beats left: ${q}`);
     // Closed on the turn that finished it, not one turn later (the report to 에드리아 closed only after leaving for the next place).
     // A talk this turn ended counts as ended (its end line comes when the player closes the window).
     const ended = res.talkEnded && res.talkNpc ? { ...res, log: [...res.log, `시스템: ${res.talkNpc}와의 대화가 끝났습니다.`] } : res;
@@ -65,7 +67,7 @@ test('a bookkeeper claiming every goal done never closes a prepared goal with be
     tried++;
     const talkEnd = r.session.mode === 'talk' && r.session.talkNpc ? [`시스템: ${r.session.talkNpc}와의 대화가 끝났습니다.`] : [];
     for (const q of before.filter(q => goalPath(g, q).length && !questsOf(res).includes(q)))
-      if (goalPath(g, q, { ...res, log: [...res.log, ...talkEnd], quests: [q] }).some(x => !x.startsWith('이미'))) broken.push(`${r.session.runId}@${r.session.log.length} closed with beats left: ${q}`);
+      if (passedLeft(g, q, { ...res, log: [...res.log, ...talkEnd], quests: [q] })) broken.push(`${r.session.runId}@${r.session.log.length} closed with beats left: ${q}`);
   }
   assert.ok(tried > 0);
   assert.deepEqual(broken, []);

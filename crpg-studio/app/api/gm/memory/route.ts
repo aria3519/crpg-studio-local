@@ -1,3 +1,4 @@
+import { aiAllowed, LIMIT_REPLY, logError } from '../../../_lib/beta';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY 환경변수가 없습니다.' }, { status: 500 });
   try {
     const body = await request.json();
+    if (!aiAllowed(request)) return NextResponse.json(LIMIT_REPLY, { status: 429 });
     const previous = typeof body.summary === 'string' ? body.summary.slice(0, 9000) : '';
     const entries = Array.isArray(body.entries) ? body.entries.filter((x: unknown): x is string => typeof x === 'string').map((x: string) => x.slice(0, 1500)).slice(-80) : [];
     // Key facts live outside the summary and are never rewritten; the model only adds new ones.
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
     const added = Array.isArray(parsed?.pinned) ? parsed.pinned.filter((x: unknown): x is string => typeof x === 'string' && !!x.trim()).map((x: string) => x.trim().slice(0, 120)).filter((x: string) => !pinned.includes(x)).slice(0, 10) : [];
     return NextResponse.json({ summary: summary.trim().slice(0, 8000), pinned: added });
   } catch (error) {
+    void logError(request, 'memory', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : '장기 기억 서버 오류' }, { status: 500 });
   }
 }

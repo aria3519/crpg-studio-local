@@ -8,7 +8,9 @@
     "start": "next start",
     "test": "tsc -p tests/tsconfig.json && node tests/run.mjs",
     "test:update": "tsc -p tests/tsconfig.json && node tests/run.mjs --update",
-    "test:keep": "node tests/keep-turns.mjs"
+    "test:keep": "node tests/keep-turns.mjs",
+    "beta": "node scripts/beta.mjs",
+    "beta:start": "node scripts/beta.mjs start"
   },
   "dependencies": {
     "next": "^15.3.0",

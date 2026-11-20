@@ -1,3 +1,4 @@
+import { aiAllowed, LIMIT_REPLY, logError } from '../../../_lib/beta';
 import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 // The model occasionally slips a word from another language into Korean (e.g. Russian "слух" for 소문).
@@ -8,6 +9,7 @@ export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({error:'OPENAI_API_KEY 환경변수가 없습니다.'},{status:500});
   try {
     const body = await request.json();
+    if (!aiAllowed(request)) return NextResponse.json(LIMIT_REPLY, { status: 429 });
     const prologue = String(body.prologue || '').trim().slice(0,5000);
     if (!prologue) return NextResponse.json({error:'프롤로그가 없습니다.'},{status:400});
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -29,6 +31,7 @@ export async function POST(request: Request) {
     const metCharacters = Array.isArray(parsed.metCharacters) ? parsed.metCharacters.slice(0,20).filter((v:unknown)=>!!v && typeof v==='object' && typeof (v as {name?:unknown}).name==='string').map((v:{name:string;relation?:string;affection?:number})=>({name:v.name.trim().slice(0,50),relation:typeof v.relation==='string'?v.relation.trim().slice(0,30):'초면',affection:typeof v.affection==='number'&&Number.isFinite(v.affection)?Math.max(-40,Math.min(40,Math.round(v.affection))):50})).filter((v:{name:string})=>!!v.name) : [];
     return NextResponse.json({choices,metCharacters,currentGoal:typeof parsed.currentGoal==='string'?parsed.currentGoal.trim().slice(0,240):''});
   } catch(error) {
+    void logError(request, 'prologue-choices', error);
     return NextResponse.json({error:error instanceof Error?error.message:'선택지 생성 오류'},{status:500});
   }
 }

@@ -1,3 +1,4 @@
+import { aiAllowed, LIMIT_REPLY, logError } from '../../../_lib/beta';
 import { NextResponse } from 'next/server';
 import { FOREIGN_SCRIPT } from '../_lib/speech';
 
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY 환경변수가 없습니다.' }, { status: 500 });
   try {
     const body = await request.json();
+    if (!aiAllowed(request)) return NextResponse.json(LIMIT_REPLY, { status: 429 });
     const strings = (v: unknown, n: number, len: number) => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(-n).map(x => x.slice(0, len)) : [];
     const recent = strings(body.recent, 40, 1500);
     if (!recent.length) return NextResponse.json({ fixes: [] });
@@ -80,6 +82,7 @@ export async function POST(request: Request) {
       reactions: (Array.isArray(parsed?.reactions) ? parsed.reactions : []).filter((r: unknown): r is { who: string; text: string; affection?: unknown } => !!r && typeof (r as { who?: unknown }).who === 'string' && !!(r as { who: string }).who.trim() && typeof (r as { text?: unknown }).text === 'string' && !!(r as { text: string }).text.trim() && !reserved.includes((r as { who: string }).who.trim()))
         .slice(0, 2).map((r: { who: string; text: string; affection?: unknown }) => ({ who: r.who.trim().slice(0, 30), text: r.text.trim().slice(0, 160), affection: Math.max(-10, Math.min(10, Math.round(Number(r.affection) || 0))) })) });
   } catch (error) {
+    void logError(request, 'director', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : '이야기 감독 서버 오류' }, { status: 500 });
   }
 }

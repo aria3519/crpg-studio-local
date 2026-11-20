@@ -10,7 +10,7 @@ export type GmStateKey =
   | 'items' | 'knownNpcs' | 'level' | 'localStories' | 'locationDescription' | 'locationName' | 'locations' | 'mapName'
   | 'mapPin' | 'maxHp' | 'maxQuests' | 'monsters' | 'npcProfiles' | 'comingBack' | 'party' | 'partyLevels' | 'placeSeed' | 'quests'
   | 'recentFoes' | 'relationships' | 'reputation' | 'reputationRank' | 'reservedNpcs' | 'roll' | 'safePlace' | 'sceneNpcs'
-  | 'storyCastFull' | 'storyNext' | 'storyPlan' | 'trainableStats' | 'whereabouts' | 'xp';
+  | 'storyCastFull' | 'storyNext' | 'storyPlan' | 'trainableStats' | 'whereabouts' | 'xp' | 'firstVoices' | 'time' | 'foundHere';
 export type GmState = { [K in GmStateKey]?: any };
 export type GmBodyKey =
   | 'action' | 'closeTalk' | 'combat' | 'debug' | 'diceResult' | 'genre' | 'hero' | 'history' | 'initialEquipment'

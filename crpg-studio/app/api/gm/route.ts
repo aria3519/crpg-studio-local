@@ -1,3 +1,4 @@
+import { aiAllowed, isPublic, logEvent, LIMIT_REPLY, turnAllowed, TURNS_REPLY, accountOf, LOGIN_REPLY, logError } from '../../_lib/beta';
 import { NextResponse } from 'next/server';
 import { appendFileSync } from 'fs';
 import path from 'path';
@@ -7,7 +8,6 @@ import { sceneWriter, talkWriter } from './_lib/prompt-writer';
 import { readWritten } from './_lib/parse';
 import { checkReply } from './_lib/checks';
 import { VOICE_LENGTH, type NpcSheet, type Profile, npcSheets, assignVoices, LEAVING, voiceFor, oldSpeech } from './_lib/speech';
-import { withoutUnmetNames } from '../../_lib/game/core';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -16,6 +16,10 @@ export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OPENAI_API_KEY 환경변수가 없습니다.' }, { status: 500 });
   try {
     const body: GmBody = await request.json();
+    if (isPublic(request) && !accountOf(request)) return NextResponse.json(LOGIN_REPLY, { status: 401 });
+    if (!aiAllowed(request, body.phase !== 'write')) return NextResponse.json(LIMIT_REPLY, { status: 429 });
+    if (!turnAllowed(request, body.phase !== 'write')) return NextResponse.json(TURNS_REPLY, { status: 429 });
+    if (isPublic(request) && body.phase !== 'write') void logEvent(request, 'turn', { action: String(body.action || '').slice(0, 300) }).catch(() => {});
     if (typeof body.action !== 'string' || !body.action.trim() || body.action.length > 4000) {
       return NextResponse.json({ error: '행동 입력이 올바르지 않습니다.' }, { status: 400 });
     }
@@ -72,6 +76,10 @@ export async function POST(request: Request) {
     const voiceless = profiles.filter(p => typeof p?.name === 'string' && !String(p.speechStyle || '').trim() && (p.inScene || p.inParty || p.name === partner)).slice(0, 4);
     const fixedVoices = [...sheetVoices, ...(voiceless.length && body.phase !== 'write' ? await assignVoices(voiceless.map(p => ({ name: String(p.name), profile: String(p.profile || '') })), genreText) : [])];
     for (const v of fixedVoices) { const p = profiles.find(x => x.name === v.name); if (p) p.speechStyle = v.style; }
+    // A written person the scene is about to bring in, not met yet, speaks in their own voice from the first line (실바엘's
+    // first line was 반말 from the scene, then 존댓말 from her sheet once the talk began).
+    const upcoming = [...(Array.isArray(body.mustHappen) ? body.mustHappen : []), state.placeSeed, state.storyNext].map(x => String(x || '')).join(' ');
+    state.firstVoices = Object.entries(sheets).filter(([name, sh]) => sh.speech && upcoming.includes(name) && !profiles.some(p => p.name === name)).slice(0, 3).map(([name, sh]) => ({ name, speechStyle: voiceFor(sh.speech || '', 0).slice(0, VOICE_LENGTH) }));
     // Scenes are written in two steps: phase 'write' streams Terra's prose to the player; then this route is called again with
     // that prose as sceneText, and the routine model only fills in the game's fields (measured 2026-11-10: Luna wrote 120~160자
     // of a dice request in 6~7s; Terra wrote 400~600자 of story, first words after 1.7~3s).
@@ -157,17 +165,12 @@ export async function POST(request: Request) {
     if (typeof raw !== 'string') throw new Error('AI 응답이 비어 있습니다.');
     let data = JSON.parse(raw);
     const talkWritten = readWritten({ prewritten, mode, partner, data, state, body });
-    // Choices name only people the hero has met (or meets in this very reply); anyone else goes by how they look.
-    const named = (list: unknown, met: boolean) => (Array.isArray(list) ? list : []).filter((r: { met?: unknown }) => !met || r?.met === true).map((r: { name?: unknown }) => String(r?.name || ''));
-    const known = [partner, ...named(state.relationships, false), ...named(data.relationshipUpdates, true)].filter(Boolean);
-    const unname = (c: unknown) => typeof c === 'string' ? withoutUnmetNames(c, known) : c && typeof c === 'object' && typeof (c as { text?: unknown }).text === 'string' ? { ...c, text: withoutUnmetNames((c as { text: string }).text, known) } : c;
-    if (Array.isArray(data.choices)) data.choices = data.choices.map(unname);
-    if (Array.isArray(data.afterChoices)) data.afterChoices = data.afterChoices.map(unname);
     const { addQuests, ambush, check, choices, completedQuests, enemy, failedQuests, gesture, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain } = checkReply({ state, data, body, mode, fixedVoices, sheets, partner, profiles, itemUse, talkWritten, holdTalk, lastReply, playerLeaves, talkTurns, history });
-    return NextResponse.json({ majorScene, nextAction, joins: mode === 'talk' && !!nextAction && data.joins === true, task: mode === 'talk' && !!nextAction && typeof data.task === 'string' ? data.task : '', afterChoices: Array.isArray(data.afterChoices) ? data.afterChoices : [], goTo: !mode && !check && typeof data.goTo === 'string' ? data.goTo : '', talkTo: !mode && !check && typeof data.talkTo === 'string' ? data.talkTo : '', setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, howKnown, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta, goldDelta: check ? 0 : goldDelta, addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
+    return NextResponse.json({ majorScene, nextAction, joins: mode === 'talk' && !!nextAction && data.joins === true, task: mode === 'talk' && !!nextAction && typeof data.task === 'string' ? data.task : '', afterChoices: Array.isArray(data.afterChoices) ? data.afterChoices : [], talkTo: !mode && !check && typeof data.talkTo === 'string' ? data.talkTo : '', setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, howKnown, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta, goldDelta: check ? 0 : goldDelta, addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
       addItems: !check && Array.isArray(data.addItems) ? data.addItems.slice(0, 5) : [], removeItems: !check && Array.isArray(data.removeItems) ? data.removeItems.slice(0, 5) : [],
       addFlags: !check && Array.isArray(data.addFlags) ? data.addFlags.slice(0, 5) : [] });
   } catch (error) {
+    void logError(request, 'gm', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'GM 서버 오류' }, { status: 500 });
   }
 }

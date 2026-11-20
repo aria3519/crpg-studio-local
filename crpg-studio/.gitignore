@@ -9,3 +9,9 @@ graphify-out/graph.html
 graphify-out/cache/stat-index.json
 graphify-out/cache/last_query_stamp
 .test-build
+
+# public beta: visitor log and visitor saves (session-<game>-<player>)
+beta-data
+saves/session-*-*.json
+saves/*.tmp
+.next-beta*

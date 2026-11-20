@@ -1,5 +1,5 @@
 // Reads what the writers wrote for /api/gm into the reply's fields: a talk reply's lines, gesture, item clue, end tag
-// and suggested answers; a scene's text, choices and its tail tags ([대화: …], [이동: …], [판정: …]).
+// and suggested answers; a scene's text, choices and its tail tags ([대화: …], [판정: …]).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { GmBody, GmState } from '../../../_lib/game/gm-contract';
 import { FOREIGN_SCRIPT } from './speech';
@@ -10,7 +10,7 @@ export function readWritten(c: Ctx) {
   const { prewritten, mode, partner, data, state, body } = c;
   let talkWritten = false;
   if (prewritten && mode === 'talk') {
-    const [said, tail = '']: string[] = prewritten.split(/\n\s*-{3,}\s*(?:\n|$)/);
+    const [said, tail = '']: string[] = prewritten.split(/(?:^|\n)\s*-{3,}\s*(?:\n|$)/);
     let gestureW = '';
     const asides: string[] = [];
     const lines = said.split('\n').map(l => l.trim()).filter(Boolean).map((l, i) => {
@@ -52,11 +52,7 @@ export function readWritten(c: Ctx) {
       && !(Array.isArray(state.party) ? state.party : []).includes(talkName) && !foes.some((n: string) => n && (n.includes(talkName) || talkName.includes(n))) ? talkName : '';
     data.talkTo = !talkName ? '' : talkable.find((n: string) => n === talkName) || (talkName.length < 2 ? '' : talkable.find((n: string) => n.length >= 2 && (talkName.includes(n) || n.includes(talkName)))) || extra;
     if (data.talkTo) data.choices = [];
-    // The player sets off: the game makes the move on the map (not on an arrival the map already made).
-    const goName = tail.match(/\[이동:\s*([^\]|]+)/)?.[1].trim().slice(0, 40) || '';
-    data.goTo = !data.talkTo && goName.length >= 2 && !String(body.action || '').startsWith('시스템이 이동을 확정') ? goName : '';
-    if (data.goTo) data.choices = [];
-    const roll = body.diceResult || data.talkTo || data.goTo ? null : tail.match(/\[판정:\s*([^\]]+)\]/);
+    const roll = body.diceResult || data.talkTo ? null : tail.match(/\[판정:\s*([^\]]+)\]/);
     if (roll) {
       const [ab = '', dcPart = '', ...more]: string[] = roll[1].split('|').map((x: string) => x.trim());
       // The impact field (전투/이후/최종보스) may sit anywhere after the weight.
