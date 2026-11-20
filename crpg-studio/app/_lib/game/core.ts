@@ -223,7 +223,8 @@ export function placeBackground(g: Game, pin?: MapPin): string {
   const file = pin && DEFAULT_PLACE_BACKGROUNDS[genre]?.[pin.name.trim()];
   return file ? `/api/default-background/${genre}/${file}` : prologueImage(g);
 }
-export type Game = { npcPortraits?:NpcPortrait[]; npcStyle?:string; prologue?: string; prologueTitle?:string; prologueImage?:string; profileDone?: boolean; promptDone?: boolean; mapDone?: boolean; assetsDone?: boolean; settingsDone?: boolean; wizardType?: string; wizardWorld?: string; wizardStage?: number; wizardMain?: string; wizardMainDraw?: string[]; wizardStart?: string; wizardBasePrompt?: string; playerMarker?: string; playerPortrait?: string; customPromptSections?: CustomPromptSection[]; removedPromptSections?: string[]; promptDrafts?: PromptDrafts; compressedPrompt?: string; characterConfig?: CharacterConfig; showHpBar?: boolean; showEquipment?: boolean; showDice?: boolean; startingEquipment?: string; maps?: BoardMap[]; startMapId?: string; startPinId?: string; registrationDescription?: string; genre?: string; gameType?: string; cooperation?: string; progression?: string; playTime?: string; hashtags?: string[]; audience?: string; playMode?: 'single' | 'multi'; minPlayers?: number; maxPlayers?: number; imageRows?: ImageRow[]; imageColumns?: ImageColumn[]; imageCells?: ImageCell[]; prompt?: string; mapImage?: string; assets?: Asset[]; id: string; name: string; description: string; world: string; rules: string; gm: string; hp: number; size: number; created: number; cover?: string };
+// betaHidden: left off the public beta's game list (set from 내 게임).
+export type Game = { betaHidden?: boolean; npcPortraits?:NpcPortrait[]; npcStyle?:string; prologue?: string; prologueTitle?:string; prologueImage?:string; profileDone?: boolean; promptDone?: boolean; mapDone?: boolean; assetsDone?: boolean; settingsDone?: boolean; wizardType?: string; wizardWorld?: string; wizardStage?: number; wizardMain?: string; wizardMainDraw?: string[]; wizardStart?: string; wizardBasePrompt?: string; playerMarker?: string; playerPortrait?: string; customPromptSections?: CustomPromptSection[]; removedPromptSections?: string[]; promptDrafts?: PromptDrafts; compressedPrompt?: string; characterConfig?: CharacterConfig; showHpBar?: boolean; showEquipment?: boolean; showDice?: boolean; startingEquipment?: string; maps?: BoardMap[]; startMapId?: string; startPinId?: string; registrationDescription?: string; genre?: string; gameType?: string; cooperation?: string; progression?: string; playTime?: string; hashtags?: string[]; audience?: string; playMode?: 'single' | 'multi'; minPlayers?: number; maxPlayers?: number; imageRows?: ImageRow[]; imageColumns?: ImageColumn[]; imageCells?: ImageCell[]; prompt?: string; mapImage?: string; assets?: Asset[]; id: string; name: string; description: string; world: string; rules: string; gm: string; hp: number; size: number; created: number; cover?: string };
 // foeBleed/foeBleedTurns/foePoison: the player's 출혈 and 독 still working on the foe.
 export type CombatState = { respect?: boolean; openCut?: number; castGauge?: number; foeBleed?: number; foeBleedTurns?: number; foePoison?: number; level?: number; boss?: boolean; enemyAtk?: number; enemySkill?: EnemySkill; enemyShield?: number; shield?: number; lethal?: boolean; monster?: boolean; foeDesc?: string; power?: number; npc: string; enemyHp: number; enemyMaxHp: number; enemyDc: number; enemyDamage: number; round: number; itemUse?: string; lastDealt?: number; lastTaken?: number; last?: { allies?: string[]; dealt: number; critDealt: boolean; taken: number | null; critTaken: boolean }; totalDealt?: number; totalTaken?: number; result?: 'win' | 'lose' };
 // What a roll changes later (user, 2026-11-17: roll only for what affects a later event): the fight that follows,
@@ -256,7 +257,6 @@ export type DirectorNotes = { fixes: string[]; upTo: number; at: number; hooks?:
 // talkPurpose: the scene stopped where the player meets someone to talk; choosing 대화하기 opens the talk with that action as its purpose.
 // focus/focusAt: the current goal the game picked last, and the log length then (see currentGoalOf).
 // storyPlan: the record keeper's blueprint (the hero's want, the people tied to them); written at game start.
-// act: which act of the outline the story is in (story points set it in withStory; it never goes back).
 // runId: one playthrough. A new game keeps the gameId and the same prologue, so background jobs (story memory, director, NPC
 // memory) still running from the previous playthrough wrote into the new one: 에드리아 spoke of a wolf test it never gave. storyPoints: story points earned (storyProgress); bossDown: the final boss fell, so this turn writes the ending.
 // echoes: rolls whose outcome comes back two or three player actions later (at: playerActs when rolled). bossEdge: rolls won toward the final boss fight.
@@ -266,7 +266,7 @@ export type DirectorNotes = { fixes: string[]; upTo: number; at: number; hooks?:
 // tempSince: the player-action count when each temporary companion joined (they stay at least TEMP_MIN_ACTS).
 // likedAt: when each liked deed last raised someone's goodwill ("이름|like" → player-action count).
 // task: the job the last talk settled ("늑대 무리 처리하기"). It runs behind: never shown as a goal, but the writer and director work to it.
-export type Session = { task?: { text: string; at: number }; delivered?: string[]; statPoints?: number; talkTask?: string; likedAt?: Record<string, number>; tempSince?: Record<string, number>; tempPending?: { npc: string; goal: string }; talkJoin?: boolean; tempParty?: Record<string, string>; echoes?: { text: string; at: number }[]; bossEdge?: number; placeArrive?: Record<string, string>; shownNext?: string[]; storyPoints?: number; bossDown?: boolean; storyNpcs?: { goal: string; names: string[] }; runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; act?: number; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; ambushNext?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
+export type Session = { task?: { text: string; at: number }; delivered?: string[]; statPoints?: number; talkTask?: string; likedAt?: Record<string, number>; tempSince?: Record<string, number>; tempPending?: { npc: string; goal: string }; talkJoin?: boolean; tempParty?: Record<string, string>; echoes?: { text: string; at: number }[]; bossEdge?: number; placeArrive?: Record<string, string>; shownNext?: string[]; storyPoints?: number; bossDown?: boolean; storyNpcs?: { goal: string; names: string[] }; runId?: string; typed?: boolean; talkNext?: string; talkChoices?: string[]; talkPurpose?: { npc: string; action: string }; storyPlan?: string; focus?: string; focusAt?: number; placeSeedsV?: number; placeSeeds?: Record<string, string>; npcCards?: Record<string, string>; directorNotes?: DirectorNotes; metNpcs?: string[]; clashed?: Record<string, number>; talkEnded?: boolean; talkAccept?: string; mana?: number; recentFoes?: string[]; scenePlace?: string; lastEventXp?: number; revivals?: number; itemInfo?: Record<string, ItemInfo>; equipped?: Equipped; lastInterference?: number; training?: Record<string, number>; threat?: Threat; ambushNext?: Threat; dead?: boolean; memory?: StoryMemory; npcVoices?: Record<string, string>; npcNotes?: Record<string, string>; quests?: string[]; questGivers?: Record<string, string>; inviteRefusals?: Record<string, number>; npcCombat?: Record<string, { hp: number; dc: number; damage: number; power?: number }>; level?: number; xp?: number; npcPower?: Record<string, number>; companions?: Record<string, { level: number; xp: number }>; reputation?: number; party?: string[];currentGoal?: string; goalCompleted?: boolean; relationships?: Relationship[]; suggestedActions?: string[]; pendingCheck?: DiceCheck | null; lastCheck?: DiceResult | null; characterValues?: Record<string,string>; characterEquipment?: Record<string,string>; characterGold?: number; mapId?: string; pinId?: string; gameId: string; x: number; y: number; hp: number; roll: number | null; log: string[]; inventory?: string[]; flags?: string[]; triggeredEvents?: string[]; activeImageKey?: string; sceneNpcs?: string[]; handledNpcs?: string[]; mode?: 'talk' | 'combat'; talkNpc?: string; combat?: CombatState | null; travel?: {mapId:string; destinationId:string; remaining:number; total:number} };
 export type View = 'library' | 'edit' | 'play';
 export type Tab = 'prompt' | 'map' | 'assets' | 'settings' | 'register';
 export const initial: Game = { characterConfig: defaultCharacterConfig(), showHpBar: true, showEquipment: true, showDice: true, startingEquipment: '낡은 검, 가죽 갑옷, 회복 물약', playMode: 'single', minPlayers: 2, maxPlayers: 4, id: 'sample', name: '잊혀진 던전', description: '고대 유적을 탐험하는 판타지 TRPG', world: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.', rules: 'D20 판정. 10 이상 보통 성공, 15 이상 어려운 성공. 같은 맵 안에서는 장소를 자유롭게 선택하고 다른 맵으로는 포탈을 통해 이동한다. 전투 및 아이템 사용은 추후 규칙 모듈로 확장.', gm: '몰입감 있는 한국어 판타지 TRPG GM. 플레이어의 행동을 임의로 확정하지 말고 결과를 설명한다.', hp: 100, size: 7, created: 0, prompt: '고대 왕국의 유적이 발견되었다. 플레이어는 유적을 탐험하는 모험가다.\nD20 판정을 사용한다.\nGM은 플레이어의 행동을 임의로 확정하지 않는다.', assets: [], imageRows: [], imageColumns: [], imageCells: [], mapImage: '', registrationDescription: '', genre: 'RPG / 탐험', gameType: 'RPG / 탐험', cooperation: '협동', progression: '턴제', playTime: '장기 캠페인', hashtags: [], audience: '전체 이용가' };
@@ -404,7 +404,7 @@ export const joinTemp = (s: Session, npc: string, goal: string, line = `시스�
 // only if the player agrees in a talk do they come along, for as long as the player stays there, staying behind on leaving.
 export const GUIDES: Record<string, string> = { 그림우드: '넬' };
 export const guideGoal = (place: string) => `${place} 안내`;
-export const guideOf = (g: Game, s: Session, place: string) => { const guide = GUIDES[place] || ''; return guide && !reservedNpcs(g, s).includes(guide) && !(s.party || []).includes(guide) ? guide : ''; };
+export const guideOf = (g: Game, s: Session, place: string) => { const guide = GUIDES[place] || ''; return guide && !(s.party || []).includes(guide) ? guide : ''; };
 export const withGuides = (s: Session, place: string): Session => {
   const temp = s.tempParty || {}, leaving = Object.keys(temp).filter(n => Object.entries(GUIDES).some(([p, guide]) => guide === n && temp[n] === guideGoal(p) && p !== place));
   const left: Session = !leaving.length ? s : { ...s, party: (s.party || []).filter(n => !leaving.includes(n)), tempParty: Object.fromEntries(Object.entries(temp).filter(([n]) => !leaving.includes(n))), sceneNpcs: (s.sceneNpcs || []).filter(n => !leaving.includes(n)), handledNpcs: [...new Set([...(s.handledNpcs || []), ...leaving])],
@@ -699,8 +699,11 @@ export const gmGoal = (g: Game, s: Session) => {
   const goal = currentGoalOf(s), task = s.task?.text || '', open = questsOf(s);
   return { currentGoal: goal, goalPath: goal ? goalPath(g, goal, s) : [], quests: [...open, ...(task && !open.some(q => alikeQuest(q, task)) ? [task] : [])] };
 };
-// The final boss comes out once the story is at 100% and the player is at its place; before that it isn't there yet.
-export const bossWaits = (g: Game, s: Session) => { const p = storyProgress(g, s), place = bossPlace(g); return !!p && !!place && p.done >= p.total && regionWhere(g, s).includes(place); };
+// The way to the final boss opens when the boss's story line (the old main story, all but its last step: the boss fight) is
+// done, not at 100% (user 2026-11-20): the player may go at once or grow first. Steps passed over count as passed (mainAt).
+export const bossOpen = (g: Game, s: Session) => { const chain = mainChain(g) || []; return chain.length > 1 && mainAt(chain, questsDone(s)) >= chain.length - 2; };
+// The final boss comes out once its way is open and the player is at its place; before that it isn't there yet.
+export const bossWaits = (g: Game, s: Session) => { const place = bossPlace(g); return !!finalBoss(g) && !!place && bossOpen(g, s) && regionWhere(g, s).includes(place); };
 // Foes the story sets: the current goal's (a region story's 'defeat' steps) are fought as written. The final boss stays
 // off stage until progress hits 100% and the player reaches its place. Act bosses are whatever the story calls for, at a fair level (writerFoes).
 export const storyFoes = (g: Game, s: Session) => {
@@ -710,39 +713,48 @@ export const storyFoes = (g: Game, s: Session) => {
   const now = [...new Set(steps.flatMap(st => st?.beats || []).flatMap(b => b.do === 'defeat' ? [b.foe] : []))].filter(n => n !== boss);
   return boss && finale ? { now: [...now, boss], later: [] } : { now, later: boss ? [boss] : [] };
 };
-// The story moves on with every story the player finishes: each finished goal adds points by its weight (small 1,
-// normal/big 2, decisive 3) toward a fixed scale, four acts of STORY_TOTAL / 4 points. At 90% the finale goal opens and
-// leads to the boss's place; at 100% the boss waits there (bossWaits, turn.ts).
+// The story moves on with every story the player finishes. The boss's story line (the old main story) carries MAIN_SHARE of
+// the bar over its steps, whatever their count (19 for the knight, 13 for the mage), so following it grows the hero fast
+// (storyLevelAt); every other goal adds points by its weight (small 1, normal/big 2, decisive 3) toward the rest (user 2026-11-20).
+// Before, a main step was a small goal: the whole main story came to 56% (knight) / 47% (mage).
 // shortcut: a weight per goal, not per what it did; if made-up errands farm progress, weigh them by the director instead.
 const STORY_POINTS: Record<Weight, number> = { small: 1, normal: 2, big: 2, decisive: 3 };
-const STORY_TOTAL = 36, STORY_ACTS = 4;
-export const storyPointsOf = (g: Game, quests: string[]) => quests.reduce((a, q) => a + STORY_POINTS[questWeight(g, q)], 0);
-// How far the story has come, in story points. The act is the furthest of the points' act and the director's.
+// The boss line alone leaves the hero at Lv.80 (user 2026-11-20: "메인만 클리어 해도 80").
+const STORY_TOTAL = 36, MAIN_SHARE = 0.8;
+export const storyPointsOf = (g: Game, quests: string[]) => {
+  const line = (mainChain(g) || []).slice(0, -1);
+  return quests.reduce((a, q) => a + (line.some(st => alikeQuest(st.q, q)) ? STORY_TOTAL * MAIN_SHARE / line.length : STORY_POINTS[questWeight(g, q)]), 0);
+};
+// How far the story has come, in story points.
 // undefined for a world with no final boss (nothing to end on).
 export const storyProgress = (g: Game, s: Session) => {
   if (!finalBoss(g)) return undefined;
-  const total = STORY_TOTAL, acts = STORY_ACTS, ends = Array.from({ length: acts }, (_, a) => Math.round(total * (a + 1) / acts));
+  const total = STORY_TOTAL;
   // The final boss down is the end of the story: 100%.
   const done = s.goalCompleted || s.bossDown ? total : Math.min(total, s.storyPoints || 0);
-  const act = Math.min(acts, Math.max(s.act || 1, 1 + ends.filter(e => done >= e).length));
-  return { done, total, act, acts, ends, finaleAt: Math.round(total * 0.9), percent: Math.round(done / total * 100) };
+  return { done, total, percent: Math.round(done / total * 100) };
 };
-// After a turn: the points for the goals finished, the act they reach, and the finale (the final boss) opened as the
-// current goal once the points get there, wherever the player is.
+// After a turn: the points for the goals finished, and the finale (the final boss) opened as the
+// current goal once the boss's story line is done (bossOpen), wherever the player is.
 export const withStory = (g: Game, s: Session, done: string[]): Session => {
   const scored = done.length ? { ...s, storyPoints: (s.storyPoints || 0) + storyPointsOf(g, done) } : s;
   const p = storyProgress(g, scored), last = finaleQuest(g);
   if (!p || !last) return scored;
-  const was = storyProgress(g, s)!, place = bossPlace(g);
-  const next = { ...scored, act: p.act, ...(p.done >= p.total && was.done < was.total && !scored.goalCompleted ? { log: [...scored.log, `시스템: 진행도 100% — 최종 보스 ${finalBoss(g)}${josa(finalBoss(g)!, '이')} ${place || '그곳'}에서 기다립니다.`] } : {}) };
-  if (next.goalCompleted || p.done < p.finaleAt || questsOf(next).some(q => alikeQuest(q, last)) || done.some(q => alikeQuest(q, last))) return next;
+  const place = bossPlace(g);
+  // The turn has already logged its finished goals; the way opened this turn if it was shut without them.
+  const opens = bossOpen(g, scored), before = { ...s, log: s.log.filter(l => !done.some(q => l.startsWith(`시스템: 목표 완료 — ${q}`))) };
+  const next = { ...scored, ...(opens && !bossOpen(g, before) && !scored.goalCompleted ? { log: [...scored.log, `시스템: 최종 보스로 가는 길이 열렸습니다 — ${finalBoss(g)}${josa(finalBoss(g)!, '이')} ${place || '그곳'}에서 기다립니다.`] } : {}) };
+  if (next.goalCompleted || !opens || questsOf(next).some(q => alikeQuest(q, last)) || done.some(q => alikeQuest(q, last))) return next;
   return { ...next, quests: [...questsOf(next).slice(-(MAX_QUESTS - 1)), last], focus: last, focusAt: next.log.length, log: [...next.log, `시스템: 새 목표 — ${last}`] };
 };
 // The level a foe is met at. The final boss is always met at its own level (Lv.100 for tier 10; user, 2026-11-16).
 // The current goal's foe matches the player: the story puts it on that step, so its tier's minimum (Lv.10 for
 // 다이어울프 우두머리) doesn't apply.
 // A story foe comes 1-3 levels over the hero, rolled once when it is met (the threat keeps it) (user 2026-11-20).
-export const foeLevel = (g: Game, s: Session, foe: Foe, rand = Math.random) => foe.name === finalBoss(g) ? levelForTier(foe.power) : storyFoes(g, s).now.includes(foe.name) ? Math.max(1, s.level || 1) + 1 + Math.floor(rand() * 3) : encounterLevel(foe.power, !!foe.boss, s.level || 1);
+// The same foe met again at the same player level is the same level: rolled anew, 다이어울프 우두머리 went Lv.10 → 12 ("매우 위험")
+// between a flight and the return, the player still Lv.9 (2026-11-20).
+export const foeLevel = (g: Game, s: Session, foe: Foe, rand = () => hashText(`${foe.name}:${s.level || 1}`) % 1000 / 1000) =>
+  foe.name === finalBoss(g) ? levelForTier(foe.power) : encounterLevel(!!foe.boss || storyFoes(g, s).now.includes(foe.name), s.level || 1, rand);
 // The foes the writer may bring in: fair for the player's level (as for roaming foes), never a later step's, always the current goal's.
 export const writerFoes = (g: Game, s: Session) => {
   const { now, later } = storyFoes(g, s), lv = s.level || 1;
@@ -802,7 +814,7 @@ export const npcTaste = (g: Game, name: string) => { const h = hashText(`${g.id}
 // Each NPC's setting line travels next to the scene so the GM keeps gender, age and personality in the voice; a speech style, once fixed, sticks for the whole playthrough.
 export const NPC_PROFILE_LIMIT = 24;
 // The genre's cast with what each wants, hides and when it comes out, minus those the main story brings in later.
-export const genreCast = (g: Game, s: Session) => { const reserved = reservedNpcs(g, s); return ((GENRE_REF as Record<string, { npcs?: string[] }>)[GENRE_REF_KEY[defaultMapGenre(g)]]?.npcs || []).filter(t => !reserved.includes(t.replace(/^\[GM\]\s*/, '').split('(')[0].trim())); };
+export const genreCast = (g: Game, _s?: Session) => (GENRE_REF as Record<string, { npcs?: string[] }>)[GENRE_REF_KEY[defaultMapGenre(g)]]?.npcs || [];
 export const knownNpcNames = (g: Game, s: Session) => [...new Set([...npcProfiles(g, s).map(p => p.name), ...(g.npcPortraits || []).map(n => n.name), ...(DEFAULT_NPC_NAMES[defaultMapGenre(g)] || [])])];
 export const npcProfiles = (g: Game, s: Session) => {
   const prompt = g.prompt || '';
@@ -1080,16 +1092,21 @@ export const regionQuestsOf = (g: Game) => ALL_REGION_QUESTS.filter(r => r.genre
 // Where each story person is found, read from the story data (main steps of the acts reached, then the region stories): the writer had no
 // place for anyone it hadn't met, so 에드리아 (북문 초소) turned up at 변경백가 영지 because her title says 변경백가.
 export const npcWhereabouts = (g: Game, s: Session): Record<string, string> => {
-  const main = mainPrologue(g.wizardMain), beats: Beat[] = [...(main?.firstBeats || [])], out: Record<string, string> = {};
-  let act = 1;
-  for (const step of main?.questChain || []) { if (act <= (s.act || 1)) beats.push(...step.beats); if (step.act) act = step.act + 1; }
+  // The main steps reached so far (done ones and the current one): a later step's place (바레나 on 해신의 섬) isn't where they are yet.
+  const chain = mainChain(g) || [], beats = chain.slice(0, mainAt(chain, questsDone(s)) + 2).flatMap(st => st.beats), out: Record<string, string> = {};
   for (const b of [...beats, ...regionQuestsOf(g).flatMap(r => r.steps.flatMap(x => x.beats))]) if (b.do === 'talk' && b.at?.[0] && !out[b.npc]) out[b.npc] = b.at[0];
   for (const [place, people] of Object.entries(PLACE_NPCS)) for (const n of people) out[n] ||= place;
   return out;
 };
 export const regionWhere = (g: Game, s: Session) => { const map = (g.maps || []).find(m => m.id === s.mapId); const pin = map?.pins.find(p => p.id === s.pinId); return `${map?.name || ''} ${pin?.name || ''} ${s.scenePlace || ''}`; };
 export const inRegion = (r: RegionQuest, where: string) => r.region.some(w => where.includes(w));
-export const actsDone = (s: Session) => Math.max(0, (s.act || 1) - 1);
+// Story chapters open: the further of the main story's finished chapters (main steps marked act, done) and one per quarter of
+// progress made anywhere (user 2026-11-20: a hero off the main path still moves the world's story; at 100% by side stories the
+// writer saw only chapter 1 when the final boss came). Read, never stored: a stored act stayed at 1 while the goals were in
+// chapter 2, and 바레나 never came (2026-11-20).
+export const chaptersOpen = (g: Game, s: Session) => Math.max(
+  (mainChain(g) || []).filter(st => st.act && questsDone(s).some(d => alikeQuest(st.q, d))).length,
+  Math.floor((storyProgress(g, s)?.percent || 0) / 25));
 // The story as far as it has gone, for the GM: finished acts in full, the current act by its name only (what to do now
 // comes from the quest beats), later acts not at all, and the progress goal up to the current act. With the whole
 // outline in view the GM pulled the next quest into the scene (taking the player to 회색 탑 while the report to
@@ -1105,8 +1122,8 @@ export const playerActs = (s: Session) => s.log.filter(e => e.startsWith('플레
 // of improvising a hunt with no answer (11 actions chasing boars and hedgehogs for 넬's monster, 2026-11-17). Rank doesn't
 // gate them here: once the story has started in play, it runs on its prepared steps.
 export const personalStories = (g: Game, s: Session): string[] => {
-  const met = (s.relationships || []).map(r => r.name), reserved = reservedNpcs(g, s), done = questsDone(s);
-  return regionQuestsOf(g).filter(r => r.kind === 'story' && met.includes(r.giver) && !reserved.includes(r.giver) && !done.includes(r.title)).map(r => `${r.giver} — ${r.title}: ${r.hook}`);
+  const met = (s.relationships || []).map(r => r.name), done = questsDone(s);
+  return regionQuestsOf(g).filter(r => r.kind === 'story' && met.includes(r.giver) && !done.includes(r.title)).map(r => `${r.giver} — ${r.title}: ${r.hook}`);
 };
 // A goal someone only offered joins the list without taking over (user, 2026-11-17): the current goal holds until the player accepts
 // (endTalk) — or, if it just ended, the latest older one; with nothing older, the offer is all there is.
@@ -1137,46 +1154,37 @@ export const withNextMain = <T extends { quests: string[]; added: string[]; done
   // One main step is always open (unless given up): with none, the hero only had side jobs to steer by.
   const chain = mainChain(g) || [];
   if (log.quests.some(q => chain.some(st => alikeQuest(st.q, q)))) return log;
-  const next = chain.slice(mainAt(chain, done) + 1).find(st => !dropped.some(d => alikeQuest(st.q, d)))?.q;
+  // The last step is the boss fight: the finale goal (withStory) stands in for it once the rest is done.
+  const next = chain.slice(mainAt(chain, done) + 1, -1).find(st => !dropped.some(d => alikeQuest(st.q, d)))?.q;
   return next && !log.quests.some(q => alikeQuest(q, next)) ? { ...log, quests: [...log.quests, next], added: [...log.added, next] } : log;
 };
 // doneNow: goals this same turn closes (the exam closed in the talk that handed out 장물 단속, and was read as still running).
 // A goal is always a step's wording ("성채 지하 냉실 문 열기"), never a story's title ("성채 지하 냉실").
 export const preparedGoal = (g: Game, s: Session, text: string, giver: string, doneNow: string[] = []): string => {
-  const open = questsOf(s).filter(q => !doneNow.includes(q)), done = [...questsDone(s), ...doneNow], reserved = reservedNpcs(g, s), chain = mainChain(g) || [];
+  const open = questsOf(s).filter(q => !doneNow.includes(q)), done = [...questsDone(s), ...doneNow], chain = mainChain(g) || [];
   // A job whose beats the log already shows is over: 브리아's wolf job came after the wolves fell in the exam and could never clear.
   const over = (q: string) => { const beats = stepOf(g, q)?.beats || []; return beats.length > 0 && beatsDone(beats, s.log, 0, s.delivered) >= beats.length; };
   const free = (q: string) => !open.some(o => alikeQuest(o, q)) && !done.some(d => alikeQuest(d, q)) && !over(q);
   // A region story's goal: its first step not done yet, while none of its steps is running.
   const firstStep = (r: ReturnType<typeof regionQuestsOf>[number]) => [r.title, ...r.steps.map(st => st.q)].some(q => open.some(o => alikeQuest(o, q))) ? '' : r.steps.find(st => free(st.q))?.q || '';
-  const mainNamed = chain.find(st => alikeQuest(st.q, text))?.q, regionNamed = regionQuestsOf(g).find(r => alikeQuest(r.title, text) || r.steps.some(st => alikeQuest(st.q, text)));
+  const mainNamed = chain.slice(0, -1).find(st => alikeQuest(st.q, text))?.q, regionNamed = regionQuestsOf(g).find(r => alikeQuest(r.title, text) || r.steps.some(st => alikeQuest(st.q, text)));
   // A later main step named while an earlier one is still open waits its turn.
   if (mainNamed) return free(mainNamed) && !open.some(o => chain.some(st => alikeQuest(st.q, o))) ? mainNamed : '';
   if (regionNamed || !giver) return regionNamed ? firstStep(regionNamed) : '';
-  const at = mainAt(chain, done), next = chain[at + 1];
+  const at = mainAt(chain, done), next = at + 1 < chain.length - 1 ? chain[at + 1] : undefined;
   const talkers = (beats: Beat[] = []) => beats.flatMap(b => b.do === 'talk' ? [b.npc] : []);
   if (next && free(next.q) && [talkers(next.beats)[0], talkers(chain[at]?.beats).at(-1)].includes(giver)) return next.q;
   // A main-story person speaks for the main story while a step of it is open: 에드리아's "clear 회색 탑" (a later step) fell
   // through to her own 성채 냉실 twice. Her own story comes when the director names it.
   if (chain.some(st => talkers(st.beats).includes(giver)) && open.some(o => chain.some(st => alikeQuest(st.q, o)))) return '';
-  const own = regionQuestsOf(g).filter(r => r.giver === giver && firstStep(r) && !reserved.some(n => n !== giver && JSON.stringify(r).includes(n)) && (r.kind === 'story' || regionOpen(s, r)));
+  const own = regionQuestsOf(g).filter(r => r.giver === giver && firstStep(r) && (r.kind === 'story' || regionOpen(g, s, r)));
   const pick = own.find(r => r.kind === 'story') || own[0];
   return pick ? firstStep(pick) : '';
 };
-export const regionOpen = (s: Session, r: RegionQuest) => Math.max(0, s.reputation || 0) >= RANK_FLOORS[r.minRank || 0] && actsDone(s) >= (r.minAct || 0);
-// Cast members the main story brings in only at a later step (and the player hasn't met yet). Nothing may pull them in early:
-// region stories they appear in stay shut, and the GM and the director use a new person for such a role instead
-// (세라핀, central to act 3, would otherwise meet the player in 축일의 독배 at the start).
-export const reservedNpcs = (g: Game, s: Session): string[] => {
-  const acts = (g.prompt || '').split('\n').flatMap(l => { const m = l.match(/^\s*-\s*(\d)막\s/); return m ? [{ n: Number(m[1]), l }] : []; });
-  if (!acts.length) return [];
-  const cur = s.act || 1, now = acts.filter(a => a.n <= cur).map(a => a.l).join(' '), later = acts.filter(a => a.n > cur).map(a => a.l).join(' ');
-  const cast = [...new Set([...(g.npcPortraits || []).map(n => n.name), ...(DEFAULT_NPC_NAMES[defaultMapGenre(g)] || [])])].filter(n => n.length >= 2);
-  const seen = new Set([...(s.relationships || []).map(r => r.name), ...(s.metNpcs || [])]);
-  return cast.filter(n => later.includes(n) && !now.includes(n) && !seen.has(n));
-};
-// An open region quest that brings in none of them.
-export const regionFree = (g: Game, s: Session) => { const reserved = reservedNpcs(g, s); return (r: RegionQuest) => regionOpen(s, r) && !reserved.some(n => JSON.stringify(r).includes(n)); };
+export const regionOpen = (g: Game, s: Session, r: RegionQuest) => Math.max(0, s.reputation || 0) >= RANK_FLOORS[r.minRank || 0] && chaptersOpen(g, s) >= (r.minAct || 0);
+// Everyone is where they live from the start: holding later-chapter people back (by a stored act) kept 바레나 off 7번 부두 while
+// the goal was to meet her, 34 turns (2026-11-20). Secrets stay hidden by the story text (promptUpToAct), not by absence.
+export const regionFree = (g: Game, s: Session) => (r: RegionQuest) => regionOpen(g, s, r);
 // One automatic exchange: the player strikes, then the foe answers if still standing.
 // Player damage scales with the foe's size so an ordinary fight resolves in about ten exchanges.
 // How long the check die tumbles on screen before it lands.
@@ -1547,7 +1555,7 @@ export const withoutUnmetNames = (text: string, known: string[]) => Object.entri
 // writers' input all read it; the bookkeeper's relationship rows don't count (it added anyone the writer named, so names showed early).
 export const metNames = (s: Session) => [...new Set([...(s.metNpcs || []), ...(s.party || []), s.talkNpc || ''])].filter(Boolean);
 export const unnamedScene = (text: string, known: string[]) => text.split(/(“[^”]*”|"[^"]*")/).map((part, i) => i % 2 ? part : withoutUnmetNames(part, known)).join('');
-export const placePeople = (g: Game, s: Session, place: string) => { const reserved = reservedNpcs(g, s); return (PLACE_NPCS[place] || []).filter(n => !reserved.includes(n)); };
+export const placePeople = (_g: Game, _s: Session, place: string) => PLACE_NPCS[place] || [];
 export const defaultNpcImage = (g: Game, name: string) => { const genre = defaultMapGenre(g); return DEFAULT_NPC_NAMES[genre]?.includes(name) ? `/api/default-npc/${encodeURIComponent(name)}?genre=${genre}` : undefined; };
 // Browsers held built-in NPC art for a day under the old cache header; a version tag fetches the replaced files.
 export const freshAsset = (url?: string) => url && url.startsWith('/api/default-npc/') && !/[?&]v=/.test(url) ? `${url}${url.includes('?') ? '&' : '?'}v=2` : url;

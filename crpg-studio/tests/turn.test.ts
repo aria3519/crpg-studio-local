@@ -7,8 +7,9 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply, type TurnContext } from '../app/_lib/game/turn';
-import { toBeatPlace, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session } from '../app/_lib/game/core';
+import { toBeatPlace, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session, chaptersOpen, promptUpToAct, regionQuestsOf, regionOpen, bossOpen, storyPointsOf, alikeQuest } from '../app/_lib/game/core';
 import { foesOf, findFoe } from '../app/_lib/monsters';
+import { mainChain } from '../app/_lib/prologues';
 import { levelForTier, storyLevel } from '../app/_lib/progression';
 
 const root = path.join(__dirname, '..', '..');
@@ -60,8 +61,22 @@ test('baseline saved', () => {
 // Story people have a place before the writer meets them (에드리아 turned up at 변경백가 영지 with nowhere set).
 test('whereabouts come from the story data', () => {
   const g = { ...games[0], wizardMain: '잿빛 문장의 기사' } as Game;
-  const at = npcWhereabouts(g, { act: 1 } as Session);
+  const at = npcWhereabouts(g, { log: [] } as unknown as Session);
   assert.equal(at['에드리아 하르트'], '북문 초소');
+});
+
+// The world's story opens by progress made anywhere, not only along the main story (user 2026-11-20): 100% by side stories
+// left the writer on chapter 1 when the final boss came, and the chapter-2 region story never opened.
+test('story chapters open by progress or by the main story, whichever is further', () => {
+  const g = { ...games[0], wizardMain: '잿빛 문장의 기사' } as Game, at = (pts: number) => ({ log: [], storyPoints: pts } as unknown as Session);
+  assert.deepEqual([0, 9, 18, 27, 36].map(p => chaptersOpen(g, at(p))), [0, 1, 2, 3, 4]);
+  const sanctum = regionQuestsOf(g).find(r => r.id === 'w-abyss-sanctum')!;
+  assert.deepEqual([regionOpen(g, at(9), sanctum), regionOpen(g, at(18), sanctum)], [false, true]);
+  const lines = (n: number) => promptUpToAct(g.prompt || '', n).split('\n').filter(l => /^\s*-\s*\d막/.test(l) && !l.endsWith('진행 중.')).length;
+  assert.equal(lines(chaptersOpen(g, at(36))), 4, 'at 100% the writer sees the whole story');
+  // Along the main story a chapter opens when its last step is done, well before its quarter of progress (6 points = 17%).
+  const ch1 = { log: ['시스템: 목표 완료 — 그림우드의 다이어울프 우두머리를 토벌하고 기사단 서약하기'], storyPoints: 6 } as unknown as Session;
+  assert.equal(chaptersOpen(g, ch1), 1);
 });
 
 // A region story's and the world's first goal's prepared path reach the writer; a made-up goal has none until the director draws it.
@@ -180,7 +195,7 @@ test('the final boss stays off stage until the finale', () => {
 });
 // session 0wxcoq1ef: Lv.5 at 17% of the story. A finished goal lifts the hero to the level the new progress calls for.
 test('a finished goal brings the hero up to the story level', () => {
-  assert.deepEqual([0, 0.17, 0.25, 0.5, 0.75, 0.9, 1].map(storyLevel), [1, 11, 17, 33, 60, 92, 100]);
+  assert.deepEqual([0, 0.17, 0.25, 0.5, 0.75, 0.9, 1].map(storyLevel), [1, 17, 25, 50, 75, 90, 100]);
   const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
   const finish = (level: number) => run({ ...t0, session: { ...structuredClone(t0.session), level, xp: 0, storyPoints: 4, quests: ['떠돌이 상인 호위하기'] }, data: { ...t0.data, ambush: '', completedQuests: ['떠돌이 상인 호위하기'] } }).session;
   const low = finish(5), p = storyProgress(g, low)!;
@@ -188,23 +203,33 @@ test('a finished goal brings the hero up to the story level', () => {
   assert.equal(low.level, storyLevel(p.done / p.total), 'caught up to the story');
   assert.equal(finish(30).level, 30, 'a hero already past it keeps the usual pay');
 });
-// Any finished story moves the story on; the finale (the final boss) opens once the points reach it, wherever the player is.
-test('story points from any goal reach the finale, and only the final boss ends the game', () => {
+// Any finished goal moves the bar; the boss's story line (the old main story) carries 80% of it and, once done, opens the way
+// to the final boss at once, at whatever percent: the player goes now or grows first (user 2026-11-20).
+const doneLines = (qs: string[]) => qs.map(q => `시스템: 목표 완료 — ${q}`);
+test('the boss story line opens the final boss; other goals fill the bar', () => {
   const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId), s = structuredClone(t0.session);
-  const p0 = storyProgress(g, s)!;
   const side = withStory(g, s, ['동네 꼬마의 잃어버린 고양이 찾기']);
   assert.ok((side.storyPoints || 0) > (s.storyPoints || 0));
-  const late = withStory(g, { ...s, storyPoints: p0.finaleAt - 1 }, ['떠돌이 상인 호위하기']);
-  const last = late.quests![late.quests!.length - 1];
-  assert.equal(late.focus, last);
-  assert.equal(last, finaleQuest(g));
-  // The goal comes near the end; the boss itself waits for 100%.
-  assert.ok(!storyFoes(g, late).now.includes(finalBoss(g)!), 'the final boss came before 100%');
+  const line = mainChain(g)!.slice(0, -1), total = storyProgress(g, s)!.total;
+  assert.equal(Math.round(storyPointsOf(g, line.map(st => st.q)) / total * 100), 80, 'the whole line is 80% of the bar');
+  for (const main of ['잿빛 문장의 기사', '붉은 그릇', '바다 건너온 용병']) {
+    const g2 = { ...g, wizardMain: main } as Game, l2 = mainChain(g2)!.slice(0, -1);
+    assert.equal(Math.round(storyPointsOf(g2, l2.map(st => st.q)) / total * 100), 80, main);
+  }
+  const before = { ...s, log: [...s.log, ...doneLines(line.slice(0, -1).map(st => st.q))] };
+  assert.ok(!bossOpen(g, before), 'the way opened before the line was done');
+  const lastStep = line[line.length - 1].q;
+  const late = withStory(g, { ...before, log: [...before.log, ...doneLines([lastStep])] }, [lastStep]);
+  assert.ok(storyProgress(g, late)!.percent < 100, 'the line alone does not fill the bar');
+  assert.equal(late.focus, finaleQuest(g));
+  assert.ok(late.log.some(l => l.includes('최종 보스로 가는 길이 열렸습니다') && l.includes(bossPlace(g)!)), 'no word where the boss waits');
+  assert.ok(!(late.quests || []).some(q => alikeQuest(q, mainChain(g)!.slice(-1)[0].q)), 'the boss step came as a second goal beside the finale');
+  assert.ok(!storyFoes(g, late).now.includes(finalBoss(g)!), 'the final boss came to the player away from its place');
   const lair = (g.maps || []).flatMap(m => m.pins.map(p => ({ mapId: m.id, pinId: p.id, name: p.name }))).find(p => p.name === bossPlace(g))!;
-  const full = { ...late, storyPoints: p0.total, mapId: lair.mapId, pinId: lair.pinId, scenePlace: undefined };
-  assert.ok(storyFoes(g, full).now.includes(finalBoss(g)!), 'the finale goal fights the final boss');
-  assert.ok(writerFoes(g, full).some(f => f.name === finalBoss(g)), 'the writer may bring the final boss at its place at 100%');
-  assert.ok(late.act! >= p0.acts);
+  const there = { ...late, mapId: lair.mapId, pinId: lair.pinId, scenePlace: undefined };
+  assert.ok(storyFoes(g, there).now.includes(finalBoss(g)!), 'the finale goal fights the final boss');
+  assert.ok(writerFoes(g, there).some(f => f.name === finalBoss(g)), 'the writer may bring the final boss at its place');
+  assert.ok(!storyFoes(g, { ...there, storyPoints: total, log: s.log }).now.includes(finalBoss(g)!), '100% by side goals opened the boss');
   const r = run({ ...t0, session: { ...late, bossDown: true } });
   assert.equal(r.session.goalCompleted, true);
   assert.equal(storyProgress(g, r.session)!.percent, 100, "the final boss down fills the bar");
@@ -222,9 +247,8 @@ test('a foe met on a move blocks the way only after the arrival scene', () => {
   assert.equal(r.session.ambushNext, undefined);
   assert.ok(r.session.log[r.session.log.length - 1].startsWith('시스템: 습격! 굶주린 늑대 무리'));
 });
-// At 90% the finale goal leads to the boss's place; at 100% the boss waits there and comes out when the player is there
-// (user, 2026-11-16: "자연스럽게 최종 보스 위치로 가게").
-test('the final boss waits at its place once progress hits 100%', () => {
+// Once the way is open the boss waits at its place and comes out when the player is there (user, 2026-11-16: "자연스럽게 최종 보스 위치로 가게").
+test('the final boss waits at its place once its story line is done', () => {
   const t0 = turns.find(x => x.name.includes('다이어울프'));
   assert.ok(t0, 'fixture missing');
   const g = gameOf(t0.gameId), s0 = structuredClone(t0.session), place = bossPlace(g)!;
@@ -233,10 +257,10 @@ test('the final boss waits at its place once progress hits 100%', () => {
   assert.equal(bossPlace({ ...g, wizardMain: '붉은 그릇' } as Game), '마탑 본부');
   assert.equal(bossPlace({ ...g, wizardMain: '바다 건너온 용병' } as Game), '회색 탑 폐허');
   assert.ok(finaleQuest(g)!.startsWith(place) && goalPath(g, finaleQuest(g)!)[0].startsWith(place), 'the finale goal names the place');
-  const turn = (sess: Session) => run({ ...t0, session: { ...sess, storyPoints: storyProgress(g, s0)!.total - 1, quests: ['떠돌이 상인 호위하기'] }, data: { ...t0.data, ambush: '', completedQuests: ['떠돌이 상인 호위하기'] } });
+  const line = mainChain(g)!.slice(0, -1);
+  const turn = (sess: Session) => run({ ...t0, session: { ...sess, log: [...sess.log, ...doneLines(line.map(st => st.q))], quests: ['떠돌이 상인 호위하기'] }, data: { ...t0.data, ambush: '', completedQuests: ['떠돌이 상인 호위하기'] } });
   const away = turn(s0);
   assert.notEqual(away.session.threat?.npc, finalBoss(g), 'the boss came to the player away from its place');
-  assert.ok(away.session.log.some(l => l.includes('진행도 100%') && l.includes(place)), 'no word where the boss waits');
   const pin = (g.maps || []).flatMap(m => m.pins.map(p => ({ mapId: m.id, pinId: p.id, name: p.name }))).find(p => p.name === place)!;
   const there = turn({ ...s0, mapId: pin.mapId, pinId: pin.pinId, scenePlace: undefined });
   assert.equal(there.session.threat?.npc, finalBoss(g));
@@ -344,8 +368,11 @@ test('the story may run ahead of its order: the next step\'s foe is fought at th
   const truth = '넬의 옛 파티가 몰살당한 날의 진실 듣기', wyvern = findFoe('fantasy', '와이번')!;
   const s0 = { ...structuredClone(t0.session), mode: undefined, level: 2, quests: [truth], focus: truth, delivered: [] as string[], log: ['시스템: 새 목표 — ' + truth] } as Session;
   assert.ok(storyFoes(g, s0).now.includes('와이번'), 'the next step\'s foe can be fought now');
-  assert.equal(foeLevel(g, s0, wyvern, () => 0), 3, '1-3 over the player\'s level, not Lv.48');
-  assert.equal(foeLevel(g, s0, wyvern, () => 0.99), 5);
+  assert.equal(foeLevel(g, s0, wyvern, () => 0), 2, 'the story\'s foe: the player\'s level or one under, not Lv.48');
+  assert.equal(foeLevel(g, s0, wyvern, () => 0.99), 1);
+  assert.equal(foeLevel(g, s0, wyvern), foeLevel(g, s0, wyvern), 'met again at the same level: the same level');
+  const wolves = findFoe('fantasy', '굶주린 늑대 무리')!, at10 = { ...s0, level: 10 };
+  assert.deepEqual([foeLevel(g, at10, wolves, () => 0), foeLevel(g, at10, wolves, () => 0.99)], [9, 6], 'an ordinary monster: 1-4 under the player');
   assert.deepEqual(goalsFinished(g, s0), []);
   assert.deepEqual(goalsFinished(g, { ...s0, log: [...s0.log, 'GM: 【그림우드 · 낮】 협곡 아래에서 와이번의 날갯소리가 들린다.', '플레이어: 넬과 함께 둥지에서 돌아오는 와이번을 노린다'] }), [truth], 'the hero going after the wyvern in the scene moves the goal to the hunt');
   assert.deepEqual(goalsFinished(g, { ...s0, log: [...s0.log, '플레이어: 한나에게 와이번 이야기를 묻는다'] }), [], 'naming it with no wyvern in the scene is not going after it');

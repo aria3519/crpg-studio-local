@@ -16,12 +16,10 @@ export const tierOfLevel = (level: number) => { let t = 1; while (t < MAX_POWER 
 // A roaming foe grows with the player: it starts at its tier's level and can be met up to two tiers higher
 // (wolves Lv.2-10, a troll Lv.20-48, a wyvern Lv.48-82). Bosses keep their tier's level.
 export const foeLevelRange = (tier: number, boss = false): [number, number] => [levelForTier(tier), boss ? levelForTier(tier) : levelForTier(Math.min(MAX_POWER, Math.round(tier) + 2))];
-// The level a foe is met at: 1-3 levels over the player (user 2026-11-20), within its range. A roaming foe may be met one
-// level under its tier's floor: a Lv.1 player otherwise met every forest foe above them.
-export const encounterLevel = (tier: number, boss: boolean, playerLevel: number, rand = Math.random) => {
-  const [min, max] = foeLevelRange(tier, boss);
-  return Math.max(boss ? min : Math.max(1, min - 1), Math.min(max, playerLevel + 1 + Math.floor(rand() * 3)));
-};
+// The level a foe is met at, always under the player (user 2026-11-20): an ordinary monster 1-4 levels under, one that matters
+// (a boss, the story's foe) the player's level or one under. At 1-3 over, every fight missed more than it hit (1 hit in 8).
+export const encounterLevel = (important: boolean, playerLevel: number, rand = Math.random) =>
+  Math.max(1, playerLevel - (important ? Math.floor(rand() * 2) : 1 + Math.floor(rand() * 4)));
 
 // What each level adds on top of the character sheet: HP and damage grow by a steady share per level.
 export const levelBonus = (level: number) => {
@@ -81,10 +79,10 @@ export const questXp = (level: number) => Math.round(xpToNext(level) * SIDE_QUES
 export const DEED_SHARES: Record<string, number> = { minor: 0.1, deed: 0.3, event: 0.6 };
 export const deedXp = (kind: unknown, level: number) => typeof kind === 'string' && DEED_SHARES[kind] ? Math.round(xpToNext(Math.max(1, level)) * DEED_SHARES[kind] * earlyBoost(level)) : 0;
 
-// The level the story's progress (0-1) calls for: Lv.17 / 33 / 60 at the end of acts 1-3, Lv.92 at the finale, 100 at
-// the end. A finished goal lifts the hero at least this far: per step the story brings ~1 fight and no side quests, not
+// The level the story's progress (0-1) calls for: the percent itself (user 2026-11-20: "75%면 레벨 75"), Lv.1 at 0.
+// Was a bent curve (Lv.60 at 75%). A finished goal lifts the hero at least this far: per step the story brings ~1 fight and no side quests, not
 // the 3 fights, side quest and deed the curve above was built on (Lv.5 at 17%, 2026-11-19).
-const STORY_LEVELS: [number, number][] = [[0, 1], [0.25, 17], [0.5, 33], [0.75, 60], [0.9, 92], [1, 100]];
+const STORY_LEVELS: [number, number][] = [[0, 1], [1, 100]];
 // Fractional: Lv.8.4 is level 8 with 40% of the way to 9, so a finished goal leaves the hero partway into a level the way
 // the story stands, not always at 0 (user 2026-11-20: progress sets the level, 100% is Lv.100).
 export const storyLevelAt = (progress: number) => {

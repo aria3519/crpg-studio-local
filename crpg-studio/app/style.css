@@ -1506,11 +1506,48 @@ details[open]>summary .storyPreview{display:none}
 @media(max-width:520px){.vnSkip{top:2px}}
 
 /* Public beta sign-in: over the page until the visitor signs in. The buttons keep Kakao's and Google's brand colors. */
-.loginGate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(12,14,20,.72)}
-.loginCard{width:min(360px,100%);padding:28px 24px;border-radius:14px;background:#fff;color:#1d2330;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.35)}
-.loginCard h2{margin:0 0 8px;font-size:20px}.loginCard p{margin:0 0 18px;font-size:14px;color:#596273;line-height:1.5}
-.kakaoLogin{display:block;padding:13px 16px;border-radius:10px;background:#FEE500;color:rgba(0,0,0,.85);font-weight:700;text-decoration:none}
-.kakaoLogin:hover{filter:brightness(.97)}
-.googleLogin{display:block;margin-top:10px;padding:12px 16px;border:1px solid #dadce0;border-radius:10px;background:#fff;color:#1f1f1f;font-weight:700;text-decoration:none}
+.loginGate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(12,14,20,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.loginCard{width:min(380px,100%);border-radius:18px;overflow:hidden;background:#fff;color:#1d2330;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:loginIn .35s ease-out}
+@keyframes loginIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.loginHero{height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(145deg,#fce6e2,#f7bdb5 55%,#d8a7ba);color:#fff}
+.loginMark{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.28);box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
+.loginEyebrow{font-size:11px;font-weight:800;letter-spacing:3px}
+.loginBody{padding:24px 24px 26px}
+.loginCard h2{margin:0 0 10px;font-size:24px;font-weight:800;letter-spacing:-.5px}.loginCard h2 strong{font-weight:600;color:#f26861}
+.loginCard p{margin:0 0 16px;font-size:14px;color:#596273;line-height:1.6}
+.loginPerks{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:20px}.loginPerks span{background:#fff0ee;color:#e0625c;border-radius:20px;padding:6px 11px;font-size:12px;font-weight:700}.loginPerks b{font-weight:800}
+.kakaoLogin,.googleLogin{position:relative;display:flex;align-items:center;justify-content:center;height:48px;padding:0 16px;border-radius:12px;font-size:15px;font-weight:700;text-decoration:none;transition:filter .15s,background .15s,transform .1s}
+.kakaoLogin svg,.googleLogin svg{position:absolute;left:18px}
+.kakaoLogin:active,.googleLogin:active{transform:scale(.985)}
+.kakaoLogin{background:#FEE500;color:rgba(0,0,0,.85)}
+.kakaoLogin:hover{filter:brightness(.96)}
+.googleLogin{margin-top:10px;border:1px solid #dadce0;background:#fff;color:#1f1f1f}
 .googleLogin:hover{background:#f6f8fa}
 .loginCard .loginNote{margin:14px 0 0;color:#e5484d}
+.betaToggle{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:13px;color:var(--muted,#888);cursor:pointer;user-select:none}
+.betaToggle input{width:16px;height:16px;cursor:pointer}
+/* Library loading: shown until the saved games arrive, so the built-in placeholder game never shows as a real one. */
+.loadingHero{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;padding:46px 20px 38px;margin-bottom:34px;border-radius:20px;color:#fff;background:radial-gradient(120% 90% at 50% 0%,#ff9d8f 0%,#f26861 38%,#b9507a 72%,#5a3a6e 100%);box-shadow:0 18px 50px rgba(185,80,122,.28)}
+.loadingHero::before{content:'';position:absolute;inset:0;background:radial-gradient(2px 2px at 12% 30%,#fff9 50%,transparent 51%),radial-gradient(2px 2px at 78% 22%,#fff8 50%,transparent 51%),radial-gradient(1.5px 1.5px at 30% 75%,#fff7 50%,transparent 51%),radial-gradient(1.5px 1.5px at 88% 68%,#fff9 50%,transparent 51%),radial-gradient(2px 2px at 55% 12%,#fff6 50%,transparent 51%);animation:loadingTwinkle 3s ease-in-out infinite;pointer-events:none}
+.loadingRune{position:relative;width:112px;height:112px;display:grid;place-items:center;margin-bottom:18px}
+.loadingRing{position:absolute;inset:0;border-radius:50%;border:2px dashed rgba(255,255,255,.55);animation:loadingSpin 9s linear infinite}
+.loadingRing.two{inset:14px;border:2px solid transparent;border-top-color:#fff;border-right-color:rgba(255,255,255,.5);animation-duration:1.4s}
+.loadingDie{width:66px;height:66px;border-radius:18px;display:grid;place-items:center;background:rgba(255,255,255,.2);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 0 28px rgba(255,255,255,.35);animation:loadingRoll 2.4s cubic-bezier(.5,0,.3,1) infinite}
+.loadingEyebrow{font-size:11px;font-weight:800;letter-spacing:3px;opacity:.85;margin-bottom:8px}
+.loadingHero h1{font-size:28px;letter-spacing:-1px;margin:0 0 10px;text-shadow:0 2px 12px rgba(0,0,0,.18)}
+.loadingLines{position:relative;height:22px;width:100%;margin:0 0 20px;font-size:14px}
+.loadingLines span{position:absolute;left:0;right:0;opacity:0;animation:loadingLine 8s infinite}
+.loadingLines span:nth-child(2){animation-delay:2s}.loadingLines span:nth-child(3){animation-delay:4s}.loadingLines span:nth-child(4){animation-delay:6s}
+.loadingBar{width:min(320px,80%);height:6px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden}
+.loadingBar span{display:block;width:40%;height:100%;border-radius:inherit;background:linear-gradient(90deg,transparent,#fff,transparent);animation:loadingSweep 1.3s ease-in-out infinite}
+.skeletonCard{animation:loadingFade 1.6s ease-in-out infinite}
+.skeletonCard .gameCover,.skeletonCard i{background:linear-gradient(100deg,#f3e8e5 30%,#fbf3f1 50%,#f3e8e5 70%);background-size:300% 100%;animation:loadingShimmer 1.4s linear infinite}
+.skeletonCard i{display:block;height:12px;border-radius:6px;margin-bottom:10px}.skeletonCard i:first-child{width:62%;height:16px}.skeletonCard i:last-child{width:40%;margin:0}
+@keyframes loadingSpin{to{transform:rotate(360deg)}}
+@keyframes loadingRoll{0%{transform:rotate(0) scale(1)}35%{transform:rotate(200deg) scale(.86)}55%{transform:rotate(360deg) scale(1.08)}70%,100%{transform:rotate(360deg) scale(1)}}
+@keyframes loadingLine{0%,100%{opacity:0;transform:translateY(8px)}5%,22%{opacity:1;transform:none}27%{opacity:0;transform:translateY(-8px)}}
+@keyframes loadingSweep{from{transform:translateX(-110%)}to{transform:translateX(260%)}}
+@keyframes loadingShimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+@keyframes loadingFade{0%,100%{opacity:1}50%{opacity:.7}}
+@keyframes loadingTwinkle{0%,100%{opacity:.5}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.loadingRing,.loadingDie,.loadingBar span,.skeletonCard,.skeletonCard .gameCover,.skeletonCard i,.loadingHero::before{animation:none}.loadingLines span{animation:none}.loadingLines span:first-child{opacity:1}}

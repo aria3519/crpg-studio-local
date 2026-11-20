@@ -5,7 +5,7 @@ import type { Beat } from './quest-beats';
 // Steps work like main steps: each is done through its beats (quest-beats.ts), which only the game checks.
 
 // region: words matched against the current map name, map pin name and scene heading (any one is enough).
-// minRank: reputation rank needed: 0 무명, 1 신참 (100+), 2 알려진 자 (500+), 3 유명인 (2,000+), 4 영웅 (5,000+), 5 전설. minAct: main acts completed.
+// minRank: reputation rank needed: 0 무명, 1 신참 (100+), 2 알려진 자 (500+), 3 유명인 (2,000+), 4 영웅 (5,000+), 5 전설. minAct: story chapters open (chaptersOpen).
 // after: id of a regional quest that has to be finished first.
 // beats: how the step gets done (quest-beats.ts).
 export type RegionStep = { q: string; beats: Beat[] };
