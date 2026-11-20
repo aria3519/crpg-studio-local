@@ -1,4 +1,4 @@
-import { aiAllowed, isPublic, logEvent, LIMIT_REPLY, turnAllowed, TURNS_REPLY, accountOf, LOGIN_REPLY, logError } from '../../_lib/beta';
+import { aiAllowed, isPublic, logEvent, LIMIT_REPLY, turnBlock, accountOf, LOGIN_REPLY, logError } from '../../_lib/beta';
 import { NextResponse } from 'next/server';
 import { appendFileSync } from 'fs';
 import path from 'path';
@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     const body: GmBody = await request.json();
     if (isPublic(request) && !accountOf(request)) return NextResponse.json(LOGIN_REPLY, { status: 401 });
     if (!aiAllowed(request, body.phase !== 'write')) return NextResponse.json(LIMIT_REPLY, { status: 429 });
-    if (!turnAllowed(request, body.phase !== 'write')) return NextResponse.json(TURNS_REPLY, { status: 429 });
+    const blocked = turnBlock(request, body.phase !== 'write');
+    if (blocked) return NextResponse.json(blocked, { status: 429 });
     if (isPublic(request) && body.phase !== 'write') void logEvent(request, 'turn', { action: String(body.action || '').slice(0, 300) }).catch(() => {});
     if (typeof body.action !== 'string' || !body.action.trim() || body.action.length > 4000) {
       return NextResponse.json({ error: '행동 입력이 올바르지 않습니다.' }, { status: 400 });

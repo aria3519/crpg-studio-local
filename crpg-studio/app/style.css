@@ -1573,3 +1573,25 @@ details[open]>summary .storyPreview{display:none}
 @keyframes fxFlash{0%{opacity:0}25%{opacity:.55}100%{opacity:0}}
 @keyframes fxPop{0%{opacity:0;transform:translate(-50%,0) scale(1.8)}15%{opacity:1;transform:translate(-50%,0) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px) scale(1)}}
 @media(prefers-reduced-motion:reduce){.fxDim,.fxPanel,.fxPanel img,.fxName,.fxSlash,.fxFlash,.battleGrit.full i{animation:none!important}.fxPanel{clip-path:none}.fxSlash,.fxFlash{display:none}}
+/* Daily energy (public beta, 200 turns a day): top-bar pill and the used-up popup, mobile-game style. */
+.energyPill{position:relative;display:inline-flex;align-items:center;gap:4px;padding:5px 12px 7px 9px;border-radius:999px;background:linear-gradient(180deg,#2a3352,#1b2238);color:#fff;font-size:13px;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 6px rgba(20,30,60,.25);overflow:hidden;white-space:nowrap}
+.energyPill svg{color:#fcd34d;fill:#fcd34d}
+.energyPill b{font-size:15px;font-weight:900}.energyPill small{opacity:.7;font-size:11px}
+.energyPill i{position:absolute;left:10px;right:10px;bottom:3px;height:2px;border-radius:2px;background:linear-gradient(90deg,#fde047,#f59e0b);max-width:calc(100% - 20px)}
+.energyPill.low svg{color:#fb923c;fill:#fb923c}.energyPill.low i{background:#fb923c}
+.energyPill.empty{background:linear-gradient(180deg,#3b2430,#2a1820)}.energyPill.empty svg{color:#9ca3af;fill:none}
+.energyGate{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(8,10,20,.6);backdrop-filter:blur(3px);animation:energyFade .2s ease-out}
+.energyCard{width:min(360px,100%);padding:30px 24px 22px;border-radius:24px;text-align:center;color:#fff;background:linear-gradient(180deg,#27304d 0%,#161c30 100%);border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 60px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.1);animation:energyPop .35s cubic-bezier(.2,1.4,.4,1)}
+.energyIcon{width:84px;height:84px;margin:-4px auto 16px;border-radius:50%;display:grid;place-items:center;color:#6b7280;background:radial-gradient(circle,#323b5c 0%,#202842 70%);box-shadow:0 0 0 6px rgba(252,211,77,.08);animation:energyGlow 2.2s ease-in-out infinite}
+.energyCard h2{font-size:20px;font-weight:900;letter-spacing:-.5px;margin:0 0 8px}
+.energyCard p{font-size:13px;line-height:1.6;color:#b8c0d8;margin:0 0 18px}
+.energyBar{display:flex;gap:4px;justify-content:center;margin-bottom:18px}.energyBar i{width:22px;height:8px;border-radius:3px;background:#323b5c}
+.energyTimer{padding:12px;border-radius:14px;background:rgba(0,0,0,.25);margin-bottom:18px}
+.energyTimer small{display:block;font-size:11px;color:#9aa3bf;letter-spacing:1px;margin-bottom:2px}
+.energyTimer b{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:1px;color:#fde68a}
+.energyOk{width:100%;height:50px;border:0;border-radius:14px;font-size:16px;font-weight:900;color:#3b2a00;background:linear-gradient(180deg,#fde68a,#f5b72e);box-shadow:0 4px 0 #b7791f,0 8px 18px rgba(245,183,46,.35);transition:transform .08s,box-shadow .08s}
+.energyOk:active{transform:translateY(3px);box-shadow:0 1px 0 #b7791f,0 4px 10px rgba(245,183,46,.3)}
+@keyframes energyFade{from{opacity:0}}
+@keyframes energyPop{from{opacity:0;transform:scale(.85)}}
+@keyframes energyGlow{0%,100%{box-shadow:0 0 0 6px rgba(252,211,77,.08)}50%{box-shadow:0 0 0 12px rgba(252,211,77,.04)}}
+@media (prefers-reduced-motion:reduce){.energyGate,.energyCard,.energyIcon{animation:none}}

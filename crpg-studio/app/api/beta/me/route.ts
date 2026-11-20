@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { accountOf, isPublic, logEvent, turnsUsed, visitorOf } from '../../../_lib/beta';
+import { accountOf, DAILY_TURNS, isPublic, kstDay, logEvent, turnsToday, turnsUsed, visitorOf } from '../../../_lib/beta';
 import { listAccounts, MAX_ACCOUNTS } from '../../../_lib/beta-accounts';
 export const runtime = 'nodejs';
 // The page asks on load (a visit) and after each turn (?check, not logged): is this a public visitor, are they signed in,
@@ -10,6 +10,9 @@ export async function GET(request: Request) {
   const res = NextResponse.json({
     public: pub, pid, signedIn: !!acct, name: acct?.memo?.replace(/^\w+: /, '') || '',
     turnsLeft: acct ? Math.max(0, acct.limit - turnsUsed(acct.pid)) : 0, turnsTotal: acct?.limit || 0,
+    // Today's turns and when they come back (next 00:00 KST, as epoch ms).
+    todayLeft: acct ? Math.max(0, DAILY_TURNS - turnsToday(acct.pid)) : 0, todayTotal: DAILY_TURNS,
+    refillAt: Date.parse(kstDay(Date.now() + 864e5) + 'T00:00:00+09:00'),
     full: !acct && listAccounts().length >= MAX_ACCOUNTS,
   }, { headers: { 'Cache-Control': 'no-store' } });
   // Signed in from a browser whose player id differs (cookies cleared, another device): saves follow the account.

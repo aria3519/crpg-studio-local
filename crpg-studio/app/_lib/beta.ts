@@ -36,20 +36,23 @@ export function underCap(req: Request, kind: string, cap: number) {
   written.set(k, n + 1);
   return true;
 }
-// Daily AI budget for visitors: every OpenAI-backed call counts (a turn is about 1.5 calls with director and memory).
-// shortcut: counts live in memory and reset when the server restarts; keep them in a file if restarts become common.
-export const CALLS_PER_VISITOR = 400, CALLS_PER_DAY = 4000;
+// The beta's day is Korea's: today's counts start over at 00:00 KST.
+export const kstDay = (at = Date.now()) => new Date(at + 9 * 3600e3).toISOString().slice(0, 10);
+// The whole beta's daily AI budget, a cost guard over everyone (each account's own day is DAILY_TURNS). It was also 400 calls
+// an IP: five testers on one office IP shared it and were all stopped after 129 turns (a turn is 2-3 calls, not 1.5).
+// shortcut: counted in memory, reset on restart; keep it in a file if restarts become common.
+export const CALLS_PER_DAY = 4000;
 const used = new Map<string, number>();
 let day = '';
 export function aiAllowed(req: Request, count = true): boolean {
   if (!isPublic(req)) return true;
   if (!accountOf(req)) return false; // visitors play once signed in
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = kstDay();
   if (today !== day) { day = today; used.clear(); }
-  const ip = 'ip:' + req.headers.get('cf-connecting-ip'), mine = used.get(ip) || 0, all = used.get('all') || 0;
-  if (mine >= CALLS_PER_VISITOR || all >= CALLS_PER_DAY) return false;
-  if (count) { used.set(ip, mine + 1); used.set('all', all + 1); }
+  const all = used.get('all') || 0;
+  if (all >= CALLS_PER_DAY) { if (all === CALLS_PER_DAY) { used.set('all', all + 1); void logError(req, 'budget', `하루 전체 AI 호출 ${CALLS_PER_DAY}번을 모두 썼습니다`).catch(() => {}); } return false; }
+  if (count) used.set('all', all + 1);
   return true;
 }
 // Each signed-in account gets its limit of turns in all (DEFAULT_TURNS on sign-up), kept on disk so restarts don't reset
@@ -58,16 +61,31 @@ let turns: Record<string, number> | null = null;
 const turnsFile = () => path.join(BETA_DIR, 'turns.json');
 const loadTurns = () => { if (!turns) try { turns = JSON.parse(readFileSync(turnsFile(), 'utf8')) as Record<string, number>; } catch { turns = {}; } return turns; };
 export const turnsUsed = (pid: string) => loadTurns()[pid] || 0;
-export function turnAllowed(req: Request, count = true): boolean {
-  if (!isPublic(req)) return true;
-  const turns = loadTurns(), file = turnsFile();
+// And DAILY_TURNS a day (user 2026-11-20), on disk too: { day, counts by pid }.
+export const DAILY_TURNS = 200;
+let daily: { day: string; counts: Record<string, number> } | null = null;
+const dailyFile = () => path.join(BETA_DIR, 'today.json');
+const loadDaily = () => {
+  if (!daily) try { daily = JSON.parse(readFileSync(dailyFile(), 'utf8')); } catch { daily = { day: '', counts: {} }; }
+  if (daily!.day !== kstDay()) daily = { day: kstDay(), counts: {} };
+  return daily!;
+};
+export const turnsToday = (pid: string) => loadDaily().counts[pid] || 0;
+// Why a turn can't be played (the reply to send), or undefined when it can; counted when `count`.
+export function turnBlock(req: Request, count = true) {
+  if (!isPublic(req)) return undefined;
   const acct = accountOf(req);
-  if (!acct) return false;
-  const pid = acct.pid, n = turns[pid] || 0;
-  if (n >= acct.limit) return false;
-  if (count) { turns[pid] = n + 1; mkdirSync(BETA_DIR, { recursive: true }); writeFileSync(file, JSON.stringify(turns)); }
-  return true;
+  if (!acct) return LOGIN_REPLY;
+  const turns = loadTurns(), today = loadDaily(), pid = acct.pid, n = turns[pid] || 0, d = today.counts[pid] || 0;
+  if (n >= acct.limit) return TURNS_REPLY;
+  if (d >= DAILY_TURNS) return TODAY_REPLY;
+  if (count) {
+    turns[pid] = n + 1; today.counts[pid] = d + 1;
+    mkdirSync(BETA_DIR, { recursive: true }); writeFileSync(turnsFile(), JSON.stringify(turns)); writeFileSync(dailyFile(), JSON.stringify(today));
+  }
+  return undefined;
 }
 export const TURNS_REPLY = { error: `베타 체험 턴을 모두 사용했습니다. 참여해 주셔서 감사합니다! 오른쪽 위 '의견 보내기'로 소감을 남겨 주세요.` };
 export const LOGIN_REPLY = { error: '로그인한 뒤에 플레이할 수 있습니다.' };
-export const LIMIT_REPLY = { error: '오늘 이용할 수 있는 양을 모두 사용했습니다. 내일 다시 이어서 해 주세요.' };
+export const LIMIT_REPLY = { error: '오늘 베타 전체 이용량이 모두 찼습니다. 내일 다시 이어서 해 주세요.' };
+export const TODAY_REPLY = { error: `오늘 플레이할 수 있는 ${DAILY_TURNS}턴을 모두 사용했습니다. 내일 0시에 다시 채워집니다.`, today: true };

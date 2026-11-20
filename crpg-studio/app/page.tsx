@@ -119,6 +119,20 @@ function FinalBossIntro({ name, art, level, desc }: { name: string; art?: string
     <i className="bossFlash"/>
   </div>;
 }
+// Today's turns used up (public beta): mobile-game style energy popup, counting down to the refill at 00:00 KST.
+function EnergyEmpty({ total, refillAt, onClose }: { total: number; refillAt: number; onClose: () => void }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const left = Math.max(0, refillAt - now), hms = [3600e3, 60e3, 1e3].map((u, i) => String(Math.floor(left / u) % (i ? 60 : 100)).padStart(2, '0')).join(':');
+  return <div className="energyGate" role="dialog" aria-modal="true" aria-labelledby="energyTitle"><div className="energyCard">
+    <div className="energyIcon"><Zap size={40}/></div>
+    <h2 id="energyTitle">오늘의 에너지를 모두 썼어요</h2>
+    <p>하루 {total}턴을 다 플레이했어요. 진행은 자동으로 저장돼 있으니 내일 이어서 모험하세요!</p>
+    <div className="energyBar" aria-hidden="true">{Array.from({ length: 10 }, (_, i) => <i key={i}/>)}</div>
+    <div className="energyTimer"><small>다시 충전까지</small><b>{left ? hms : '곧 충전'}</b></div>
+    <button type="button" className="energyOk" onClick={onClose}>확인</button>
+  </div></div>;
+}
 function NpcCutIn({ npc, art, onDone }: { npc: string; art?: string; onDone: () => void }) {
   useEffect(() => { const t = setTimeout(onDone, wait(1250)); return () => clearTimeout(t); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return <div className="cutIn cutInSweep" aria-hidden="true">
@@ -405,7 +419,8 @@ export default function Home() {
   // Public beta visitor (came through the tunnel): play only, own save, feedback button. See middleware.ts.
   const [publicBeta, setPublicBeta] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [betaTurns, setBetaTurns] = useState<{ left: number; total: number; full?: boolean; signedIn?: boolean } | null>(null);
+  const [betaTurns, setBetaTurns] = useState<{ left: number; total: number; full?: boolean; signedIn?: boolean; today?: number; todayTotal?: number; refillAt?: number } | null>(null);
+  const [todayClosed, setTodayClosed] = useState(false);
   // A sign-in that came back with a problem (?login=…): shown on the sign-in card.
   const [loginError, setLoginError] = useState('');
   const [tab, setTab] = useState<Tab>('prompt');
@@ -484,7 +499,7 @@ export default function Home() {
         // then persisted to IndexedDB only when the user presses the manual Save button.
         const me = await fetch('/api/beta/me', { cache: 'no-store' }).then(r => r.json()).catch(() => null);
         beta = !!me?.public;
-        if (me?.public && typeof me.pid === 'string') { setSessionOwner(me.pid); setPublicBeta(true); setBetaTurns({ left: me.turnsLeft, total: me.turnsTotal, full: me.full, signedIn: me.signedIn }); }
+        if (me?.public && typeof me.pid === 'string') { setSessionOwner(me.pid); setPublicBeta(true); setBetaTurns({ left: me.turnsLeft, total: me.turnsTotal, full: me.full, signedIn: me.signedIn, today: me.todayLeft, todayTotal: me.todayTotal, refillAt: me.refillAt }); }
         const loginMsg = new URLSearchParams(location.search).get('login');
         if (loginMsg) { setLoginError(loginMsg); history.replaceState(null, '', location.pathname); }
         const stored = await readProjectRecord<Game[]>('games');
@@ -566,7 +581,7 @@ export default function Home() {
   // Public beta: the turn count left is the server's; asked again whenever the log grows (a turn may have been spent).
   useEffect(() => {
     if (!publicBeta || busy) return;
-    void fetch('/api/beta/me?check', { cache: 'no-store' }).then(r => r.json()).then(me => setBetaTurns({ left: me.turnsLeft, total: me.turnsTotal, full: me.full, signedIn: me.signedIn })).catch(() => {});
+    void fetch('/api/beta/me?check', { cache: 'no-store' }).then(r => r.json()).then(me => { setBetaTurns({ left: me.turnsLeft, total: me.turnsTotal, full: me.full, signedIn: me.signedIn, today: me.todayLeft, todayTotal: me.todayTotal, refillAt: me.refillAt }); if (me.todayLeft === 0) setTodayClosed(false); }).catch(() => {});
   }, [publicBeta, busy, session.log.length]);
   // Play sessions are saved separately from the manual project save, as before.
   useEffect(() => {
@@ -1782,9 +1797,10 @@ export default function Home() {
       <button className="logo" onClick={() => setView('library')}><span className="logoMark"><Dices size={22} /></span> CRPG <strong>STUDIO</strong></button>
       <nav className="mainNav"><button className={view === 'library' ? 'navActive' : ''} onClick={() => setView('library')}><FolderOpen size={17} /> {publicBeta ? '게임 목록' : '내 게임'}</button>{!publicBeta && <><button className={view === 'edit' ? 'navActive' : ''} onClick={() => setView('edit')}><BookOpen size={17} /> 제작 스튜디오</button><button className={view === 'play' ? 'navActive' : ''} onClick={() => start(game)}><Play size={17} /> 테스트 플레이</button></>}</nav>
       {view === 'play' && <div className="playHeading"><div><button className="textBack" onClick={() => { if (publicBeta) { setView('library'); return; } setView('edit'); setTab('prompt'); }}><ArrowLeft size={16} /> {publicBeta ? '게임 목록으로' : '스튜디오로 돌아가기'}</button><h1>{game.name}</h1></div><button className="btn" onClick={newGame} disabled={busy}><RotateCcw size={16} /> 새로하기</button></div>}
-      <div className="topRight">{publicBeta && betaTurns?.signedIn && (<span className={`betaTurns${betaTurns.left <= 10 ? ' low' : ''}`} title="베타 체험으로 진행할 수 있는 남은 턴">남은 턴 <b>{betaTurns.left}</b>/{betaTurns.total}</span>)}{publicBeta ? <button className="btn" onClick={() => setFeedbackOpen(true)}><MessageCircle size={16} /> 의견 보내기</button> : <><span className="localTag"><span className="onlineDot" /> LOCAL</span><button className="btn primary" onClick={create}><Plus size={16} /> 새 게임</button></>}</div>
+      <div className="topRight">{publicBeta && betaTurns?.signedIn && (<>{betaTurns.todayTotal ? <span className={`energyPill${!betaTurns.today ? ' empty' : betaTurns.today <= 20 ? ' low' : ''}`} title={`오늘 플레이할 수 있는 턴 (하루 ${betaTurns.todayTotal}턴, 0시에 충전)`}><Zap size={15}/><b>{betaTurns.today ?? 0}</b><small>/{betaTurns.todayTotal}</small><i style={{ width: `${(betaTurns.today ?? 0) / betaTurns.todayTotal * 100}%` }}/></span> : null}<span className={`betaTurns${betaTurns.left <= 10 ? ' low' : ''}`} title="베타 체험으로 진행할 수 있는 전체 남은 턴">남은 턴 <b>{betaTurns.left}</b>/{betaTurns.total}</span></>)}{publicBeta ? <button className="btn" onClick={() => setFeedbackOpen(true)}><MessageCircle size={16} /> 의견 보내기</button> : <><span className="localTag"><span className="onlineDot" /> LOCAL</span><button className="btn primary" onClick={create}><Plus size={16} /> 새 게임</button></>}</div>
     </header>
     {/* Public beta: play starts once signed in (Kakao or Google); seats are the accounts. */}
+    {publicBeta && betaTurns?.signedIn && betaTurns.todayTotal && betaTurns.today === 0 && betaTurns.left > 0 && !todayClosed && <EnergyEmpty total={betaTurns.todayTotal} refillAt={betaTurns.refillAt || 0} onClose={() => setTodayClosed(true)}/>}
     {publicBeta && betaTurns && !betaTurns.signedIn && <div className="loginGate"><div className="loginCard">
       <div className="loginHero"><span className="loginMark"><Dices size={30} /></span><span className="loginEyebrow">OPEN BETA</span></div>
       <div className="loginBody">

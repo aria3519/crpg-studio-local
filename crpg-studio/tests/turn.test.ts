@@ -550,34 +550,40 @@ test('a fighter\'s mana is 투지: filled by fighting, spent on a sure-hit finis
   assert.equal(r.session.mana, 3);
 });
 
-test('public beta visitors get a daily AI budget per address once signed in; local play is never limited', async () => {
+test('the public beta has one daily AI budget for everyone once signed in; local play is never limited', async () => {
   process.env.BETA_DATA_DIR = require('node:fs').mkdtempSync(path.join(require('node:os').tmpdir(), 'beta-'));
-  const { aiAllowed, CALLS_PER_VISITOR } = await import('../app/_lib/beta');
+  const { aiAllowed, CALLS_PER_DAY } = await import('../app/_lib/beta');
   const { signInWith } = await import('../app/_lib/beta-accounts');
   const signed = signInWith('kakao', '1', '가', '') as { token: string };
   const req = (ip?: string, token = signed.token) => new Request('http://x/api/gm', { headers: { ...(ip ? { 'cf-connecting-ip': ip } : {}), cookie: `crpg-session=${token}` } });
   assert.equal(aiAllowed(req('6.6.6.6', '')), false, 'not signed in');
-  for (let i = 0; i < CALLS_PER_VISITOR; i++) assert.ok(aiAllowed(req('9.9.9.9')));
-  assert.equal(aiAllowed(req('9.9.9.9')), false, 'over the budget');
-  assert.ok(aiAllowed(req('9.9.9.8')), 'another visitor still plays');
-  assert.ok(aiAllowed(req()), 'local');
   assert.ok(aiAllowed(req('7.7.7.7'), false) && aiAllowed(req('7.7.7.7'), false), 'the scene-writing half is not counted');
+  // Five testers behind one office address were stopped together at 400 calls (2026-11-20): no per-address cap any more.
+  for (let i = 0; i < 500; i++) assert.ok(aiAllowed(req('9.9.9.9')), 'one address: call ' + i);
+  for (let i = 500; i < CALLS_PER_DAY; i++) aiAllowed(req('9.9.9.' + (i % 50)));
+  assert.equal(aiAllowed(req('8.8.8.8')), false, 'the whole beta over its day');
+  assert.ok(aiAllowed(req()), 'local');
 });
 
-test('each signed-in beta player gets 500 turns from sign-up, remembered on disk, and seats are the accounts (200)', async () => {
+test('each signed-in beta player gets 500 turns in all and 200 a day, remembered on disk, and seats are the accounts (200)', async () => {
   const dir = process.env.BETA_DATA_DIR!;
-  const { turnAllowed } = await import('../app/_lib/beta');
-  const { signInWith, MAX_ACCOUNTS, DEFAULT_TURNS, listAccounts } = await import('../app/_lib/beta-accounts');
+  const { turnBlock, DAILY_TURNS, TODAY_REPLY, TURNS_REPLY, LOGIN_REPLY } = await import('../app/_lib/beta');
+  const { signInWith, MAX_ACCOUNTS, DEFAULT_TURNS, listAccounts, updateAccount } = await import('../app/_lib/beta-accounts');
   const req = (token = '') => new Request('http://x/api/gm', { headers: { 'cf-connecting-ip': '5.5.5.5', cookie: `crpg-session=${token}` } });
-  assert.equal(turnAllowed(req()), false, 'a visitor not signed in plays no turn');
+  assert.equal(turnBlock(req()), LOGIN_REPLY, 'a visitor not signed in plays no turn');
   const a = signInWith('kakao', '100', '가', 'aaaaaaaaaaaa') as { token: string; pid: string };
   assert.equal(a.pid, 'aaaaaaaaaaaa', 'the save made before signing in carries over');
-  for (let i = 0; i < DEFAULT_TURNS; i++) assert.ok(turnAllowed(req(a.token)));
-  assert.equal(turnAllowed(req(a.token), false), false, 'used up');
-  assert.equal(JSON.parse(readFileSync(path.join(dir, 'turns.json'), 'utf8')).aaaaaaaaaaaa, DEFAULT_TURNS);
+  assert.equal(DEFAULT_TURNS, 500);
+  for (let i = 0; i < DAILY_TURNS; i++) assert.equal(turnBlock(req(a.token)), undefined);
+  assert.equal(turnBlock(req(a.token), false), TODAY_REPLY, 'today used up: 200');
+  assert.equal(JSON.parse(readFileSync(path.join(dir, 'today.json'), 'utf8')).counts.aaaaaaaaaaaa, DAILY_TURNS, 'today kept on disk');
+  assert.equal(JSON.parse(readFileSync(path.join(dir, 'turns.json'), 'utf8')).aaaaaaaaaaaa, DAILY_TURNS);
   assert.equal((signInWith('kakao', '100', '가', 'zzzzzzzzzzzz') as { pid: string }).pid, a.pid, 'the same account on the next sign-in, from another browser');
-  const b = signInWith('kakao', '200', '나', '') as { token: string };
-  assert.ok(turnAllowed(req(b.token)), 'another player');
+  const b = signInWith('kakao', '200', '나', '') as { token: string, pid: string };
+  assert.equal(turnBlock(req(b.token)), undefined, 'another player has their own day');
+  updateAccount(listAccounts().find(x => x.pid === b.pid)!.id, { limit: 3 });
+  turnBlock(req(b.token)); turnBlock(req(b.token));
+  assert.equal(turnBlock(req(b.token), false), TURNS_REPLY, 'all turns used up');
   for (let i = listAccounts().length; i < MAX_ACCOUNTS; i++) signInWith('google', String(i), '', '');
   assert.ok('error' in signInWith('kakao', '999', '', ''), 'seats full: a newcomer is turned away');
   assert.ok('token' in signInWith('kakao', '200', '나', ''), 'a member still signs in');
