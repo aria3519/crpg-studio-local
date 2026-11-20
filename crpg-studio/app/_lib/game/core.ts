@@ -226,7 +226,8 @@ export function placeBackground(g: Game, pin?: MapPin): string {
 // betaHidden: left off the public beta's game list (set from 내 게임).
 export type Game = { betaHidden?: boolean; npcPortraits?:NpcPortrait[]; npcStyle?:string; prologue?: string; prologueTitle?:string; prologueImage?:string; profileDone?: boolean; promptDone?: boolean; mapDone?: boolean; assetsDone?: boolean; settingsDone?: boolean; wizardType?: string; wizardWorld?: string; wizardStage?: number; wizardMain?: string; wizardMainDraw?: string[]; wizardStart?: string; wizardBasePrompt?: string; playerMarker?: string; playerPortrait?: string; customPromptSections?: CustomPromptSection[]; removedPromptSections?: string[]; promptDrafts?: PromptDrafts; compressedPrompt?: string; characterConfig?: CharacterConfig; showHpBar?: boolean; showEquipment?: boolean; showDice?: boolean; startingEquipment?: string; maps?: BoardMap[]; startMapId?: string; startPinId?: string; registrationDescription?: string; genre?: string; gameType?: string; cooperation?: string; progression?: string; playTime?: string; hashtags?: string[]; audience?: string; playMode?: 'single' | 'multi'; minPlayers?: number; maxPlayers?: number; imageRows?: ImageRow[]; imageColumns?: ImageColumn[]; imageCells?: ImageCell[]; prompt?: string; mapImage?: string; assets?: Asset[]; id: string; name: string; description: string; world: string; rules: string; gm: string; hp: number; size: number; created: number; cover?: string };
 // foeBleed/foeBleedTurns/foePoison: the player's 출혈 and 독 still working on the foe.
-export type CombatState = { respect?: boolean; openCut?: number; castGauge?: number; foeBleed?: number; foeBleedTurns?: number; foePoison?: number; level?: number; boss?: boolean; enemyAtk?: number; enemySkill?: EnemySkill; enemyShield?: number; shield?: number; lethal?: boolean; monster?: boolean; foeDesc?: string; power?: number; npc: string; enemyHp: number; enemyMaxHp: number; enemyDc: number; enemyDamage: number; round: number; itemUse?: string; lastDealt?: number; lastTaken?: number; last?: { allies?: string[]; dealt: number; critDealt: boolean; taken: number | null; critTaken: boolean }; totalDealt?: number; totalTaken?: number; result?: 'win' | 'lose' };
+// hitRun / takenRun: blows landed / taken in a row, for 투지 (gritOf).
+export type CombatState = { hitRun?: number; takenRun?: number; respect?: boolean; openCut?: number; castGauge?: number; foeBleed?: number; foeBleedTurns?: number; foePoison?: number; level?: number; boss?: boolean; enemyAtk?: number; enemySkill?: EnemySkill; enemyShield?: number; shield?: number; lethal?: boolean; monster?: boolean; foeDesc?: string; power?: number; npc: string; enemyHp: number; enemyMaxHp: number; enemyDc: number; enemyDamage: number; round: number; itemUse?: string; lastDealt?: number; lastTaken?: number; last?: { allies?: string[]; finisher?: string; dealt: number; critDealt: boolean; taken: number | null; critTaken: boolean }; totalDealt?: number; totalTaken?: number; result?: 'win' | 'lose' };
 // What a roll changes later (user, 2026-11-17: roll only for what affects a later event): the fight that follows,
 // the story two or three scenes on, or the final boss fight. A roll that changes none of these is not rolled.
 export type Impact = 'combat' | 'later' | 'boss';
@@ -1196,6 +1197,20 @@ export const AUTO_BATTLE_LIMIT = 40;
 // late (balance: scratchpad magesim.mjs). Mana comes back MANA_REGEN_ROUND a round in a fight, MANA_REGEN_TURN a turn
 // outside one.
 export const SPELL_GAUGE = 200, SPELL_COST = 15, MAGIC_RESIST = 0.75, MANA_REGEN_ROUND = 0.03, MANA_REGEN_TURN = 0.1;
+// 투지 (user 2026-11-20: the knight never used mana): a fighter's mana (no staff) doesn't come back by itself; it fills by
+// fighting, GRIT_HIT of the maximum per blow landed and GRIT_TAKEN per blow taken, and kept between fights. Full, the next
+// blow is a 필살기: a sure hit for GRIT_FINISH times a weapon blow, emptying it. At 0.15/0.2 a fight (3-4 rounds) never
+// filled it (0 finishers in 300 fights at Lv.5-10); at these it comes about once a fight.
+// A run of blows landed (or taken) in a row fills it faster, GRIT_RUN more per blow in the run (user 2026-11-20: "연속으로
+//맞거나 때리면 더 많이"); a miss or a dodge breaks the run.
+export const GRIT_HIT = 0.3, GRIT_TAKEN = 0.35, GRIT_FINISH = 3, GRIT_RUN = 0.5;
+// The finisher's name, shouted as it lands: the hero's own start, else a plain one.
+const FINISHERS: Record<string, string> = { '몰락 기사 가문의 후계자': '엑스칼리버', '신입 모험가': '철급 혼신격', '바다 건너온 용병': '파도 가르기' };
+export const finisherOf = (g: Game) => FINISHERS[g.wizardStart || ''] || '혼신의 일격';
+export const gritOf = (g: Game, s: Session) => maxManaOf(g, s) > 0 && !gearOf(s.equipped, s.itemInfo).caster;
+// Mana now. Unset is full for a caster but empty for 투지, which is earned in a fight: unset-as-full gave every first
+// fight (and every fight the odds simulated) a 필살기 in round 1, and a foe 3× the player's 전투력 read as a coin flip.
+export const manaNow = (g: Game, s: Session) => { const max = maxManaOf(g, s); return Math.min(max, s.mana ?? (gritOf(g, s) ? 0 : max)); };
 // Health comes back on its own too: HP_REGEN_TURN of the maximum each calm turn (not in a fight, nothing hurt the
 // player this turn), so the player never has to go and rest just to heal.
 export const HP_REGEN_TURN = 0.06;
@@ -1236,12 +1251,16 @@ const heroRound = (g: Game, s: Session, c: CombatState) => {
   const caster = gear.caster && st.maxMana > 0;
   const own = caster ? swing(st.spellHit, Math.round(c.enemyDc * MAGIC_RESIST), (st.spell[0] + st.spell[1]) / 2) * Math.min(1, (100 + gear.haste) / SPELL_GAUGE)
     : swing(st.hit, c.enemyDc, (st.blow[0] + st.blow[1]) / 2) * (1 + skill('double') / 100);
+  // 투지: the 필살기 comes once the bar fills, a sure GRIT_FINISH-times blow; spread over the rounds it takes to fill.
+  // shortcut: runs counted as an average 1.25×, the foe landing half its blows; simulate per foe if 전투력 drifts from the odds again.
+  const fillRate = caster || !st.maxMana ? 0 : Math.min(1, 1.25 * (landed(st.hit, c.enemyDc) * GRIT_HIT + 0.5 * GRIT_TAKEN));
+  const finisher = fillRate * GRIT_FINISH * (st.blow[0] + st.blow[1]) / 2;
   const bleed = caster ? 0 : skill('bleed') * Math.min(1, 3 * landed(st.hit, c.enemyDc));
   const allies = (s.party || []).filter(n => n !== c.npc).reduce((n, ally) => {
     const t = companionStats(npcLevel(s, ally) || 3), hit = 0.7 * (t.damage + 1) / 2 + 0.5;
     return n + faces(roll => roll === 20 ? 2 * hit : roll !== 1 && roll + (t.dc - 10) >= c.enemyDc - 2 ? hit : 0);
   }, 0);
-  return own + bleed + allies;
+  return own + finisher + bleed + allies;
 };
 const foeRound = (g: Game, s: Session, c: CombatState) => {
   const st = combatStatsOf(g, s), foe = c.enemySkill, crit = foe?.id === 'keen' ? foe.value : 20, acc = c.enemyAtk ?? c.enemyDc - 10, dmg = (c.enemyDamage + 1) / 2;
@@ -1305,27 +1324,32 @@ export const autoBattleStep = (g: Game, s: Session): Session => {
   const skill = (id: string) => gear.skills.filter(k => k.id === id).reduce((a, k) => a + k.value, 0);
   const skillName = (id: string) => gear.skills.find(k => k.id === id)?.name || '';
   const lines: string[] = [];
-  let enemyHp = c.enemyHp, hp = s.hp, dealt = 0, taken = 0, countered = false, critTaken = false, critDealt = false;
+  let enemyHp = c.enemyHp, hp = s.hp, dealt = 0, taken = 0, countered = false, critTaken = false, critDealt = false, finisher = '';
   let shield = c.shield ?? skill('guard'), enemyShield = c.enemyShield || 0;
   // 출혈 and 독 keep working between rounds; 기절 and 가드 last only this round.
   let bleed = c.foeBleed || 0, bleedTurns = c.foeBleedTurns || 0, poison = c.foePoison || 0, stunned = false, parried = false;
   const foe = c.enemySkill, foeSkill = (id: string) => foe?.id === id ? foe.value : 0, foeLabel = foe ? SKILLS[foe.id].label : '';
-  const maxMana = maxManaOf(g, s), caster = gear.caster && maxMana > 0;
-  let mana = Math.min(maxMana, s.mana ?? maxMana), gauge = c.castGauge || 0;
+  const maxMana = maxManaOf(g, s), caster = gear.caster && maxMana > 0, grit = !gear.caster && maxMana > 0;
+  let hitRun = c.hitRun || 0, takenRun = c.takenRun || 0;
+  // Returns a note for the log once a run is going (2 in a row and on).
+  const fill = (share: number, run: number) => { if (!grit || mana >= maxMana) return ''; const add = Math.max(1, Math.round(maxMana * share * (1 + GRIT_RUN * (run - 1)))); mana = Math.min(maxMana, mana + add); return run >= 2 ? ` (연속 ${run}회 — 마나 +${add})` : ''; };
+  let mana = manaNow(g, s), gauge = c.castGauge || 0;
   // weapon: a blow with the weapon; spell: a cast spell; poke: a caster out of mana jabbing with the staff.
-  const strike = (extra: boolean, how: 'weapon' | 'spell' | 'poke' = 'weapon') => {
+  // finisher: the 필살기, a weapon blow that can't miss, GRIT_FINISH times as hard.
+  const strike = (extra: boolean, how: 'weapon' | 'spell' | 'poke' | 'finisher' = 'weapon') => {
     if (!parried && skill('parry') && Math.random() * 100 < skill('parry')) { parried = true; lines.push(`[${skillName('parry')}] 가드 — 공격하며 자세를 잡았다`); }
     const die = d(20), spell = how === 'spell';
     const aim = spell ? intellect + grow.hit + gear.hit : how === 'poke' ? strength + grow.hit : strength + grow.hit + gear.hit;
     const target = spell ? Math.round(c.enemyDc * MAGIC_RESIST) : c.enemyDc;
-    if (die >= critFrom || (die !== 1 && die + aim >= target)) {
+    if (how === 'finisher' || die >= critFrom || (die !== 1 && die + aim >= target)) {
       const base = spell ? Math.round((4.5 + Math.max(0, intellect) + grow.damage + gear.spell) * 2 * spellScale(s.level || 1) * (0.4 + Math.random() * 1.2))
-        : how === 'poke' ? Math.max(1, d(4) + strength) : d(8) + Math.max(0, strength) + grow.damage + gear.damage;
+        : how === 'poke' ? Math.max(1, d(4) + strength) : Math.round((d(8) + Math.max(0, strength) + grow.damage + gear.damage) * (how === 'finisher' ? GRIT_FINISH : 1));
       const swing = base * (die >= critFrom ? 2 : 1);
       const blocked = Math.min(enemyShield, swing); enemyShield -= blocked;
       const hit = swing - blocked;
       enemyHp = Math.max(0, enemyHp - hit); dealt += hit; critDealt = critDealt || die >= critFrom;
-      lines.push(`${extra ? `[${skillName('double')}] 연타! ` : ''}${die >= critFrom ? '치명타! ' : ''}${spell ? '마법 명중' : '내 공격 명중'} — ${c.npc}에게 ${spell ? '마법' : '물리'} 피해 ${hit}${blocked ? ` (${c.npc}의 ${foeLabel}이 ${blocked} 막음)` : ''} · ${c.npc} ${enemyHp}/${c.enemyMaxHp}`);
+      const run = how === 'finisher' ? '' : fill(GRIT_HIT, ++hitRun);
+      lines.push(`${extra ? `[${skillName('double')}] 연타! ` : ''}${die >= critFrom ? '치명타! ' : ''}${spell ? '마법 명중' : how === 'finisher' ? '필살기 명중' : '내 공격 명중'} — ${c.npc}에게 ${spell ? '마법' : '물리'} 피해 ${hit}${blocked ? ` (${c.npc}의 ${foeLabel}이 ${blocked} 막음)` : ''} · ${c.npc} ${enemyHp}/${c.enemyMaxHp}${run}`);
       const thorn = Math.round(hit * foeSkill('thorns') / 100);
       if (thorn > 0) { hp = Math.max(c.lethal ? 0 : 1, hp - thorn); taken += thorn; lines.push(`${c.npc}의 ${foeLabel} — 나에게 ${thorn} 피해가 되돌아옴 · 내 HP ${hp}/${maxHp}`); }
       if (hit > 0 && skill('bleed')) { const fresh = !bleedTurns; bleed = skill('bleed'); bleedTurns = 3; if (fresh) lines.push(`[${skillName('bleed')}] 출혈 — ${c.npc}${josa(c.npc, '이')} 피를 흘린다 (3라운드, 매 라운드 ${bleed})`); }
@@ -1333,13 +1357,15 @@ export const autoBattleStep = (g: Game, s: Session): Session => {
       if (hit > 0 && !stunned && skill('stun') && Math.random() * 100 < skill('stun')) { stunned = true; lines.push(`[${skillName('stun')}] 기절 — ${c.npc}${josa(c.npc, '이')} 비틀거린다`); }
       const healed = Math.min(maxHp - hp, Math.round(hit * skill('lifesteal') / 100));
       if (healed > 0) { hp += healed; lines.push(`[${skillName('lifesteal')}] 흡혈 — HP ${healed} 회복 · 내 HP ${hp}/${maxHp}`); }
-    } else lines.push(`${extra ? `[${skillName('double')}] 연타 — ` : ''}${spell ? '마법이 빗나갔다' : '내 공격이 빗나갔다'} — ${c.npc}${josa(c.npc, '이')} 피했다`);
+    } else { hitRun = 0; lines.push(`${extra ? `[${skillName('double')}] 연타 — ` : ''}${spell ? '마법이 빗나갔다' : '내 공격이 빗나갔다'} — ${c.npc}${josa(c.npc, '이')} 피했다`); }
   };
   if (caster) {
     gauge += 100 + gear.haste;
     if (gauge < SPELL_GAUGE) lines.push(`마법 시전 중… ${Math.round(gauge / SPELL_GAUGE * 100)}%`);
     else if (mana >= SPELL_COST) { gauge -= SPELL_GAUGE; mana -= SPELL_COST; lines.push(`마법 발동! (마나 -${SPELL_COST} · ${mana}/${maxMana})`); strike(false, 'spell'); }
     else { gauge = SPELL_GAUGE; lines.push('마나가 부족하다 — 지팡이로 후려친다'); strike(false, 'poke'); }
+  } else if (grit && mana >= maxMana) {
+    mana = 0; finisher = finisherOf(g); lines.push(`마나 폭발! 필살기 「${finisher}」!!`); strike(false, 'finisher');
   } else {
     strike(false);
     if (enemyHp > 0 && skill('double') && Math.random() * 100 < skill('double')) strike(true);
@@ -1366,12 +1392,13 @@ export const autoBattleStep = (g: Game, s: Session): Session => {
       const absorbed = Math.min(shield, raw); shield -= absorbed;
       const got = raw - absorbed; taken += got;
       hp = Math.max(c.lethal ? 0 : 1, hp - got);
-      lines.push(`${again ? `${c.npc}의 ${foeLabel}! ` : ''}${counter >= foeCrit ? '치명타! ' : ''}${c.npc}의 반격 명중 — 나에게 ${got} 피해${absorbed ? ` ([${skillName('guard')}] 보호막이 ${absorbed} 막음)` : ''} · 내 HP ${hp}/${maxHp}`);
+      const run = got > 0 ? fill(GRIT_TAKEN, ++takenRun) : (takenRun = 0, '');
+      lines.push(`${again ? `${c.npc}의 ${foeLabel}! ` : ''}${counter >= foeCrit ? '치명타! ' : ''}${c.npc}의 반격 명중 — 나에게 ${got} 피해${absorbed ? ` ([${skillName('guard')}] 보호막이 ${absorbed} 막음)` : ''} · 내 HP ${hp}/${maxHp}${run}`);
       const back = Math.round(raw * skill('thorns') / 100);
       if (back > 0 && enemyHp > 0) { enemyHp = Math.max(0, enemyHp - back); dealt += back; lines.push(`[${skillName('thorns')}] 가시 — ${c.npc}에게 ${back} 피해를 되돌려 줌 · ${c.npc} ${enemyHp}/${c.enemyMaxHp}`); }
       const drain = Math.min(c.enemyMaxHp - enemyHp, Math.round(got * foeSkill('lifesteal') / 100));
       if (drain > 0 && enemyHp > 0) { enemyHp += drain; lines.push(`${c.npc}의 ${foeLabel} — ${drain} 회복 · ${c.npc} ${enemyHp}/${c.enemyMaxHp}`); }
-    } else lines.push(`${again ? `${c.npc}의 ${foeLabel} — ` : ''}${c.npc}의 반격을 피했다`);
+    } else { takenRun = 0; lines.push(`${again ? `${c.npc}의 ${foeLabel} — ` : ''}${c.npc}의 반격을 피했다`); }
   };
   if (enemyHp > 0 && stunned) lines.push(`${c.npc}${josa(c.npc, '은')} 기절해 반격하지 못했다`);
   if (enemyHp > 0 && hp > 0 && !stunned) counterAttack(false);
@@ -1383,13 +1410,13 @@ export const autoBattleStep = (g: Game, s: Session): Session => {
     const heal = Math.min(maxHp - hp, skill('regen')); hp += heal;
     lines.push(`[${skillName('regen')}] 재생 — HP ${heal} 회복 · 내 HP ${hp}/${maxHp}`);
   }
-  if (maxMana > 0) mana = Math.min(maxMana, mana + Math.max(1, Math.round(maxMana * MANA_REGEN_ROUND)));
+  if (caster) mana = Math.min(maxMana, mana + Math.max(1, Math.round(maxMana * MANA_REGEN_ROUND)));
   const round = c.round + 1;
   // A stalemate is settled by whoever has more health left.
   const knockedOut = !c.lethal && hp <= 1 && taken > 0;
   const result: CombatState['result'] = enemyHp <= 0 ? 'win' : hp <= 0 || knockedOut ? 'lose' : round > AUTO_BATTLE_LIMIT ? (enemyHp / c.enemyMaxHp < hp / Math.max(1, maxHp) ? 'win' : 'lose') : undefined;
   if (result) lines.push(result === 'win' ? `승리 — ${c.npc}${josa(c.npc, '을')} 쓰러뜨렸다` : knockedOut ? `패배 — ${c.npc}에게 쓰러져 빈사 상태가 됐다 (HP 1)` : `패배 — ${c.npc}에게 쓰러졌다`);
-  return { ...s, hp, ...(maxMana > 0 ? { mana } : {}), combat: { ...c, castGauge: caster ? gauge : undefined, enemyHp, shield, enemyShield, foeBleed: bleed, foeBleedTurns: bleedTurns, foePoison: poison, round, lastDealt: dealt, lastTaken: taken, last: { allies: allyHits, dealt, critDealt: critDealt && dealt > 0, taken: countered ? taken : null, critTaken: critTaken && taken > 0 }, totalDealt: (c.totalDealt || 0) + dealt, totalTaken: (c.totalTaken || 0) + taken, result }, log: [...s.log, ...lines.map(l => `전투: ${l}`)] };
+  return { ...s, hp, ...(maxMana > 0 ? { mana } : {}), combat: { ...c, castGauge: caster ? gauge : undefined, hitRun, takenRun, enemyHp, shield, enemyShield, foeBleed: bleed, foeBleedTurns: bleedTurns, foePoison: poison, round, lastDealt: dealt, lastTaken: taken, last: { allies: allyHits, ...(finisher ? { finisher } : {}), dealt, critDealt: critDealt && dealt > 0, taken: countered ? taken : null, critTaken: critTaken && taken > 0 }, totalDealt: (c.totalDealt || 0) + dealt, totalTaken: (c.totalTaken || 0) + taken, result }, log: [...s.log, ...lines.map(l => `전투: ${l}`)] };
 };
 // A check rolled just before a fight changes the fight itself, whatever the narration said: the GM's text alone left no visible difference.
 // openCut is a share of the foe's health, taken in startCombat because that's where its real health is settled.

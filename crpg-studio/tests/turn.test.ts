@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply, type TurnContext } from '../app/_lib/game/turn';
-import { toBeatPlace, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session, chaptersOpen, promptUpToAct, regionQuestsOf, regionOpen, bossOpen, storyPointsOf, alikeQuest } from '../app/_lib/game/core';
+import { toBeatPlace, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session, chaptersOpen, promptUpToAct, regionQuestsOf, regionOpen, bossOpen, storyPointsOf, alikeQuest, gritOf, maxManaOf, autoBattleStep, finisherOf } from '../app/_lib/game/core';
 import { foesOf, findFoe } from '../app/_lib/monsters';
 import { mainChain } from '../app/_lib/prologues';
 import { levelForTier, storyLevel } from '../app/_lib/progression';
@@ -523,8 +523,31 @@ test('level-ups place their points by who the hero started as, and a stronger fo
   assert.ok(odds(4).ratio > odds(8).ratio && odds(8).ratio > odds(12).ratio);
   assert.ok(odds(4).power < odds(12).power);
   // The two 전투력 compare the way the fight goes: the side shown stronger wins most of the time (Lv.18 read 1,109 vs 2,370 in a won fight).
-  for (const lv of [4, 14]) { const o = odds(lv); assert.equal(o.mine > o.power, o.winRate > 0.5, `Lv.${lv}: 나 ${o.mine} 적 ${o.power} 승률 ${o.winRate}`); }
+  // Lv.16, not 14: with 투지 the Lv.8 knight wins about half the Lv.14 fights (2026-11-20).
+  for (const lv of [4, 16]) { const o = odds(lv); assert.equal(o.mine > o.power, o.winRate > 0.5, `Lv.${lv}: 나 ${o.mine} 적 ${o.power} 승률 ${o.winRate}`); }
   assert.ok(playerPower(g, spendStat(g, { ...s, statPoints: 1 }, growthFields(g)[0].id)) >= playerPower(g, s));
+});
+// 투지 (user 2026-11-20: the knight never spent mana): a fighter's mana fills by fighting and, full, becomes a 필살기.
+test('a fighter\'s mana is 투지: filled by fighting, spent on a sure-hit finisher', () => {
+  const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
+  const s = { ...structuredClone(t0.session), level: 8, hp: 200, equipped: {}, mode: 'combat' } as Session;
+  const fight = foeCombat({ npc: '해골 병사', monster: true }, 3, 8);
+  assert.ok(gritOf(g, s), 'a hero with no staff fights on 투지');
+  const step = (x: Session) => autoBattleStep(g, { ...x, combat: { ...fight, ...x.combat, round: Math.max(1, x.combat?.round || 0), lethal: true } });
+  const max = maxManaOf(g, s);
+  let x: Session = { ...s, mana: 0, combat: { ...fight, lethal: true } }, rose = false;
+  for (let k = 0; k < 6 && !x.combat?.result; k++) { const before = x.mana || 0; x = step(x); rose ||= (x.mana || 0) > before; }
+  assert.ok(rose, '투지 never rose in a fight');
+  // Blows in a row fill it faster, and the log says so.
+  let streak = false;
+  for (let i = 0; i < 40 && !streak; i++) { let y: Session = { ...s, mana: 0, combat: { ...fight, lethal: true } }; for (let k = 0; k < 6 && !y.combat?.result; k++) y = step(y); streak = y.log.some(l => /연속 \d회 — 마나 \+\d+/.test(l)); }
+  assert.ok(streak, 'no faster fill for a run of blows');
+  const full = step({ ...s, mana: max, combat: { ...fight, lethal: true } });
+  assert.ok(full.log.some(l => l.includes(`필살기 「${finisherOf(g)}」`)) && full.combat?.last?.finisher === finisherOf(g) && full.log.some(l => l.includes('필살기 명중')), 'no finisher at full 투지');
+  assert.ok((full.mana || 0) < max, 'the finisher did not spend 투지');
+  // Out of a fight 투지 stays where it is (a caster's mana comes back by itself).
+  const r = run({ ...t0, session: { ...structuredClone(t0.session), mode: undefined, mana: 3 } as unknown as Session });
+  assert.equal(r.session.mana, 3);
 });
 
 test('public beta visitors get a daily AI budget per address once signed in; local play is never limited', async () => {

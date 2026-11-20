@@ -1551,3 +1551,25 @@ details[open]>summary .storyPreview{display:none}
 @keyframes loadingFade{0%,100%{opacity:1}50%{opacity:.7}}
 @keyframes loadingTwinkle{0%,100%{opacity:.5}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.loadingRing,.loadingDie,.loadingBar span,.skeletonCard,.skeletonCard .gameCover,.skeletonCard i,.loadingHero::before{animation:none}.loadingLines span{animation:none}.loadingLines span:first-child{opacity:1}}
+/* 투지 and the 필살기 (user 2026-11-20: shouted, flashy, hits hard). The cut-in plays over the battle for ~1.6s. */
+.battleGrit i{background:linear-gradient(90deg,#fb923c,#ef4444)!important;transition:width .35s}
+.battleGrit.full i{background:linear-gradient(90deg,#fde047,#f97316,#ef4444,#fde047)!important;background-size:200% 100%!important;animation:gritFull .8s linear infinite;box-shadow:0 0 10px #f97316}
+.battleGrit.full b{color:#fde047;text-shadow:0 0 8px #f97316}
+.finisherCut{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.fxDim{position:absolute;inset:0;background:rgba(6,10,20,.62);animation:fxDim 1.7s ease both}
+.fxPanel{position:absolute;left:0;right:0;top:50%;height:46%;transform:translateY(-50%);display:flex;align-items:center;background:linear-gradient(90deg,rgba(8,12,24,.95) 0%,rgba(20,28,48,.9) 55%,rgba(20,28,48,0) 100%);border-top:1px solid rgba(253,230,138,.7);border-bottom:1px solid rgba(253,230,138,.7);clip-path:inset(0 100% 0 0);animation:fxPanel 1.7s cubic-bezier(.22,1,.36,1) both}
+.fxPanel img{height:118%;align-self:flex-end;margin-left:4%;object-fit:contain;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6));animation:fxHero 1.7s cubic-bezier(.22,1,.36,1) both}
+.fxName{margin-left:4%;color:#fff;animation:fxName 1.7s cubic-bezier(.22,1,.36,1) both}
+.fxName small{display:block;font-size:11px;font-weight:800;letter-spacing:5px;color:#fde68a;opacity:.9;margin-bottom:4px}
+.fxName b{display:block;font-size:clamp(28px,5.5vw,54px);font-weight:900;font-style:italic;letter-spacing:-.5px;line-height:1.05;background:linear-gradient(180deg,#fff 0%,#fff7d6 45%,#f5c451 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 10px rgba(245,196,81,.45))}
+.fxSlash{position:absolute;left:58%;top:50%;width:46%;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,#fff 40%,#fde68a 60%,transparent);box-shadow:0 0 16px rgba(253,230,138,.9);transform:translate(0,-50%) rotate(-24deg) scaleX(0);transform-origin:left center;animation:fxSlash .32s 1.05s cubic-bezier(.2,.9,.3,1) both}
+.fxFlash{position:absolute;inset:0;background:#fff;opacity:0;animation:fxFlash .35s 1.12s ease-out both}
+.battlePop.finisher{font-size:clamp(40px,7vw,58px);font-style:italic;color:#fff7d6;-webkit-text-stroke:1.5px #8a5a00;text-shadow:0 0 14px rgba(245,196,81,.8),0 3px 8px #000;animation:fxPop 1.2s ease-out;animation-delay:1.15s!important;z-index:7}
+@keyframes fxDim{0%{opacity:0}10%,75%{opacity:1}100%{opacity:0}}
+@keyframes fxPanel{0%{clip-path:inset(0 100% 0 0)}14%,62%{clip-path:inset(0 0 0 0);opacity:1}72%{clip-path:inset(0 0 0 0);opacity:0}100%{opacity:0}}
+@keyframes fxHero{0%{transform:translateX(-30px);opacity:0}16%{transform:translateX(0);opacity:1}62%{transform:translateX(10px);opacity:1}72%,100%{opacity:0}}
+@keyframes fxName{0%,8%{transform:translateX(40px);opacity:0}22%{transform:translateX(0);opacity:1}62%{transform:translateX(-6px);opacity:1}72%,100%{opacity:0}}
+@keyframes fxSlash{0%{transform:translate(0,-50%) rotate(-24deg) scaleX(0);opacity:1}70%{opacity:1}100%{transform:translate(0,-50%) rotate(-24deg) scaleX(1);opacity:0}}
+@keyframes fxFlash{0%{opacity:0}25%{opacity:.55}100%{opacity:0}}
+@keyframes fxPop{0%{opacity:0;transform:translate(-50%,0) scale(1.8)}15%{opacity:1;transform:translate(-50%,0) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-20px) scale(1)}}
+@media(prefers-reduced-motion:reduce){.fxDim,.fxPanel,.fxPanel img,.fxName,.fxSlash,.fxFlash,.battleGrit.full i{animation:none!important}.fxPanel{clip-path:none}.fxSlash,.fxFlash{display:none}}
