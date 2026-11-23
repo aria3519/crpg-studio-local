@@ -300,7 +300,7 @@
   "threat": {
    "npc": "굶주린 늑대 무리",
    "monster": true,
-   "level": 1
+   "level": 2
   },
   "people": [
    "에드리아 하르트 지인 5",
@@ -692,7 +692,7 @@
   "threat": {
    "npc": "심연의 사도 광신도",
    "monster": true,
-   "level": 4
+   "level": 6
   },
   "people": [
    "에드리아 하르트 지인 5",

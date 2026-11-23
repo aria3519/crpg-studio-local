@@ -2,7 +2,7 @@
 // on the player next (a monster, a hostile NPC). Pure: no React, no network. The play screen applies the result and
 // shows the effects; tests replay recorded replies through it (tests/turn.test.ts).
 import { TRAVEL_VERB } from '../travel';
-import { talkStartIndex, metNames, NPC_LOOKS, unnamedScene, amountsIn, tookItem, relationOf, placeHeading, heroFits, wasTold, wearNew, rollOutcome, timeOfDay, dueBeat, withDecision, beatFoe, gritOf, focusAfter, goalsFinished, goalPath, withNextMain, preparedGoal, ownStoryOpen, currentGoalOf, alikeQuest, FIRST_LIKE_MAX, LIKE_GAP, dismissTemps, storyNpcsAfter, storyFoes, bossWaits, foeLevel, withStory, storyProgress, storyPointsOf, finalBoss, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, AFFECTION_UNIT, MANA_REGEN_TURN, train } from './core';
+import { priceAsk, talkStartIndex, metNames, NPC_LOOKS, unnamedScene, amountsIn, tookItem, relationOf, placeHeading, heroFits, wasTold, wearNew, rollOutcome, timeOfDay, dueBeat, withDecision, beatFoe, gritOf, focusAfter, goalsFinished, goalPath, withNextMain, preparedGoal, ownStoryOpen, currentGoalOf, alikeQuest, FIRST_LIKE_MAX, LIKE_GAP, dismissTemps, storyNpcsAfter, storyFoes, bossWaits, foeLevel, withStory, storyProgress, storyPointsOf, finalBoss, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, AFFECTION_UNIT, MANA_REGEN_TURN, train } from './core';
 import { GRADE_LABELS, KIND_LABELS, SKILLS, infoOf, gearOf, bonusText, skillText, enemyGear, gradeForTier, dropChance, rollGrade, rollSkill, randomGearKind, gearName, POTIONS, healShareOf, enemySkill, enemySkillText, type EnemySkill, type Grade, type ItemInfo, type ItemKind, type Equipped } from '../items';
 import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, wordIn, type Foe } from '../monsters';
 import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, storyLevel, storyLevelAt, xpToReach, battleXp, questXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from '../progression';
@@ -196,7 +196,10 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     const goldBefore = current.characterGold ?? startGold(game);
     // A paid beat told now takes its price, in place of whatever the bookkeeper said was handed over for it.
     const beatPay = told && due?.do === 'talk' && due.pay ? due.pay : 0;
-    const goldDelta = Math.max(-goldBefore, (beatPay ? -beatPay : typeof data.goldDelta === 'number' && Number.isFinite(data.goldDelta) ? Math.round(data.goldDelta) : 0) + questSum('gold') + (rollPay ? rollPay.gold : 0));
+    // While a priced beat waits for its money, only the game takes it (paidFor): the bookkeeper took 2 of the 3 asked, the
+    // game saw no payment, and 핍 kept saying she knew nothing (2026-11-23).
+    const priced = !beatPay && !!priceAsk(game, current);
+    const goldDelta = Math.max(-goldBefore, (beatPay ? -beatPay : priced ? 0 : typeof data.goldDelta === 'number' && Number.isFinite(data.goldDelta) ? Math.round(data.goldDelta) : 0) + questSum('gold') + (rollPay ? rollPay.gold : 0));
     const characterGold = goldBefore + goldDelta;
     // A big deed gets its own fanfare instead of a quiet log line.
     if (Math.abs(repDelta) >= 300 && !questLog.done.length) fx.repBurst = { delta: repDelta, total: reputation };
@@ -302,7 +305,8 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     // A finished talk is where the player usually takes on something (the 7번 부두 salvage job), so the director reads it now
     // and the current goal follows; before, the first main step stayed on screen for 20 entries of dock work.
     if (talkOver && current.talkNpc) return { ...fx, session: { ...grown.session, talkEnded: true, suggestedActions: [] }, settled: grown.session, major: true };
-    if (!grown.session.dead && !grown.session.mode && grown.session.hp <= 0 && current.hp > 0) grown.session = { ...grown.session, dead: true, log: [...grown.session.log, '시스템: 사망 — 체력이 다했습니다.'] };
+    // No death (user 2026-11-23): health run out outside a fight leaves the hero at 1.
+    if (!grown.session.dead && !grown.session.mode && grown.session.hp <= 0 && current.hp > 0) grown.session = { ...grown.session, hp: 1, log: [...grown.session.log, '시스템: 쓰러질 뻔했지만 간신히 버텼습니다 (HP 1)'] };
     if (grown.session.dead) grown.session = { ...grown.session, suggestedActions: [] };
     if (settle) return { ...fx, session: grown.session, settled: grown.session, major: questLog.done.length > 0 };
     // A decision the goal waits on is offered as the game's own options, word for word, so picking one is the decision; the
