@@ -4,8 +4,9 @@
 import { execSync } from 'node:child_process';
 // Which commit this build is, shown on /admin; "+수정" when the build had uncommitted changes.
 const git = (cmd: string) => { try { return execSync(`git ${cmd}`, { encoding: 'utf8' }).trim(); } catch { return ''; } };
-// The commit's subject up to its colon ("선택지·장소·위치 정리: …" → "선택지·장소·위치 정리"), cut at 30 characters.
-const subject = git('log -1 --format=%s').split(':')[0].slice(0, 30) || '?';
+// The commit's whole subject, and its "- " lines as what the build changed (user 2026-11-23: the cut subject said too little).
+const subject = git('log -1 --format=%s').slice(0, 120) || '?';
+const notes = git('log -1 --format=%b').split('\n').filter(l => l.startsWith('- ')).map(l => l.slice(2).trim()).slice(0, 12).join('\n');
 const build = `${subject}${git('status --porcelain') ? ' +수정' : ''} · ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
-const config = { distDir: process.env.NEXT_DIST_DIR || '.next', env: { BUILD_LABEL: build }, experimental: { middlewareClientMaxBodySize: '64mb' } };
+const config = { distDir: process.env.NEXT_DIST_DIR || '.next', env: { BUILD_LABEL: build, BUILD_NOTES: notes }, experimental: { middlewareClientMaxBodySize: '64mb' } };
 export default config;
