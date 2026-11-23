@@ -16,10 +16,11 @@ export const tierOfLevel = (level: number) => { let t = 1; while (t < MAX_POWER 
 // A roaming foe grows with the player: it starts at its tier's level and can be met up to two tiers higher
 // (wolves Lv.2-10, a troll Lv.20-48, a wyvern Lv.48-82). Bosses keep their tier's level.
 export const foeLevelRange = (tier: number, boss = false): [number, number] => [levelForTier(tier), boss ? levelForTier(tier) : levelForTier(Math.min(MAX_POWER, Math.round(tier) + 2))];
-// The level a foe is met at (user 2026-11-23: always 1-4 under won ~100% of fights, "너무 쉽다"): an ordinary monster 1 under to
-// 2 over (simulated ~75-99% wins, a third to two thirds of the HP gone), one that matters (a boss, the story's foe) level or 1 over.
+// The level a foe is met at (user 2026-11-23: always 1-4 under won ~100% of fights, "너무 쉽다"; 1 under to 2 over still read
+// 여유 half the time): an ordinary monster level to 3 over (simulated ~50-99% wins, 승산 있음 or 위험), one that matters (a boss,
+// the story's foe) 1-2 over (a boss ~40-75%). Losing costs turns, gold or an item, never the game (defeatCost).
 export const encounterLevel = (important: boolean, playerLevel: number, rand = Math.random) =>
-  Math.max(1, playerLevel + (important ? Math.floor(rand() * 2) : Math.floor(rand() * 4) - 1));
+  Math.max(1, playerLevel + (important ? 1 + Math.floor(rand() * 2) : Math.floor(rand() * 4)));
 
 // What each level adds on top of the character sheet: HP and damage grow by a steady share per level.
 export const levelBonus = (level: number) => {

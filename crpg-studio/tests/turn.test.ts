@@ -395,11 +395,11 @@ test('the story may run ahead of its order: the next step\'s foe is fought at th
   const truth = '넬의 옛 파티가 몰살당한 날의 진실 듣기', wyvern = findFoe('fantasy', '와이번')!;
   const s0 = { ...structuredClone(t0.session), mode: undefined, level: 2, quests: [truth], focus: truth, delivered: [] as string[], log: ['시스템: 새 목표 — ' + truth] } as Session;
   assert.ok(storyFoes(g, s0).now.includes('와이번'), 'the next step\'s foe can be fought now');
-  assert.equal(foeLevel(g, s0, wyvern, () => 0), 2, 'the story\'s foe: the player\'s level or one over, not Lv.48');
-  assert.equal(foeLevel(g, s0, wyvern, () => 0.99), 3);
+  assert.equal(foeLevel(g, s0, wyvern, () => 0), 3, 'the story\'s foe: one or two over the player, not Lv.48');
+  assert.equal(foeLevel(g, s0, wyvern, () => 0.99), 4);
   assert.equal(foeLevel(g, s0, wyvern), foeLevel(g, s0, wyvern), 'met again at the same level: the same level');
   const wolves = findFoe('fantasy', '굶주린 늑대 무리')!, at10 = { ...s0, level: 10 };
-  assert.deepEqual([foeLevel(g, at10, wolves, () => 0), foeLevel(g, at10, wolves, () => 0.99)], [9, 12], 'an ordinary monster: 1 under to 2 over the player');
+  assert.deepEqual([foeLevel(g, at10, wolves, () => 0), foeLevel(g, at10, wolves, () => 0.99)], [10, 13], 'an ordinary monster: the player\'s level to 3 over');
   // No death (user 2026-11-23): a lost fight costs turns, half the gold or a spare item, never what is worn.
   const poor = { ...s0, characterGold: 0, inventory: ['낡은 롱소드'], equipped: { weapon: '낡은 롱소드' }, rewind: undefined };
   assert.equal(defeatCost(g, poor).lost, '', 'nothing to pay: just wakes up');
