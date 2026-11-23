@@ -394,6 +394,9 @@ export const INTERFERE_CHANCE = 0.35;
 // The line that opens a talk with name; saves from before the particle fix wrote it with 와(과).
 export const isTalkStart = (e: string, name: string) => e === `시스템: ${name}${josa(name, '와')} 대화를 시작했습니다.` || e === `시스템: ${name}와(과) 대화를 시작했습니다.`;
 export const talkStartIndex = (log: string[], name: string) => { for (let i = log.length - 1; i >= 0; i--) if (isTalkStart(log[i], name)) return i; return -1; };
+// People the hero walked past at this spot (무시하기) and hasn't spoken to since: they don't step out again here (user 2026-11-23:
+// 실바엘, ignored, came back to block the way three scenes running). handledNpcs empties on every move.
+export const passedBy = (s: Session) => (s.handledNpcs || []).filter(n => { const at = s.log.lastIndexOf(`시스템: ${n}${josa(n, '을')} 무시하고 지나쳤습니다.`); return at >= 0 && at > talkStartIndex(s.log, n); });
 export const talkTurns = (s: Session) => { const i = s.talkNpc ? talkStartIndex(s.log, s.talkNpc) : -1; return i < 0 ? 0 : s.log.slice(i + 1).filter(e => parseTalk(e)?.speaker === 'me').length; };
 // Lines from the whole log that involve one NPC, so they remember earlier meetings, promises and deeds beyond the recent window.
 // What the person has been through with the player: every line of the talks with them (the player's own words too,
@@ -869,7 +872,8 @@ export const PARTY_LIMIT = 2;
 export const PARTY_THINK_MS = 2200;
 // An NPC who dislikes the player (affection under -20) never agrees; otherwise the odds grow with both numbers, from 2% up to 95%.
 export const joinChance = (affection: number, reputation: number, taste: { affectionWeight: number; pickiness: number }) => {
-  if (affection < -20) return 0;
+  // Below 0 a companion walks out the next turn (turn.ts deserters), so nobody below 0 joins (audit 2026-11-23: -10 joined, then left).
+  if (affection < 0) return 0;
   const score = taste.affectionWeight * Math.max(0, affection) / 100 + (1 - taste.affectionWeight) * reputationScore(reputation);
   return Math.max(0.02, Math.min(0.95, score * 1.15 / taste.pickiness));
 };

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply, type TurnContext } from '../app/_lib/game/turn';
-import { renamePlaces, addressedIn, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, goalHere, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session, chaptersOpen, promptUpToAct, regionQuestsOf, regionOpen, bossOpen, storyPointsOf, alikeQuest, gritOf, maxManaOf, autoBattleStep, finisherOf, defeatCost } from '../app/_lib/game/core';
+import { renamePlaces, addressedIn, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, goalHere, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session, chaptersOpen, promptUpToAct, regionQuestsOf, regionOpen, bossOpen, storyPointsOf, alikeQuest, gritOf, maxManaOf, autoBattleStep, finisherOf, defeatCost, passedBy, joinChance } from '../app/_lib/game/core';
 import { knownName } from '../app/api/gm/_lib/speech';
 import { readWritten } from '../app/api/gm/_lib/parse';
 import { foesOf, findFoe } from '../app/_lib/monsters';
@@ -407,6 +407,13 @@ test('the story may run ahead of its order: the next step\'s foe is fought at th
   assert.equal(defeatCost(g, { ...poor, characterGold: 9 }).session.characterGold, 4, 'half the gold');
   const back = defeatCost(g, { ...poor, log: [...poor.log, '플레이어: 간다', '플레이어: 싸운다'], rewind: poor });
   assert.ok(back.back && back.session.log.length === poor.log.length + 1 && !back.session.rewind, 'turned back to the saved moment');
+  // Someone walked past stays passed by here until the hero speaks to them again (실바엘 blocked the way three times, 2026-11-23).
+  const ignored = { ...s0, handledNpcs: ['실바엘'], log: [...s0.log, '시스템: 실바엘을 무시하고 지나쳤습니다.'] };
+  assert.deepEqual(passedBy(ignored), ['실바엘']);
+  // Nobody below 0 joins: a companion below 0 walks out the next turn (audit 2026-11-23: -10 with a big name joined, then left).
+  assert.equal(joinChance(-10, 5000, { affectionWeight: 0.3, pickiness: 1 }), 0);
+  assert.ok(joinChance(0, 5000, { affectionWeight: 0.3, pickiness: 1 }) > 0);
+  assert.deepEqual(passedBy({ ...ignored, log: [...ignored.log, '시스템: 실바엘과 대화를 시작했습니다.'] }), [], 'spoken to again: no longer passed by');
   assert.deepEqual(goalsFinished(g, s0), []);
   assert.deepEqual(goalsFinished(g, { ...s0, log: [...s0.log, 'GM: 【그림우드 · 낮】 협곡 아래에서 와이번의 날갯소리가 들린다.', '플레이어: 넬과 함께 둥지에서 돌아오는 와이번을 노린다'] }), [truth], 'the hero going after the wyvern in the scene moves the goal to the hunt');
   assert.deepEqual(goalsFinished(g, { ...s0, log: [...s0.log, '플레이어: 한나에게 와이번 이야기를 묻는다'] }), [], 'naming it with no wyvern in the scene is not going after it');
@@ -658,6 +665,35 @@ test('each signed-in beta player gets 500 turns in all and 200 a day, remembered
   assert.equal(used(), 1, 'redraws after a turn are not turns');
   turnBlock(req(b.token), true, true);
   assert.equal(used(), 2, 'past FREE_CALLS a follow-up counts (the flag comes from the page)');
+  // A turn is counted when its writing starts; the bookkeeping after it is free, and so is one retry of the same action
+  // (audit 2026-11-23: the writing alone cost nothing and could be sent again and again).
+  const c = signInWith('kakao', '300', '다', '') as { token: string; pid: string }, usedC = () => JSON.parse(readFileSync(path.join(dir, 'turns.json'), 'utf8'))[c.pid] || 0;
+  const play = (action: string) => { turnBlock(req(c.token), true, false, 'write', action); turnBlock(req(c.token), true, false, 'fill', action); };
+  play('수레 자국을 살핀다');
+  assert.equal(usedC(), 1, 'writing + bookkeeping: one turn');
+  play('수레 자국을 살핀다');
+  assert.equal(usedC(), 1, 'the same action again (a reload, an error): free once');
+  play('수레 자국을 살핀다');
+  assert.equal(usedC(), 2, 'and only once');
+  for (let i = 0; i < 3; i++) turnBlock(req(c.token), true, false, 'write', '글만 반복 ' + i);
+  assert.equal(usedC(), 5, 'writing alone, sent again and again, counts every time');
+  turnBlock(req(c.token), true, false, '', '검을 휘두른다');
+  assert.equal(usedC(), 6, 'a fight call (no writing) counts as before');
+  // Saves through the tunnel (audit 2026-11-23): only the signed-in account's own play save, for a game that exists, up to 2MB.
+  const root = process.cwd(), saveDir = require('node:fs').mkdtempSync(path.join(require('node:os').tmpdir(), 'saves-'));
+  require('node:fs').mkdirSync(path.join(saveDir, 'saves'));
+  require('node:fs').writeFileSync(path.join(saveDir, 'saves', 'games.json'), JSON.stringify([{ id: 'g1' }]));
+  process.chdir(saveDir);
+  try {
+    const saves = await import('../app/api/saves/[key]/route');
+    const put = (key: string, token: string, body = '{"log":[]}') => saves.PUT(new Request('http://x/api/saves/' + key, { method: 'PUT', body, headers: { 'cf-connecting-ip': '5.5.5.5', cookie: `crpg-session=${token}` } }), { params: Promise.resolve({ key }) }).then(r => r.status);
+    assert.equal(await put(`session-g1-${c.pid}`, c.token), 200, 'own save: kept');
+    assert.equal(await put(`session-g1-${c.pid}`, ''), 401, 'not signed in: refused');
+    assert.equal(await put(`session-g1-${b.pid}`, c.token), 403, "someone else's save: refused");
+    assert.equal(await put(`session-zz9-${c.pid}`, c.token), 403, 'a game that does not exist: refused');
+    assert.equal(await put(`session-g1-${c.pid}`, c.token, JSON.stringify({ log: ['가'.repeat(700_000)] })), 413, 'over 2MB as received: refused');
+    assert.deepEqual(require('node:fs').readdirSync(path.join(saveDir, 'saves')).sort(), ['games.json', `session-g1-${c.pid}.json`]);
+  } finally { process.chdir(root); require('node:fs').rmSync(saveDir, { recursive: true, force: true }); }
   updateAccount(listAccounts().find(x => x.pid === b.pid)!.id, { limit: 3 });
   turnBlock(req(b.token)); turnBlock(req(b.token));
   assert.equal(turnBlock(req(b.token), false), TURNS_REPLY, 'all turns used up');

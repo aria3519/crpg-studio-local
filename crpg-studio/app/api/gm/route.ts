@@ -17,12 +17,13 @@ export async function POST(request: Request) {
   try {
     const body: GmBody = await request.json();
     if (isPublic(request) && !accountOf(request)) return NextResponse.json(LOGIN_REPLY, { status: 401 });
-    if (!aiAllowed(request, body.phase !== 'write')) return NextResponse.json(LIMIT_REPLY, { status: 429 });
+    if (!aiAllowed(request)) return NextResponse.json(LIMIT_REPLY, { status: 429 });
     // Choices drawn again and a small roll's scene come after the player's turn, not as one (FREE_CALLS).
     // A fresh game's first choices (a redraw over the prologue alone) are the game's, not a turn: the opening's own request never counted.
     // shortcut: history is the page's word, so a client could redraw for free; only choices come back and the daily budget caps it.
     const opening = body.reroll === true && Array.isArray(body.history) && body.history.length <= 1;
-    const blocked = turnBlock(request, body.phase !== 'write' && !opening,body.reroll === true || (body.diceResult?.weight === 'small' && body.diceResult?.dc === 0));
+    // The turn is the writing's (beta.ts turnBlock); the bookkeeping after it uses the credit the writing left. Fights have no writing.
+    const blocked = turnBlock(request, !opening, body.reroll === true || (body.diceResult?.weight === 'small' && body.diceResult?.dc === 0), body.phase === 'write' ? 'write' : body.mode === 'combat' ? '' : 'fill', String(body.action || '').slice(0, 300));
     if (blocked) return NextResponse.json(blocked, { status: 429 });
     if (isPublic(request) && body.phase !== 'write') void logEvent(request, 'turn', { action: String(body.action || '').slice(0, 300) }).catch(() => {});
     if (typeof body.action !== 'string' || !body.action.trim() || body.action.length > 4000) {

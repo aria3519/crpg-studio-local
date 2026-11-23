@@ -1,5 +1,5 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 // Test-server accounts (server only; middleware.ts runs on Node to read them). The admin makes each account on the local
@@ -16,15 +16,20 @@ export type Account = { id: string; pid: string; salt: string; hash: string; lim
 type Store = { accounts: Account[]; sessions: Record<string, { pid: string; at: string }> };
 
 // Re-read only when the file changed: middleware and the routes may be separate module copies in one server.
+// Written to a side file then renamed over the old one, so a server closed mid-write never leaves half a file (audit 2026-11-23).
+export const writeWhole = (file: string, text: string) => { const tmp = `${file}.${process.pid}.tmp`; writeFileSync(tmp, text); renameSync(tmp, file); };
 let cache: { mtime: number; store: Store } | null = null;
+// A file that exists but can't be read is never written over: before, it read as no accounts and the next sign-in saved a
+// file holding that one account, losing every other.
+let unreadable = false;
 const load = (): Store => {
   let mtime = 0;
   try { mtime = statSync(FILE).mtimeMs; } catch { return { accounts: [], sessions: {} }; }
   if (cache?.mtime === mtime) return cache.store;
-  try { cache = { mtime, store: JSON.parse(readFileSync(FILE, 'utf8')) as Store }; } catch { return cache?.store || { accounts: [], sessions: {} }; }
+  try { cache = { mtime, store: JSON.parse(readFileSync(FILE, 'utf8')) as Store }; unreadable = false; } catch { unreadable = true; return cache?.store || { accounts: [], sessions: {} }; }
   return cache.store;
 };
-const save = (store: Store) => { mkdirSync(DIR, { recursive: true }); writeFileSync(FILE, JSON.stringify(store, null, 1)); cache = null; };
+const save = (store: Store) => { if (unreadable) throw new Error('accounts.json을 읽지 못해 덮어쓰지 않습니다.'); mkdirSync(DIR, { recursive: true }); writeWhole(FILE, JSON.stringify(store, null, 1)); cache = null; };
 
 const hashOf = (password: string, salt: string) => scryptSync(password, salt, 32).toString('hex');
 const tokenKey = (token: string) => createHash('sha256').update(token).digest('hex');

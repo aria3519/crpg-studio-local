@@ -4,6 +4,7 @@
 //
 //   node tests/play-live.cjs --action "떠돌이 약초사에게 냄새를 묻는다" [--talk 3] [--game 0wxcoq1ef] [--session seed.json] [--keep]
 //   node tests/play-live.cjs --talk 3 --keep     (no --action: goes on with the talk left open)
+//   node tests/play-live.cjs --say "그럼 쏴 봐!" --talk 0   (types a line into the open talk window)
 //   node tests/play-live.cjs --press 싸운다 --talk 0 --keep  (presses a button first, e.g. a fight)
 //   node tests/play-live.cjs --talk 0 --wait 30  (no --action: just opens the save and watches for 30s, e.g. a redraw)
 //
@@ -60,6 +61,20 @@ const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}
   let s = save();
   // --press: a button by its text (싸운다 on a fight), then the log it adds and the screen are shown.
   if (PRESS) { const n = save().log.length; if (!await until(`[...document.querySelectorAll('button')].some(b => b.textContent.trim() === ${JSON.stringify(PRESS)})`, 30000)) throw new Error(PRESS + ' 버튼이 없습니다.'); await shot('0-before'); await click(PRESS); console.log('누름:', PRESS); s = await settle(n); await readPages(); show(s.log.slice(n)); }
+  // --say: a line typed into the open talk window (not one of its suggested lines).
+  const SAY = arg('say', '');
+  if (SAY) {
+    if (!await until(`!!document.querySelector('form.talkInput input')`, 60000)) throw new Error('대화 입력 칸이 뜨지 않았습니다.');
+    await shot('0-before');
+    const n = save().log.length;
+    await js(`(() => { const el = document.querySelector('form.talkInput input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, ${JSON.stringify(SAY)}); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await wait(300);
+    await js(`document.querySelector('form.talkInput').requestSubmit()`);
+    console.log('대사:', SAY);
+    s = await settle(n); await readPages(); await shot('1-say');
+    s = save(); show(s.log.slice(n));
+    console.log('→', calls(), '| mode:', s.mode, '| 대화 상대:', s.talkNpc || '-');
+  }
   if (ACTION) {
   // An open talk is closed first, so the action goes in as a scene action.
   for (let k = 0; k < 10 && !(await js(`!!document.querySelector('form.gmChoiceOwn')`)); k++) { await readPages(); await click('대화 끝내기'); await wait(2000); }

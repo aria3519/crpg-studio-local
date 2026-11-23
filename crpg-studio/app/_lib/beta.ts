@@ -1,7 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { appendFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { accountOfToken, SESSION_COOKIE } from './beta-accounts';
+import { accountOfToken, SESSION_COOKIE, writeWhole } from './beta-accounts';
 
 // Public beta helpers (server only). middleware.ts tells visitors apart and sets x-crpg-pid.
 export const BETA_DIR = path.resolve(process.cwd(), process.env.BETA_DATA_DIR || 'beta-data');
@@ -75,20 +75,30 @@ export const turnsToday = (pid: string) => loadDaily().counts[pid] || 0;
 // lost 69 of 200 turns to them (2026-11-20). The flag comes from the page, so only FREE_CALLS follow each counted turn free.
 export const FREE_CALLS = 3;
 const freeLeft = new Map<string, number>();
+// A turn is counted when its writing starts (stage 'write', the costly model), not at the bookkeeping after it: called on its
+// own, the writing cost nothing and could be repeated without limit (audit 2026-11-23). The write leaves one free bookkeeping
+// call ('fill') for its scene. The same action sent again right after its counted turn (a reload mid-scene, an error) is free
+// once.
+const fillCredit = new Set<string>();
+const lastTurn = new Map<string, { action: string; retried: boolean }>();
 // Why a turn can't be played (the reply to send), or undefined when it can; counted when `count` (and not a free follow-up).
-export function turnBlock(req: Request, count = true, followUp = false) {
+export function turnBlock(req: Request, count = true, followUp = false, stage: 'write' | 'fill' | '' = '', action = '') {
   if (!isPublic(req)) return undefined;
   const acct = accountOf(req);
   if (!acct) return LOGIN_REPLY;
   const turns = loadTurns(), today = loadDaily(), pid = acct.pid, n = turns[pid] || 0, d = today.counts[pid] || 0;
   if (n >= acct.limit) return TURNS_REPLY;
   if (d >= DAILY_TURNS) return TODAY_REPLY;
+  if (stage === 'fill' && fillCredit.delete(pid)) return undefined;
+  const last = lastTurn.get(pid), retry = count && stage === 'write' && !followUp && !!action && last?.action === action && !last.retried;
+  if (retry) { last!.retried = true; fillCredit.add(pid); return undefined; }
+  if (stage === 'write') fillCredit.add(pid);
   const free = count && followUp && (freeLeft.get(pid) || 0) > 0;
   if (free) freeLeft.set(pid, freeLeft.get(pid)! - 1);
   else if (count) {
-    if (!followUp) freeLeft.set(pid, FREE_CALLS);
+    if (!followUp) { freeLeft.set(pid, FREE_CALLS); lastTurn.set(pid, { action, retried: false }); }
     turns[pid] = n + 1; today.counts[pid] = d + 1;
-    mkdirSync(BETA_DIR, { recursive: true }); writeFileSync(turnsFile(), JSON.stringify(turns)); writeFileSync(dailyFile(), JSON.stringify(today));
+    mkdirSync(BETA_DIR, { recursive: true }); writeWhole(turnsFile(), JSON.stringify(turns)); writeWhole(dailyFile(), JSON.stringify(today));
   }
   return undefined;
 }
