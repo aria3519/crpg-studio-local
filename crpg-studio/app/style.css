@@ -1607,3 +1607,31 @@ details[open]>summary .storyPreview{display:none}
 
 .adminBuildNotes{margin:-6px 0 18px;padding:10px 14px 10px 30px;background:#f7f8fa;border:1px solid #e9e9ed;border-radius:9px;font-size:12px;line-height:1.7;color:#4a515c}
 .adminBuildNotes ul{margin:2px 0 6px;padding-left:18px;color:#6b7280}
+/* Phones (user 2026-11-23): the play screen shows the status, a square stage and its choices in the first screen. PC (>1100px) is untouched. */
+@media(max-width:600px){
+  .gameInfo h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .appShell:has(.playPage) .topbar{padding:8px 12px;gap:6px;min-height:0}
+  .appShell:has(.playPage) .mainNav{display:none}
+  .appShell:has(.playPage) .topbar .btn{padding:7px 10px;font-size:12px}
+  .appShell:has(.playPage) .logo{font-size:15px}
+  .playPage{padding:8px 8px 40px}
+  .playBoard{gap:8px}
+  .playStatus{gap:6px 10px;padding:8px 10px;border-radius:10px}
+  .statusPortrait{width:42px;height:42px}
+  .statusFact,.statusTime{font-size:12px}
+  .statusTime{padding:3px 8px}
+  .statusFact.statusPlace small{display:none}
+  .sceneStage{aspect-ratio:1/1;border-radius:10px}
+  .sceneBackground{object-fit:cover}
+  .sceneTopBar{top:8px;left:8px;right:8px;gap:5px}
+  .sceneLocation>b{padding:6px 10px;font-size:12px;gap:4px}
+  .sceneBody{padding:6px 8px}
+  .sceneBody:empty{display:none}
+  .playBoard{grid-template-areas:'tabs' 'status' 'scene' 'side'}
+  .playBoard.phoneSide{grid-template-areas:'tabs' 'side'}
+  .playBoard .phoneTabs{grid-area:tabs;display:flex;gap:6px;position:sticky;top:0;z-index:9;padding:6px 0;background:#f8f9fb}
+  .playBoard:not(.phoneSide) .playLogPanel,.playBoard.phoneSide .playStatus,.playBoard.phoneSide .playScenePanel,.playLogPanel .sideTabs{display:none}
+}
+.phoneTabs{display:none}
+.phoneTabs button{position:relative;flex:1;padding:9px 4px;border:1px solid #ececf0;border-radius:9px;background:#fff;color:#596579;font-size:13px;font-weight:700}
+.phoneTabs button.active{background:#ffe8e7;border-color:#ffe8e7;color:#cf4c55}

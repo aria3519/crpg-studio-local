@@ -608,6 +608,8 @@ export default function Home() {
     });
   }, [session, ready, view]);
   const [sideTab, setSideTab] = useState<'log' | 'info'>('log');
+  // Phones show one of 현재 진행 / 진행 기록 / 정보창 at a time (user 2026-11-23); on PC every part stays on screen.
+  const [phonePlay, setPhonePlay] = useState(true);
   // Story entries from this log item on glow until clicked, so the new scene gets read.
   const [freshFrom, setFreshFrom] = useState<number | null>(null);
   // A new scene is read first in a visual-novel box over the stage (ref/진행기록 예시.jpg), a paragraph at a time with ▽;
@@ -629,7 +631,7 @@ export default function Home() {
   const nextPage = () => { if (vnAt + 1 < vnPages.length) setVnPage(vnAt + 1); else if (reading) finishReading(); };
   // The fight plays out in the log, so a fight brings the log forward.
   useEffect(() => { if (session.mode === 'combat') setSideTab('log'); }, [session.mode]);
-  useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' }); }, [session.log, sideTab, !!liveScene, readDone]);
+  useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' }); }, [session.log, sideTab, phonePlay, !!liveScene, readDone]);
   useEffect(() => { if (!busy) setLiveScene(''); }, [busy]);
   useEffect(() => { if (notice) { const t = setTimeout(() => setNotice(''), 2500); return () => clearTimeout(t); } }, [notice]);
 
@@ -2018,7 +2020,8 @@ export default function Home() {
   // The map (and its button) is there only while the player can move.
   const showMap = mapOpen && !!m && !locked;
   const interactable = !!here && here.eventTrigger === 'interact' && !!here.eventText?.trim() && !(here.eventOnce && (session.triggeredEvents || []).includes(interactKey));
-  return <div className="playBoard">
+  return <div className={phonePlay ? 'playBoard' : 'playBoard phoneSide'}>
+  <div className="phoneTabs" role="tablist">{([['play', '현재 진행'], ['log', '진행 기록'], ['info', '정보창']] as const).map(([key, label]) => { const on = key === 'play' ? phonePlay : !phonePlay && sideTab === key; return <button key={key} type="button" role="tab" aria-selected={on} className={on ? 'active' : ''} onClick={() => { setPhonePlay(key === 'play'); if (key !== 'play') setSideTab(key); }}>{label}{key === 'info' && !on && infoFresh.length > 0 && <i className="newDot" role="img" aria-label="새 변화"/>}</button>; })}</div>
   <PlayIntro cover={game.cover} art={background} onDone={setTitleDone}>
     <div className="introTitle"><small>{session.log.length > 1 ? 'CONTINUE' : 'NEW GAME'}</small><b>{game.name}</b><span>Lv.{session.level || 1} · {placeName}</span>{currentGoalOf(session) && <span>{currentGoalOf(session)}</span>}<i className="introBar"/></div>
   </PlayIntro>
