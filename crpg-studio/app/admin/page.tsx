@@ -42,7 +42,7 @@ export default function Admin() {
   const bar = ([label, n]: [string, number]) => <div className="adminBar" key={label}><span>{label}</span><i style={{ width: `${(n / maxDrop) * 100}%` }} /><b>{n}명</b></div>;
 
   return <main className="adminPage">
-    <div className="adminHead"><h1>베타 대시보드</h1><button className="btn" onClick={() => void load()}>새로고침</button>{error && <small className="feedbackError">{error}</small>}</div>
+    <div className="adminHead"><h1>베타 대시보드</h1><small title="이 서버가 돌리는 빌드: 커밋 내용 · 빌드 시각">빌드 {process.env.BUILD_LABEL}</small><button className="btn" onClick={() => void load()}>새로고침</button>{error && <small className="feedbackError">{error}</small>}</div>
     <div className="adminCards">
       <div><small>가입자</small><b>{data.members.length}/{data.maxAccounts}</b></div><div><small>방문자</small><b>{s.players}</b></div><div><small>24시간 내 활동</small><b>{s.today}</b></div><div><small>총 턴</small><b>{s.turns}</b></div>
       <a href="#feedback" className={s.unread ? 'hot' : ''}><small>💬 안 읽은 의견</small><b>{s.unread}</b></a>
