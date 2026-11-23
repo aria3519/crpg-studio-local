@@ -873,6 +873,18 @@ export default function Home() {
   // turn); if the new set strays too, just those choices go. Keyed by the set, a stray set drew a new stray set up to 9 times
   // running, each a turn (이현욱, 박재유: 27 each, 2026-11-20).
   const stray = !busy && !session.mode && (session.suggestedActions || []).some(c => !placeReasoned(c, storyPlaces, toldOf(session)));
+  // Portraits are 2.5-3.3MB and the first-meeting cut-in lasts 1.25s: fetched only when someone stepped out, the art arrived after
+  // the cut-in had gone (1.7s through the tunnel, user 2026-11-23). On arrival, the people of this place (and of the city's spots)
+  // are fetched ahead, while the arrival scene is being written.
+  const preloaded = useRef(new Set<string>());
+  useEffect(() => {
+    if (view !== 'play') return;
+    const pin = pinOf(session), places = [pin, session.scenePlace || '', ...cityPlaces(defaultMapGenre(game)).filter(([, c]) => c === pin).map(([n]) => n)].filter(Boolean);
+    for (const src of new Set([...new Set(places)].flatMap(p => placePeople(game, session, p)).map(n => npcImage(game, n)))) {
+      if (!src || preloaded.current.has(src)) continue;
+      preloaded.current.add(src); new Image().src = src;
+    }
+  }, [view, game.id, session.pinId, session.scenePlace]); // eslint-disable-line react-hooks/exhaustive-deps
   const redrawnFor = useRef('');
   useEffect(() => {
     if (!stray || view !== 'play') return;
