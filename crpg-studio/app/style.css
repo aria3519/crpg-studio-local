@@ -1606,3 +1606,4 @@ details[open]>summary .storyPreview{display:none}
 .storyEntry.storyHost .storyEntryText{color:#3b2a0a;font-size:14px;line-height:1.6}
 
 .adminBuildNotes{margin:-6px 0 18px;padding:10px 14px 10px 30px;background:#f7f8fa;border:1px solid #e9e9ed;border-radius:9px;font-size:12px;line-height:1.7;color:#4a515c}
+.adminBuildNotes ul{margin:2px 0 6px;padding-left:18px;color:#6b7280}
