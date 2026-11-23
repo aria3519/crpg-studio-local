@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { BETA_DIR, EVENTS_FILE, isPublic, turnsUsed } from '../../../_lib/beta';
-import { betaReport, type BetaEvent, type VisitorSave } from '../../../_lib/beta-report';
+import { BETA_DIR, EVENTS_FILE, RECORDS_FILE, isPublic, turnsUsed } from '../../../_lib/beta';
+import { betaReport, type BetaEvent, type TurnRecord, type VisitorSave } from '../../../_lib/beta-report';
 import { listAccounts, MAX_ACCOUNTS, updateAccount } from '../../../_lib/beta-accounts';
 export const runtime = 'nodejs';
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   }
   const events: BetaEvent[] = (await readFile(EVENTS_FILE, 'utf8').catch(() => '')).split('\n').flatMap(l => { try { return l ? [JSON.parse(l)] : []; } catch { return []; } })
     .filter(e => !e.ua?.startsWith('curl/')); // address checks from this machine, not visitors
-  const games: { id: string; name: string }[] = JSON.parse(await readFile(path.join(saves, 'games.json'), 'utf8').catch(() => '[]'));
+  const games: { id: string; name: string }[] & Parameters<typeof betaReport>[2] = JSON.parse(await readFile(path.join(saves, 'games.json'), 'utf8').catch(() => '[]'));
   const visitorSaves: VisitorSave[] = [];
   for (const f of await readdir(saves).catch(() => [] as string[])) {
     const m = SAVE_FILE.exec(f);
@@ -34,7 +34,10 @@ export async function GET(request: Request) {
   }
   // Seats are signed-in accounts, not visitors (bots visit too); each comes with how it signed in and its name.
   const members = listAccounts().map(a => ({ pid: a.pid, id: a.id, memo: a.memo || '', created: a.created, limit: a.limit, used: turnsUsed(a.pid), disabled: !!a.disabled }));
-  return json({ ...betaReport(events, visitorSaves, games.map(g => ({ id: g.id, name: g.name })), await readIds()), members, maxAccounts: MAX_ACCOUNTS });
+  // Every recorded turn, for where the story stood still (a save shows only where it is now).
+  // shortcut: reads the whole file (~22MB) on each load; keep a running summary if it grows past ~200MB.
+  const records: TurnRecord[] = (await readFile(RECORDS_FILE, 'utf8').catch(() => '')).split('\n').flatMap(l => { try { return l ? [JSON.parse(l)] : []; } catch { return []; } });
+  return json({ ...betaReport(events, visitorSaves, games, await readIds(), Date.now(), records), members, maxAccounts: MAX_ACCOUNTS });
 }
 
 export async function POST(request: Request) {

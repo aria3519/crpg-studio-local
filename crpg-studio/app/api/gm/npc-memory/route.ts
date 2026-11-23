@@ -30,8 +30,8 @@ export async function POST(request: Request) {
     const result = await response.json();
     if (!response.ok) return NextResponse.json({ error: result?.error?.message || 'AI API 호출에 실패했습니다.' }, { status: 502 });
     const note = JSON.parse(result?.choices?.[0]?.message?.content || '{}')?.note;
-    if (typeof note !== 'string' || !note.trim()) throw new Error('NPC 기억이 비어 있습니다.');
-    return NextResponse.json({ note: note.trim().slice(0, 600) });
+    // Nothing new worth keeping comes back blank: the memory stays as it was, not an error.
+    return NextResponse.json({ note: (typeof note === 'string' && note.trim() ? note.trim() : previous).slice(0, 600) });
   } catch (error) {
     void logError(request, 'npc-memory', error);
     return NextResponse.json({ error: error instanceof Error ? error.message : 'NPC 기억 서버 오류' }, { status: 500 });

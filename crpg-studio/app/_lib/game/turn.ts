@@ -2,7 +2,7 @@
 // on the player next (a monster, a hostile NPC). Pure: no React, no network. The play screen applies the result and
 // shows the effects; tests replay recorded replies through it (tests/turn.test.ts).
 import { TRAVEL_VERB } from '../travel';
-import { talkStartIndex, metNames, unnamedScene, amountsIn, tookItem, relationOf, placeHeading, heroFits, wasTold, wearNew, rollOutcome, timeOfDay, dueBeat, withDecision, beatFoe, gritOf, focusAfter, goalsFinished, goalPath, withNextMain, preparedGoal, ownStoryOpen, currentGoalOf, alikeQuest, FIRST_LIKE_MAX, LIKE_GAP, dismissTemps, storyNpcsAfter, storyFoes, bossWaits, foeLevel, withStory, storyProgress, storyPointsOf, finalBoss, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, AFFECTION_UNIT, MANA_REGEN_TURN, train } from './core';
+import { talkStartIndex, metNames, NPC_LOOKS, unnamedScene, amountsIn, tookItem, relationOf, placeHeading, heroFits, wasTold, wearNew, rollOutcome, timeOfDay, dueBeat, withDecision, beatFoe, gritOf, focusAfter, goalsFinished, goalPath, withNextMain, preparedGoal, ownStoryOpen, currentGoalOf, alikeQuest, FIRST_LIKE_MAX, LIKE_GAP, dismissTemps, storyNpcsAfter, storyFoes, bossWaits, foeLevel, withStory, storyProgress, storyPointsOf, finalBoss, weightOf, checkStakes, questStakes, questWeight, MapPin, cityPlaces, cityOfPlace, defaultMapGenre, defaultCharacterConfig, Game, DiceResult, Session, TALK_LIMIT, EVENT_XP_GAP, talkTurns, questsOf, QUEST_REPUTATION, startGold, applyQuests, clampAffection, attitudeTier, REPUTATION_STEP, clampReputation, reputationRank, formatReputation, knownNpcNames, makeId, AFTERMATH, reachablePins, d, startCombat, debugFoe, HOSTILE_AFFECTION, CLASH_GAP, maxManaOf, maxHpOf, growthFields, growStats, withXp, TALK_ACCEPT, rewardBase, regionWhere, playerActs, HP_REGEN_TURN, restReason, QuestClear, battleIntro, josa, talkEntries, withPlayerLine, QUEST_AFFECTION, QUEST_GOLD, AFFECTION_STEP, AFFECTION_UNIT, MANA_REGEN_TURN, train } from './core';
 import { GRADE_LABELS, KIND_LABELS, SKILLS, infoOf, gearOf, bonusText, skillText, enemyGear, gradeForTier, dropChance, rollGrade, rollSkill, randomGearKind, gearName, POTIONS, healShareOf, enemySkill, enemySkillText, type EnemySkill, type Grade, type ItemInfo, type ItemKind, type Equipped } from '../items';
 import { foesOf, findFoe, trophyOf, foeImage, isFoeName, isDangerous, pickEncounter, ENCOUNTER_CHANCE, huntTarget, HUNT_CHANCE, foeInText, wordIn, type Foe } from '../monsters';
 import { POWER_TIERS, MAX_POWER, MAX_LEVEL, foeLevelRange, enemyStats, levelBonus, gainXp, xpToNext, storyLevel, storyLevelAt, xpToReach, battleXp, questXp, deedXp, levelForTier, tierOfLevel, encounterLevel, companionStats } from '../progression';
@@ -157,7 +157,10 @@ export function applyReply(game: Game, current: Session, data: any, message: str
       data.failedQuests = (Array.isArray(data.failedQuests) ? data.failedQuests : []).filter((c: unknown) => !prepared.some(q => applyQuests([q], { failedQuests: [c] }).failed.length));
     }
     const closing = applyQuests(questsOf(current), { completedQuests: data.completedQuests, failedQuests: data.failedQuests }).done;
-    const addQuests = Array.isArray(data.addQuests) ? data.addQuests.flatMap((x: unknown) => { const giver = offeredBy(x), q = ownStoryOpen(game, questsOf(current).filter(q => !closing.includes(q)), giver) ? '' : preparedGoal(game, current, offerText(x), giver, closing); return q ? [{ text: q, giver }] : []; }) : [];
+    // A job the hero took in a talk ([대화 끝: … | 맡은 일]) is an offer from the partner, whether or not the bookkeeper listed it:
+    // 레지나's 창고와 부엌 정리 was taken, the bookkeeper's addQuests came back empty, and her story never started (2026-11-23).
+    const taken = current.mode === 'talk' && current.talkNpc && typeof data.task === 'string' && data.task ? [{ text: data.task, giver: current.talkNpc }] : [];
+    const addQuests = [...(Array.isArray(data.addQuests) ? data.addQuests : []), ...taken].flatMap((x: unknown) => { const giver = offeredBy(x), q = ownStoryOpen(game, questsOf(current).filter(q => !closing.includes(q)), giver) ? '' : preparedGoal(game, current, offerText(x), giver, closing); return q ? [{ text: q, giver }] : []; }).filter((o, i, all) => all.findIndex(p => p.text === o.text) === i);
     let questLog0 = withNextMain(game, current, applyQuests(questsOf(current), { ...data, addQuests }, current.questGivers || {}));
     // A next step the log already shows done (it happened before it became the goal) closes as it comes, and the one after follows.
     for (let k = 0; k < 8 && !debug; k++) {
@@ -208,17 +211,29 @@ export function applyReply(game: Game, current: Session, data: any, message: str
     // while the player only set off for 진흙 골목), and they vanished on arrival without a word. Who meets the hero at a place is the
     // director's arrival line, which the writer turns into this scene.
     const sceneText = String(data.text || ''), onStage = current.sceneNpcs || [];
-    const inScene = (n: string) => onStage.includes(n) || [n, n.split(/\s+/)[0]].some(w => wordIn(sceneText, w));
+    // Someone the hero hasn't met is written by their look (heroCalls), not their name: 엘로이즈 as "떠돌이 약초사" fell off stage every turn.
+    // Or by the look's last word: 핍 as "정보통", not "골목의 정보통" (7 of 박재유's scenes).
+    const unmetLook = (n: string) => !metNames(current).includes(n) && NPC_LOOKS[n] || '';
+    const inScene = (n: string) => onStage.includes(n) || [n, n.split(/\s+/)[0], unmetLook(n), unmetLook(n).split(' ').at(-1) || ''].some(w => !!w && (w.length >= 2 || w === n) && wordIn(sceneText, w));
     const sceneNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => v.trim()).filter((v: string) => !!v && (debug || ((!knownNpcs.length || knownNpcs.includes(v) || relationships.some(r => r.name === v)) && (!!current.mode || inScene(v))))))].slice(0, 3) as string[] : onStage;
     // A talk or fight keeps its partner on stage; the encounter prompt only returns for newcomers.
     // Companions travel with the player, so the GM naming one in the scene never turns into a fresh encounter.
     // Who was dealt with is cleared by the game's own moves (moveTo, walkInTown), never by a heading.
     const handledBefore = current.handledNpcs || [];
     const talkTo = !current.mode && typeof data.talkTo === 'string' ? data.talkTo : '';
-    const stageNpcs = current.mode ? (current.sceneNpcs || []) : talkTo ? [...new Set([talkTo, ...sceneNpcs])].slice(0, 3) : sceneNpcs.filter(n => !(current.party || []).includes(n) && !isFoeName(defaultMapGenre(game), n) && (debug || !handledBefore.includes(n)));
+    // The writer stops a scene where someone faces the hero, to hand over to their talk ([대화: 이름]). With the tag missed (no
+    // choices, no talk), whoever the scene stopped at goes on stage, even someone dealt with before, or someone the bookkeeper left
+    // out (선장, 대신관): those scenes left nothing to do and drew their choices again, a turn each (2026-11-20).
+    const stopped = !current.mode && !talkTo && !suggestedActions.length && !data.check && !data.ambush && !debug;
+    const lastPara = sceneText.trim().split(/\n\s*\n/).at(-1) || '';
+    const callsOf = (n: string) => { const look = NPC_LOOKS[n] || '', tail = look.split(' ').at(-1) || ''; return [n, n.split(/\s+/)[0], look, tail.length >= 3 ? tail : ''].filter(Boolean); };
+    const mentionAt = (n: string) => Math.max(-1, ...callsOf(n).filter(w => wordIn(lastPara, w)).map(w => lastPara.lastIndexOf(w)));
+    const facing = !stopped ? '' : (sceneNpcs.length ? sceneNpcs : knownNpcs).filter(n => !(current.party || []).includes(n) && !isFoeName(defaultMapGenre(game), n))
+      .map(n => [n, mentionAt(n)] as const).filter(([, at]) => at >= 0).sort((a, b) => b[1] - a[1])[0]?.[0] || sceneNpcs.find(n => !(current.party || []).includes(n)) || '';
+    const stageNpcs = current.mode ? (current.sceneNpcs || []) : talkTo ? [...new Set([talkTo, ...sceneNpcs])].slice(0, 3) : [...new Set([...(facing ? [facing] : []), ...sceneNpcs.filter(n => !(current.party || []).includes(n) && !isFoeName(defaultMapGenre(game), n) && (debug || !handledBefore.includes(n)))])].slice(0, 3);
     // A test action may also teleport within the current map.
     const debugPin = debug && typeof data.moveToPinId === 'string' ? (game.maps || []).find(m => m.id === current.mapId)?.pins.find(p => p.id === data.moveToPinId && p.id !== current.pinId && p.kind !== 'event' && p.kind !== 'exit') : undefined;
-    const handledNpcs = talkTo ? handledBefore.filter(n => n !== talkTo) : handledBefore;
+    const handledNpcs = talkTo || facing ? handledBefore.filter(n => n !== talkTo && n !== facing) : handledBefore;
     // Whatever an NPC's strength turns out to be the first time, it stays that way for every later fight.
     const knownFoe = current.combat ? current.npcCombat?.[current.combat.npc] : undefined;
     const combat = current.mode === 'combat' && current.combat ? (current.combat.round === 0 ? startCombat(current.combat, knownFoe || data.enemy) : { ...current.combat, itemUse: undefined }) : current.combat;

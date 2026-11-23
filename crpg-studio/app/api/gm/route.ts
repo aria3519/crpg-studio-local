@@ -18,7 +18,11 @@ export async function POST(request: Request) {
     const body: GmBody = await request.json();
     if (isPublic(request) && !accountOf(request)) return NextResponse.json(LOGIN_REPLY, { status: 401 });
     if (!aiAllowed(request, body.phase !== 'write')) return NextResponse.json(LIMIT_REPLY, { status: 429 });
-    const blocked = turnBlock(request, body.phase !== 'write');
+    // Choices drawn again and a small roll's scene come after the player's turn, not as one (FREE_CALLS).
+    // A fresh game's first choices (a redraw over the prologue alone) are the game's, not a turn: the opening's own request never counted.
+    // shortcut: history is the page's word, so a client could redraw for free; only choices come back and the daily budget caps it.
+    const opening = body.reroll === true && Array.isArray(body.history) && body.history.length <= 1;
+    const blocked = turnBlock(request, body.phase !== 'write' && !opening,body.reroll === true || (body.diceResult?.weight === 'small' && body.diceResult?.dc === 0));
     if (blocked) return NextResponse.json(blocked, { status: 429 });
     if (isPublic(request) && body.phase !== 'write') void logEvent(request, 'turn', { action: String(body.action || '').slice(0, 300) }).catch(() => {});
     if (typeof body.action !== 'string' || !body.action.trim() || body.action.length > 4000) {
@@ -87,6 +91,8 @@ export async function POST(request: Request) {
     // Talk replies too (step 3, 2026-11-10): the partner's words and the player's next lines come from the writer in one call;
     // the six fix-up calls that patched Luna's talk replies (refill, redo, retry, rewrite, speech fixes) are gone.
     const prewritten = (!mode || mode === 'talk') && typeof body.sceneText === 'string' ? body.sceneText.slice(0, 6000) : '';
+    // A redraw is the writer's choices alone; the game reads them as written, with no second model call.
+    const redrawn = body.reroll === true && !mode && !!prewritten;
     const early = !!String(body.prologue || '').trim() || !!String(body.initialEquipment || '').trim();
     const wild = state.safePlace !== true || mode === 'combat' || body.debug === true;
     const system = fillSystem({ state, mode, body, partner, playerVoice, talkTurns, lastReply, decided, combat, itemUse, early, wild, prewritten });
@@ -140,7 +146,7 @@ export async function POST(request: Request) {
       const { writer, input } = talkWriter({ profiles, partner, talkTurns, body, state, recent, storySoFar, playerVoice, lastReply, withThisNpc, keyFacts });
       return streamWrite(writer, input, 'talk-write');
     }
-    if (body.phase === 'write' && !mode && body.reroll !== true) {
+    if (body.phase === 'write' && !mode) {
       const { writer, input } = sceneWriter({ userContent, state, body, recent, wild, early, keyFacts, storySoFar });
       return streamWrite(writer, input, 'scene-write');
     }
@@ -156,6 +162,8 @@ export async function POST(request: Request) {
         { role: 'user', content: userContent() },
       ],
     };
+    let data: ReturnType<typeof JSON.parse> = {};
+    if (!redrawn) {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'x-usage-tag': mode || 'scene' },
       body: JSON.stringify(payload), cache: 'no-store', signal: AbortSignal.timeout(55000),
@@ -164,8 +172,12 @@ export async function POST(request: Request) {
     if (!response.ok) return NextResponse.json({ error: result?.error?.message || 'AI API 호출에 실패했습니다.' }, { status: 502 });
     const raw = result?.choices?.[0]?.message?.content;
     if (typeof raw !== 'string') throw new Error('AI 응답이 비어 있습니다.');
-    let data = JSON.parse(raw);
-    const talkWritten = readWritten({ prewritten, mode, partner, data, state, body });
+    data = JSON.parse(raw);
+    // No writer text (it failed, or a test command): no choices, so the page draws them from the writer.
+    if (!mode && !prewritten) data.choices = [];
+    }
+    // Only the numbered lines of a redraw count: a stray tag ([대화:], [판정:]) must not turn it into a scene.
+    const talkWritten = readWritten({ prewritten: redrawn ? '---\n' + prewritten.split('\n').filter(l => /^\s*\d\s*[.)]/.test(l)).join('\n') : prewritten, mode, partner, data, state, body });
     const { addQuests, ambush, check, choices, completedQuests, enemy, failedQuests, gesture, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain } = checkReply({ state, data, body, mode, fixedVoices, sheets, partner, profiles, itemUse, talkWritten, holdTalk, lastReply, playerLeaves, talkTurns, history });
     return NextResponse.json({ majorScene, nextAction, joins: mode === 'talk' && !!nextAction && data.joins === true, task: mode === 'talk' && !!nextAction && typeof data.task === 'string' ? data.task : '', afterChoices: Array.isArray(data.afterChoices) ? data.afterChoices : [], talkTo: !mode && !check && typeof data.talkTo === 'string' ? data.talkTo : '', setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, howKnown, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta, goldDelta: check ? 0 : goldDelta, addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
       addItems: !check && Array.isArray(data.addItems) ? data.addItems.slice(0, 5) : [], removeItems: !check && Array.isArray(data.removeItems) ? data.removeItems.slice(0, 5) : [],

@@ -7,7 +7,9 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply, type TurnContext } from '../app/_lib/game/turn';
-import { toBeatPlace, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session, chaptersOpen, promptUpToAct, regionQuestsOf, regionOpen, bossOpen, storyPointsOf, alikeQuest, gritOf, maxManaOf, autoBattleStep, finisherOf } from '../app/_lib/game/core';
+import { renamePlaces, addressedIn, duelBeat, metNames, foundHere, routeFor, placeHeading, bestGear, growStats, heroFits, amountsIn, tookItem, relationOf, priceAsk, unnamedScene, spendStat, growthFields, playerPower, fightOdds, foeCombat, gmGoal, goalHere, dueBeat, storyStatus, withoutUnmetNames, placeReasoned, focusAfter, goalsFinished, preparedGoal, withGuides, guideOf, guideGoal, ownStoryOpen, heldGoal, personalStories, withNextMain, joinTemp, playerActs, dismissTemps, maxHpOf, refitHp, storyFoes, writerFoes, storyProgress, withStory, finalBoss, finaleQuest, bossPlace, foeLevel, defaultMapGenre, npcWhereabouts, goalPath, storyCastFull, storyNpcsAfter, mapRoute, reachablePins, asideClue, questWeight, applyQuests, questsOf, checkDc, checkStakes, impactOf, fightEdge, pendingChoice, beatFoe, sellJunk, junkOf, rollOutcome, type Game, type Session, chaptersOpen, promptUpToAct, regionQuestsOf, regionOpen, bossOpen, storyPointsOf, alikeQuest, gritOf, maxManaOf, autoBattleStep, finisherOf } from '../app/_lib/game/core';
+import { knownName } from '../app/api/gm/_lib/speech';
+import { readWritten } from '../app/api/gm/_lib/parse';
 import { foesOf, findFoe } from '../app/_lib/monsters';
 import { mainChain } from '../app/_lib/prologues';
 import { levelForTier, storyLevel } from '../app/_lib/progression';
@@ -18,7 +20,9 @@ const expectedFile = path.join(root, 'tests', 'fixtures', 'turns.expected.json')
 type Turn = { name: string; gameId: string; session: Session; data: Record<string, unknown>; message: string; ctx?: TurnContext };
 
 const turns: Turn[] = existsSync(fixtures) ? readFileSync(fixtures, 'utf8').split('\n').filter(l => l.trim()).map(l => JSON.parse(l)) : [];
-const gamesRaw = JSON.parse(readFileSync(path.join(root, 'saves', 'games.json'), 'utf8'));
+// The knight game the fixtures were played in, without its pictures (saves/ is local play, not in the repo). Renamed as the
+// play screen loads a game (renamePlaces).
+const gamesRaw = JSON.parse(renamePlaces(readFileSync(path.join(root, 'tests', 'fixtures', 'game.json'), 'utf8')));
 const games: Game[] = Array.isArray(gamesRaw) ? gamesRaw : gamesRaw.games || Object.values(gamesRaw);
 const gameOf = (id: string) => games.find(g => g?.id === id) || games[0];
 
@@ -99,7 +103,8 @@ test('an offered job becomes the next main step, the giver own story, or no goal
   const exam = { ...s, quests: [q], log: [] };
   assert.equal(preparedGoal(g, exam, '기사단 무기 유출 경로를 밝힌다', '에드리아 하르트'), '', 'read as still running: the exam is open, so 에드리아 speaks for the main story');
   assert.equal(preparedGoal(g, exam, '기사단 무기 유출 경로를 밝힌다', '에드리아 하르트', [q]), '견습 순찰로 진흙 골목의 장물 거래 단속하기');
-  assert.equal(preparedGoal(g, s, '성채 지하 냉실', ''), '성채 지하 냉실 문 열기', 'a named story starts at its first step');
+  assert.equal(preparedGoal(g, s, '성채 지하 냉실', ''), '레지나를 도와 성채 살림 거들기', 'a named story starts at its first step');
+  assert.equal(preparedGoal(g, s, '창고 정리를 돕는다', '레지나 발트'), '레지나를 도와 성채 살림 거들기', 'the estate has its own story from the first visit');
   assert.deepEqual(withNextMain(g, s, { quests: [], added: [], done: ['성채 지하 냉실 문 열기'] }).quests[0], '변경백의 죽음을 어떻게 할지 레지나와 담판 짓기', 'a finished step hands on to the next');
   // 브리아 wolf job after the wolves already fell: nothing left to do, so it is not handed out.
   assert.equal(preparedGoal(g, { ...s, log: [...s.log, '전투: 승리 — 굶주린 늑대 무리를 쓰러뜨렸다'] }, '북문 밖 늑대 떼', ''), '', 'already happened');
@@ -252,8 +257,8 @@ test('the final boss waits at its place once its story line is done', () => {
   const t0 = turns.find(x => x.name.includes('다이어울프'));
   assert.ok(t0, 'fixture missing');
   const g = gameOf(t0.gameId), s0 = structuredClone(t0.session), place = bossPlace(g)!;
-  // The map's own name for the story's place (data: 가라앉은 등대, map: 가라앉는 등대; 마탑 본탑 → 마탑 본부).
-  assert.equal(place, '가라앉는 등대');
+  // The map's own name for the story's place (마탑 본탑 → 마탑 본부; 가라앉은 등대 was 가라앉는 on older maps, renamed on load).
+  assert.equal(place, '가라앉은 등대');
   assert.equal(bossPlace({ ...g, wizardMain: '붉은 그릇' } as Game), '마탑 본부');
   assert.equal(bossPlace({ ...g, wizardMain: '바다 건너온 용병' } as Game), '회색 탑 폐허');
   assert.ok(finaleQuest(g)!.startsWith(place) && goalPath(g, finaleQuest(g)!)[0].startsWith(place), 'the finale goal names the place');
@@ -277,6 +282,24 @@ test('the GM always gets the current goal and its steps', () => {
   assert.ok(sent.goalPath.length > 0 && sent.goalPath.some(x => x.includes('북문 초소')), 'steps name where to go');
   assert.deepEqual(sent.quests, [exam, '다른 짐승의 흔적 찾기'], 'the talk job rides along');
 });
+// 박재유 (beta 2026-11-20): the exam left undone steered every scene at 회색 탑 and 변경백가 영지 back to the wolves for ~30 turns,
+// and 레지나 relayed 에드리아's exam word for word. Arriving where people live, the place leads and the exam waits in the list.
+test('arriving where people live, a goal from elsewhere waits behind; only its own people speak of it', () => {
+  const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
+  const pin = (n: string) => (g.maps || []).flatMap(m => m.pins.map(p => ({ mapId: m.id, pinId: p.id, name: p.name }))).find(p => p.name === n)!;
+  const exam = '변경 기사단 입단 시험 통과하기';
+  const at = (n: string) => goalHere(g, { ...structuredClone(t0.session), mode: undefined, talkNpc: undefined, party: [], mapId: pin(n).mapId, pinId: pin(n).pinId, scenePlace: undefined, quests: [exam], focus: exam, log: [], delivered: [] }, n);
+  const estate = at('변경백가 영지');
+  assert.deepEqual(estate.away, { place: '변경백가 영지', goal: exam });
+  assert.equal(gmGoal(g, estate).currentGoal, '', 'the estate leads there');
+  assert.ok(gmGoal(g, estate).quests.includes(exam), 'the exam stays in the list');
+  assert.equal(gmGoal(g, at('레븐홀트')).currentGoal, exam, 'where its next beat is (에드리아), it steers');
+  assert.equal(gmGoal(g, at('회색 탑 폐허')).currentGoal, exam, 'an empty place keeps the goal, or the writer circles');
+  assert.equal(gmGoal(g, { ...estate, away: undefined }).currentGoal, exam, 'picked again from the list, it steers there too');
+  const talk = (npc: string) => gmGoal(g, { ...at('레븐홀트'), mode: 'talk', talkNpc: npc }).currentGoal;
+  assert.equal(talk('레지나 발트'), '', 'someone outside the exam does not know it');
+  assert.equal(talk('에드리아 하르트'), exam);
+});
 // Choices name people only once the hero has met them (넬 was sought by name before meeting her, 17 times in recorded play).
 test('choices call people the hero has not met by how they look', () => {
   assert.equal(withoutUnmetNames('숲 가장자리에서 넬을 찾아 도움을 구한다.', []), '숲 가장자리에서 숲의 궁수를 찾아 도움을 구한다.');
@@ -291,6 +314,10 @@ test('a choice never heads to a place the story gave no reason for', () => {
   assert.equal(placeReasoned('회색 탑으로 간다.', places, '에드리아: "회색 탑 폐허의 해골을 치우십시오."'), true, 'named in a talk');
   assert.equal(placeReasoned('북문 초소로 돌아가 보고한다.', places, '이미 일어남: 북문 초소에서 시험을 받는다'), true, 'named in the goal steps');
   assert.equal(placeReasoned('발자국을 따라간다.', places, ''), true, 'no place, no question');
+  // 이현욱 (2026-11-20): the goal at 7번 부두 and 그림우드, written with the city or the fuller name, was drawn again 9 times running.
+  assert.equal(placeReasoned('사레타로 가서 7번 부두의 바레나를 찾는다.', ['사레타', '7번 부두'], '7번 부두에서 바레나와 이야기하기'), true, 'told through a place inside it');
+  assert.equal(placeReasoned('그림우드 숲 가장자리로 가서 고블린 약탈대를 소탕한다.', ['그림우드 숲 가장자리', '그림우드'], '그림우드에서 고블린 약탈대 쓰러뜨리기'), true, 'told through the world pin its name starts with');
+  assert.equal(placeReasoned('사레타로 간다.', ['사레타', '7번 부두'], '그림우드'), false);
 });
 // n22qfysdm: a letter written at 회색 탑 counted as its 맹세문 search, the step closed with neither the 맹세문 nor 에드리아's order
 // ever told, and 다이어울프 came as the goal for no reason in the story. The game now tells the writer the beat and counts it once told.
@@ -316,21 +343,21 @@ test('a beat the writer was not told does not count, and the director sees where
   assert.deepEqual(after.delivered, [due!.then]);
   assert.equal(left(after), 1, 'the scene after a fight there is the search once told');
 });
-test('a search inside the city the hero stands in is taken there, told and counted (파도의 성소 at 【사레타】)', () => {
+test('a search inside the city the hero stands in is due once they walk there, told and counted (파도의 성소 at 【사레타】)', () => {
   const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
-  const goal = '파도의 성소와 항구 관측소에서 가문의 옛 기록 찾기';
+  const goal = '파도의 성소와 마탑 항구 관측소에서 가문의 옛 기록 찾기';
   const map = (g.maps || []).find(m => m.pins.some(p => p.name === '사레타'))!, pin = map.pins.find(p => p.name === '사레타')!;
   const s0 = { ...structuredClone(t0.session), mode: undefined, talkNpc: undefined, mapId: map.id, pinId: pin.id, scenePlace: '사레타', quests: [goal], focus: goal, task: undefined, delivered: [] as string[],
     log: ['시스템: 새 목표 — ' + goal, '플레이어: 사제에게 문장이 지워진 까닭을 묻는다'] };
   assert.equal(dueBeat(g, s0), undefined, 'at 사레타 itself the search is not due');
-  const there = toBeatPlace(g, s0);
+  // The player walks there (routeFor); nothing takes them there on its own (toBeatPlace pulled every action to it, removed 2026-11-23).
+  const there = { ...s0, scenePlace: routeFor(g, s0, '파도의 성소로 가서 옛 기록을 찾는다.')!.place! };
   assert.equal(there.scenePlace, '파도의 성소');
   const due = dueBeat(g, there);
   assert.equal(due?.do, 'search');
   const res = applyReply(g, there, { text: '【사레타 · 낮】 사제가 성소 안쪽의 옛 기록을 펼친다.', choices: [] }, '사제에게 문장이 지워진 까닭을 묻는다').session;
   assert.deepEqual(res.delivered, [due!.then], 'the writer heading it 【사레타】 does not undo what the game handed over');
   assert.equal(goalPath(g, goal, res).filter(x => !x.startsWith('이미')).length, 1);
-  assert.equal(toBeatPlace(g, { ...s0, pinId: 'nowhere' }).scenePlace, '사레타', 'outside its city nothing moves');
   assert.deepEqual(foundHere(g, there), [], 'nothing found here yet');
   assert.deepEqual(foundHere(g, res), [due!.then], 'once told, a look here again has nothing new');
 });
@@ -384,11 +411,45 @@ test('the story may run ahead of its order: the next step\'s foe is fought at th
 test('only someone the scene names comes on stage (핍 guessed in at 북문 초소 vanished on arrival)', () => {
   const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
   const s0 = { ...structuredClone(t0.session), mode: undefined, talkNpc: undefined, combat: null, sceneNpcs: [] as string[], handledNpcs: [] as string[], log: ['플레이어: 진흙 골목으로 간다'] };
-  const stage = (text: string, s = s0) => applyReply(g, s, { text, choices: [], presentNpcs: ['핍'] }, '진흙 골목으로 간다').session.sceneNpcs;
+  const stage = (text: string, s = s0) => applyReply(g, s, { text, choices: ['천막을 살핀다'], presentNpcs: ['핍'] }, '진흙 골목으로 간다').session.sceneNpcs;
   assert.deepEqual(stage('【북문 초소 · 낮】 당신은 초소를 나서 진흙 골목으로 향합니다.'), []);
   assert.deepEqual(stage('【진흙 골목 · 낮】 낡은 천막 아래에서 핍이 손을 흔듭니다.'), ['핍']);
   assert.deepEqual(stage('【진흙 골목 · 낮】 키 작은 소년이 다가옵니다. 핍입니다.'), ['핍']);
   assert.deepEqual(stage('【진흙 골목 · 낮】 골목이 조용합니다.', { ...s0, sceneNpcs: ['핍'] }), ['핍'], 'someone already there stays');
+  // Not met yet, the scene writes 핍 by his look (엘로이즈 as "떠돌이 약초사" fell off stage every turn, 2026-11-20).
+  const look = '【진흙 골목 · 낮】 골목의 정보통이 천막 아래에서 손을 흔듭니다.';
+  assert.deepEqual(stage(look, { ...s0, metNpcs: [] }), ['핍'], 'an unmet person comes on stage by their look');
+  assert.deepEqual(stage(look, { ...s0, metNpcs: ['핍'] }), [], 'once met, the scene uses the name');
+});
+// The writer stops a scene where someone faces the hero, for their talk. With the [대화:] tag missed the scene had no choices and
+// no one on stage, and its choices were drawn again, a turn each (65 times in the beta, 2026-11-20).
+test('a scene that stops at someone with no talk and no choices puts them on stage', () => {
+  const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
+  const s0 = { ...structuredClone(t0.session), mode: undefined, talkNpc: undefined, combat: null, sceneNpcs: [] as string[], handledNpcs: [] as string[], metNpcs: [] as string[], log: ['플레이어: 담장을 살핀다'] };
+  const after = (text: string, presentNpcs: string[], s = s0, choices: string[] = []) => applyReply(g, s, { text, choices, presentNpcs }, '담장을 살핀다').session;
+  assert.deepEqual(after('【진흙 골목 · 낮】 정보통이 손목을 문지르며 당신을 마주 봅니다.', ['핍']).sceneNpcs, ['핍'], 'by the last word of the look (박재유: 정보통)');
+  const again = after('【북문 초소 · 낮】 에드리아는 지원서를 쥔 손을 멈추고 당신을 바라봅니다.', ['에드리아 하르트'], { ...s0, metNpcs: ['에드리아 하르트'], handledNpcs: ['에드리아 하르트'] });
+  assert.deepEqual(again.sceneNpcs, ['에드리아 하르트'], 'someone talked to before comes back on stage');
+  assert.ok(!again.handledNpcs?.includes('에드리아 하르트'));
+  assert.deepEqual(after('【7번 부두 · 밤】 선원들이 물러섭니다.\n\n선장이 당신을 돌아봅니다. 당신의 제안에 선장이 입을 열려 합니다.', []).sceneNpcs, ['바레나'], 'one the bookkeeper left out, by the look');
+  assert.deepEqual(after('【북문 초소 · 낮】 에드리아는 지원서를 쥔 손을 멈춥니다.', ['에드리아 하르트'], { ...s0, metNpcs: ['에드리아 하르트'], handledNpcs: ['에드리아 하르트'] }, ['북문으로 나간다']).sceneNpcs, [], 'with choices, someone dealt with stays off');
+  assert.deepEqual(after('【진흙 골목 · 낮】 골목이 조용합니다.', []).sceneNpcs, [], 'no one there, no one on stage');
+});
+test('a scene that stops at an unmet person opens the talk with them, by name or by look', () => {
+  const talkTo = (tag: string) => {
+    const data: Record<string, unknown> = {};
+    readWritten({ body: {} as never, state: { npcProfiles: [{ name: '핍', heroCalls: '골목의 정보통' }] } as never, data, prewritten: `【진흙 골목 · 낮】 골목의 정보통이 당신을 마주 봅니다.\n---\n${tag}`, mode: '', partner: '' });
+    return data.talkTo;
+  };
+  assert.equal(talkTo('[대화: 핍]'), '핍');
+  assert.equal(talkTo('[대화: 골목의 정보통]'), '핍');
+});
+test('a name slipped into another script is the known name its Korean words point to', () => {
+  const cast = ['레지나 발트', '에드리아 하르트', '핍'];
+  assert.equal(knownName(cast, 'レジナ 발트'), '레지나 발트');
+  assert.equal(knownName(cast, 'レ지나 발트'), '레지나 발트');
+  assert.equal(knownName(cast, '레지나 발트'), '레지나 발트');
+  assert.equal(knownName(cast, 'ピップ'), '', 'nothing Korean left to go by: dropped');
 });
 test('a mid-reply gesture at a carried item reads as the item clue', () => {
   const inv = ['낡은 롱소드', '잿빛 갈매기 인장 반지'];
@@ -529,9 +590,12 @@ test('level-ups place their points by who the hero started as, and a stronger fo
 });
 // 투지 (user 2026-11-20: the knight never spent mana): a fighter's mana fills by fighting and, full, becomes a 필살기.
 test('a fighter\'s mana is 투지: filled by fighting, spent on a sure-hit finisher', () => {
-  const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
+  const t0 = turns.find(x => x.name.includes('다이어울프'))!, knight = gameOf(t0.gameId), g = { ...knight, wizardStart: '신입 모험가' } as Game;
   const s = { ...structuredClone(t0.session), level: 8, hp: 200, equipped: {}, mode: 'combat' } as Session;
   const fight = foeCombat({ npc: '해골 병사', monster: true }, 3, 8);
+  // The knight (a fighter-only start) has no mana at all, so no 투지 or 필살기 (user 2026-11-23).
+  assert.equal(knight.wizardStart, '몰락 기사 가문의 후계자');
+  assert.ok(maxManaOf(knight, s) === 0 && !gritOf(knight, s), 'the knight has no mana');
   assert.ok(gritOf(g, s), 'a hero with no staff fights on 투지');
   const step = (x: Session) => autoBattleStep(g, { ...x, combat: { ...fight, ...x.combat, round: Math.max(1, x.combat?.round || 0), lethal: true } });
   const max = maxManaOf(g, s);
@@ -567,7 +631,7 @@ test('the public beta has one daily AI budget for everyone once signed in; local
 
 test('each signed-in beta player gets 500 turns in all and 200 a day, remembered on disk, and seats are the accounts (200)', async () => {
   const dir = process.env.BETA_DATA_DIR!;
-  const { turnBlock, DAILY_TURNS, TODAY_REPLY, TURNS_REPLY, LOGIN_REPLY } = await import('../app/_lib/beta');
+  const { turnBlock, DAILY_TURNS, TODAY_REPLY, TURNS_REPLY, LOGIN_REPLY, FREE_CALLS } = await import('../app/_lib/beta');
   const { signInWith, MAX_ACCOUNTS, DEFAULT_TURNS, listAccounts, updateAccount } = await import('../app/_lib/beta-accounts');
   const req = (token = '') => new Request('http://x/api/gm', { headers: { 'cf-connecting-ip': '5.5.5.5', cookie: `crpg-session=${token}` } });
   assert.equal(turnBlock(req()), LOGIN_REPLY, 'a visitor not signed in plays no turn');
@@ -581,6 +645,12 @@ test('each signed-in beta player gets 500 turns in all and 200 a day, remembered
   assert.equal((signInWith('kakao', '100', '가', 'zzzzzzzzzzzz') as { pid: string }).pid, a.pid, 'the same account on the next sign-in, from another browser');
   const b = signInWith('kakao', '200', '나', '') as { token: string, pid: string };
   assert.equal(turnBlock(req(b.token)), undefined, 'another player has their own day');
+  // Calls the game makes on its own after a turn (choices drawn again) are free, FREE_CALLS per counted turn.
+  const used = () => JSON.parse(readFileSync(path.join(dir, 'turns.json'), 'utf8'))[b.pid];
+  for (let i = 0; i < FREE_CALLS; i++) assert.equal(turnBlock(req(b.token), true, true), undefined);
+  assert.equal(used(), 1, 'redraws after a turn are not turns');
+  turnBlock(req(b.token), true, true);
+  assert.equal(used(), 2, 'past FREE_CALLS a follow-up counts (the flag comes from the page)');
   updateAccount(listAccounts().find(x => x.pid === b.pid)!.id, { limit: 3 });
   turnBlock(req(b.token)); turnBlock(req(b.token));
   assert.equal(turnBlock(req(b.token), false), TURNS_REPLY, 'all turns used up');
@@ -618,6 +688,22 @@ test('beta dashboard: stuck after 10 turns on one goal, gone after 24h, bugs fro
   const timed = betaReport([ev('cccccccccccc', 3, 'turn'), ev('cccccccccccc', 3 - 2 / 60, 'turn'), ev('cccccccccccc', 3 - 5 / 60, 'turn'), ev('cccccccccccc', 1, 'turn')], [], [], new Set(), now).players[0];
   assert.deepEqual([timed.playMinutes, timed.turns], [7, 4]);
   assert.deepEqual(report.bugs.map(b => b.source).sort(), ['기록', '서버', '의견'], 'the usage limit line is not a bug');
+  // A stretch on one goal shows from the turn records with its cause, even after the save started over (승우, 2026-11-23).
+  const knight = turns.find(x => x.name.includes('다이어울프'))!, kg = gameOf(knight.gameId), goal = '엘프와 변경백가가 부딪치기 전에 사태 수습하기';
+  const at = (log: string[]) => ({ at: ago(3), gameId: kg.id, pid: 'dddddddddddd', session: { ...structuredClone(knight.session), quests: [goal], focus: goal, focusAt: 0, delivered: [], log } as Session });
+  const records = [at(['시스템: 새 목표 — ' + goal, ...acts(4)]), at(['시스템: 새 목표 — ' + goal, ...acts(12)])];
+  const stuck = betaReport([], [], [kg], new Set(), now, records).bugs.filter(b => b.source === '막힘');
+  assert.equal(stuck.length, 1, 'one stretch, told once');
+  assert.match(stuck[0].message, /12턴째 제자리 — 원인: 1\/5단계/);
+  // A job taken on the side neither restarts the count nor reads as getting past it (이현욱's 구울 beside 바레나);
+  // the goal ending does, but starting over does not (승우).
+  const side = { ...at([...records[1].session.log, '시스템: 새 목표 — 묘지 구울 퇴치하기', ...acts(3)]), at: ago(2) };
+  side.session.runId = records[1].session.runId;
+  const report2 = (later: typeof side[]) => betaReport([], [], [kg], new Set(), now, [...records, ...later]).bugs.filter(b => b.source === '막힘').map(b => b.message);
+  assert.match(report2([side]).join(), /15턴째 제자리 — /, 'the side job kept counting');
+  const ended = { ...side, at: ago(1), session: { ...side.session, quests: ['묘지 구울 퇴치하기'], focus: undefined, log: [...side.session.log, '시스템: 목표 완료 — ' + goal] } };
+  assert.match(report2([side, ended]).join(), /\(이후 풀림\)/);
+  assert.doesNotMatch(report2([{ ...ended, session: { ...ended.session, runId: 'another' } }]).join(), /이후 풀림/, 'a new playthrough is not getting past it');
 });
 
 // The 2026-11-19 alpha playtest (100 turns), replayed from its own recorded turns.
@@ -736,6 +822,16 @@ test('a talk beat answers what the player says, not the opening reply (에드리
   assert.equal(dueBeat(g, s), undefined, 'the opening reply comes before the player has said anything');
   assert.equal(dueBeat(g, { ...s, log: [...s.log, '대화-NPC: {"name":"에드리아 하르트","line":"무슨 일로 왔나?"}', '대화-나: 입단 지원서를 내겠습니다.'] })?.do, 'talk');
   assert.equal(metNames({ ...s, mode: undefined, talkNpc: undefined, relationships: [{ id: 'x', name: '핍', relation: '초면', affection: 0 }], metNpcs: [], party: [] }).length, 0, 'a relationship row the bookkeeper made is not meeting');
+  // 레지나 with the exam still open: her own story's first beat is what she says, not an errand made up on the spot (박재유, 2026-11-23).
+  const said = ['대화-NPC: {"name":"레지나 발트","line":"무슨 용건이죠?"}', '대화-나: 일손이 필요하다면 돕겠습니다.'];
+  const regina = { ...s, talkNpc: '레지나 발트', log: ['시스템: 새 목표 — ' + goal, '시스템: 레지나 발트와 대화를 시작했습니다.', ...said] };
+  assert.match(dueBeat(g, regina)?.then || '', /창고와 부엌 정리/);
+  assert.equal(dueBeat(g, { ...regina, delivered: [dueBeat(g, regina)!.then] }), undefined, 'told once');
+  assert.equal(dueBeat(g, { ...regina, quests: [goal, '레지나를 도와 성채 살림 거들기'] })?.then, dueBeat(g, regina)?.then, 'the same beat once her job is taken');
+  assert.equal(dueBeat(g, { ...regina, talkNpc: '한나' }), undefined, 'someone with no story of her own tells nothing prepared');
+  // The hero takes her job and the bookkeeper lists nothing: the job taken is still her story's goal (2026-11-23).
+  const took = applyReply(g, { ...regina, log: [...regina.log, '대화-나: 네, 창고와 부엌을 정리하겠습니다.'] }, { line: '좋아요. 끝나면 알려 주세요.', endTalk: true, nextAction: '창고와 부엌을 정리한다', task: '창고와 부엌 정리하기', addQuests: [], choices: [] }, '네, 창고와 부엌을 정리하겠습니다.').session;
+  assert.ok(questsOf(took).includes('레지나를 도와 성채 살림 거들기'), questsOf(took).join());
 });
 test('playtest 1120b: the escort fight is on the road, income named in the deal, one clue per talk, gear swaps said', () => {
   const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId);
@@ -777,4 +873,12 @@ test('the story duel is fought, and won or lost the story goes on its own way (�
   assert.ok(told.every(x => x.startsWith('이미 일어남:')) && /배짱/.test(told[1]), 'the losing way is what happened');
   const won = { ...dared, log: [...dared.log, '전투: 승리 — 바레나를 쓰러뜨렸다'] };
   assert.match(goalPath(g, goal, won)[1], /명령서대로/);
+});
+test('an action speaks to someone not met yet by the look the hero knows them by (바레나 as 선장, 이현욱 2026-11-20)', () => {
+  const t0 = turns.find(x => x.name.includes('다이어울프'))!, g = gameOf(t0.gameId), known = ['바레나', '에드리아 하르트', '오틸리에 마른'];
+  const dock = { ...structuredClone(t0.session), mode: undefined, talkNpc: undefined, mapId: 'default-fantasy-0', pinId: 'default-fantasy-0-pin-0', scenePlace: '7번 부두', sceneNpcs: ['바레나'], metNpcs: [], party: [] } as Session;
+  assert.equal(addressedIn(g, dock, '선장에게 맑은 날 침몰한 왕실 함대에 관해 묻는다.', known), '바레나', 'on stage, by her look');
+  assert.equal(addressedIn(g, { ...dock, sceneNpcs: [] }, '선장에게 맑은 날 침몰한 왕실 함대에 관해 묻는다.', known), undefined, 'a 선장 nowhere near is no one');
+  assert.equal(addressedIn(g, { ...dock, metNpcs: ['바레나'] }, '선장에게 묻는다.', known), undefined, 'once met she is called by name');
+  assert.equal(addressedIn(g, dock, '에드리아 하르트에게 보고한다.', known), '에드리아 하르트', 'a name still comes first');
 });

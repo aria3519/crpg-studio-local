@@ -71,15 +71,22 @@ const loadDaily = () => {
   return daily!;
 };
 export const turnsToday = (pid: string) => loadDaily().counts[pid] || 0;
-// Why a turn can't be played (the reply to send), or undefined when it can; counted when `count`.
-export function turnBlock(req: Request, count = true) {
+// A call the game makes on its own after a turn (choices drawn again, a small roll's scene) is not the player's turn: 이현욱
+// lost 69 of 200 turns to them (2026-11-20). The flag comes from the page, so only FREE_CALLS follow each counted turn free.
+export const FREE_CALLS = 3;
+const freeLeft = new Map<string, number>();
+// Why a turn can't be played (the reply to send), or undefined when it can; counted when `count` (and not a free follow-up).
+export function turnBlock(req: Request, count = true, followUp = false) {
   if (!isPublic(req)) return undefined;
   const acct = accountOf(req);
   if (!acct) return LOGIN_REPLY;
   const turns = loadTurns(), today = loadDaily(), pid = acct.pid, n = turns[pid] || 0, d = today.counts[pid] || 0;
   if (n >= acct.limit) return TURNS_REPLY;
   if (d >= DAILY_TURNS) return TODAY_REPLY;
-  if (count) {
+  const free = count && followUp && (freeLeft.get(pid) || 0) > 0;
+  if (free) freeLeft.set(pid, freeLeft.get(pid)! - 1);
+  else if (count) {
+    if (!followUp) freeLeft.set(pid, FREE_CALLS);
     turns[pid] = n + 1; today.counts[pid] = d + 1;
     mkdirSync(BETA_DIR, { recursive: true }); writeFileSync(turnsFile(), JSON.stringify(turns)); writeFileSync(dailyFile(), JSON.stringify(today));
   }

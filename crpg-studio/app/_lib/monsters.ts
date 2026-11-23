@@ -10,8 +10,8 @@ type Roster = { danger: RegExp; habitats: Record<string, RegExp>; foes: Foe[] };
 
 const ROSTERS: Record<string, Roster> = {
   fantasy: {
-    danger: /숲|그림우드|폐허|묘지|성역|관리지|동굴|등대|섬|골목|밀동네|거점|해안|늪|광산|황무지|협곡/,
-    habitats: { forest: /숲|그림우드|협곡/, undead: /묘지|폐허|등대|광산/, abyss: /심연|검은 문|성역|관리지/, coast: /섬|해안|동굴|등대|늪/, street: /골목|밀동네|거점/ },
+    danger: /숲|그림우드|폐허|묘지|성역|관리지|동굴|등대|섬|골목|밑동네|거점|해안|늪|광산|황무지|협곡/,
+    habitats: { forest: /숲|그림우드|협곡/, undead: /묘지|폐허|등대|광산/, abyss: /심연|검은 문|성역|관리지/, coast: /섬|해안|동굴|등대|늪/, street: /골목|밑동네|거점/ },
     foes: [
       { name: '굶주린 늑대 무리', image: 'wolf-pack', power: 2, desc: '숲 가장자리를 떠도는 굶주린 늑대 대여섯 마리', trophy: '늑대 우두머리의 송곳니', habitat: ['forest'] },
       { name: '고블린 약탈대', image: 'goblin-raiders', power: 2, desc: '녹슨 칼과 활을 든 고블린 무리. 비겁하지만 수가 많다', trophy: '고블린 약탈대장의 녹슨 귀걸이', habitat: ['forest', 'coast'] },

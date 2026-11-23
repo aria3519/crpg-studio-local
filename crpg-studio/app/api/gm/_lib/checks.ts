@@ -3,7 +3,7 @@
 // the game can't honor are dropped. route.ts sends what comes back to the play screen.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { GmBody, GmState } from '../../../_lib/game/gm-contract';
-import { FOREIGN_SCRIPT, dropRepeatedQuotes, VOICE_LENGTH, sentences, repeats, addressesIn, pairShare, contentWords, LEAVING, plainEnd, type NpcSheet, type Profile } from './speech';
+import { FOREIGN_SCRIPT, knownName, dropRepeatedQuotes, VOICE_LENGTH, sentences, repeats, addressesIn, pairShare, contentWords, LEAVING, plainEnd, type NpcSheet, type Profile } from './speech';
 import { namesFoe } from '../../../_lib/monsters';
 import { POWER_TIERS, MAX_POWER } from '../../../_lib/progression';
 import { appendFileSync } from 'fs';
@@ -45,8 +45,9 @@ export function checkReply(c: Ctx) {
   const xpGain = typeof data.xpGain === 'string' && ['minor', 'deed', 'event'].includes(data.xpGain) ? data.xpGain : '';
   const reputationDelta = typeof data.reputationDelta === 'number' && Number.isFinite(data.reputationDelta) ? Math.max(-5000, Math.min(5000, Math.round(data.reputationDelta))) : 0;
   const goldDelta = typeof data.goldDelta === 'number' && Number.isFinite(data.goldDelta) ? Math.max(-1000, Math.min(500, Math.round(data.goldDelta))) : 0;
-  const presentNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => v.trim()).filter((v: string) => v.length >= 1 && v.length <= 30))].slice(0, 3) : [];
   const profileNames = Array.isArray(state.npcProfiles) ? state.npcProfiles.map((p: { name?: unknown }) => String(p?.name || '')) : [];
+  const cast = [...new Set([...profileNames, ...(Array.isArray(state.knownNpcs) ? state.knownNpcs.map(String) : [])])].filter(Boolean);
+  const presentNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => knownName(cast, v.trim())).filter((v: string) => v.length >= 1 && v.length <= 30))].slice(0, 3) : [];
   const npcVoices = [...fixedVoices, ...(Array.isArray(data.npcVoices) ? data.npcVoices.filter((v: { name?: unknown; style?: unknown }) => v && typeof v.name === 'string' && typeof v.style === 'string' && v.style.trim() && profileNames.includes(v.name.trim()) && !fixedVoices.some(f => f.name === String(v.name).trim()) && !FOREIGN_SCRIPT.test(v.style))
     .map((v: { name: string; style: string }) => ({ name: v.name.trim(), style: v.style.trim().slice(0, VOICE_LENGTH) })) : [])].slice(0, 6);
   const check = !mode && body.reroll !== true && body.debug !== true && !body.diceResult && data.check && typeof data.check === 'object' ? {
@@ -184,7 +185,9 @@ export function checkReply(c: Ctx) {
   // The scene's choices are the writer's own. The game drops only what it can't carry out: going where the player already
   // is (a far place is fine: the move goes through the places on the way), paying with an empty purse, or only resting (health comes back by itself).
   const here = [...contentWords(String(state.locationName || ''))].filter(w => !/^(입구|근처|안쪽|바깥|앞|가장자리)$/.test(w));
-  const goesHere = (c: string) => /(가서|간다|향한다|이동한다|돌아간다|찾아간다)/.test(c) && here.some(w => c.includes(w));
+  // A place the choice may go to (now.nearby) is not here, though its name holds here's (모험가 길드 레븐홀트 지부 in 레븐홀트).
+  const nearby: string[] = Array.isArray(state.adjacentLocations) ? state.adjacentLocations.map((l: { name?: unknown }) => String(l?.name || '')).filter(Boolean) : [];
+  const goesHere = (c: string) => { const rest = nearby.reduce((t, n) => t.split(n).join(' '), c); return /(가서|간다|향한다|이동한다|돌아간다|찾아간다)/.test(rest) && here.some(w => rest.includes(w)); };
   const broke = Number(state.gold ?? 1) <= 0;
   const pays = (c: string) => broke && /(골드|돈|값|요금|[가-힣]료|삯|대금|사례금)[^.]{0,15}(내고|낸다|내며|내서|건네|치르고|치른다|치러|지불|갚|꺼내)/.test(c);
   const RESTING = /(휴식|쉬며|쉬면서|쉰다|쉬어|잠을 ?청|눈을 붙|숨을 돌리|체력을 ?회복|회복하러|회복한다|기력을 ?회복|상처를 ?돌보|치료(를|하러) ?받)/;

@@ -4,6 +4,13 @@ import path from 'path';
 
 // The model occasionally slips a word from another language into Korean (e.g. Russian "слух" for 소문).
 export const FOREIGN_SCRIPT = /[\u0400-\u04FF\u0600-\u06FF\u0E00-\u0E7F\u3040-\u30FF\u3400-\u9FFF\uF900-\uFAFF]/; // Han too (\u6551\u51FA slipped into a goal)
+// A name half in another script ("レジナ 발트": 3 of ~680 recorded turns, all 레지나) is the known name its Korean words point to,
+// if only one; else it's dropped. Left as written, 레지나 fell off the stage and her talk never opened (2026-11-23).
+export const knownName = (cast: string[], v: string) => {
+  if (!FOREIGN_SCRIPT.test(v)) return v;
+  const words = v.split(/\s+/).filter(w => w.length >= 2 && !FOREIGN_SCRIPT.test(w)), hits = cast.filter(n => words.length > 0 && words.every(w => n.split(/\s+/).includes(w)));
+  return hits.length === 1 ? hits[0] : '';
+};
 export const VOICE_LENGTH = 200;
 // A medieval setting pulled the model toward translated-drama speech (~이오, ~하시오). Wuxia keeps its authored 하오체 characters, so it skips this.
 export const NATURAL_SPEECH = '인물은 모두 오늘날 한국 사람이 실제로 입으로 하는 자연스러운 말로 이야기합니다. 세계관이 중세여도 번역극이나 사극처럼 말하지 않습니다.';

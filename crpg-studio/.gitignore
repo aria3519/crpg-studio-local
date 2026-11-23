@@ -12,6 +12,6 @@ graphify-out/cache/last_query_stamp
 
 # public beta: visitor log and visitor saves (session-<game>-<player>)
 beta-data
-saves/session-*-*.json
-saves/*.tmp
+# local play: games, saves and their temp files (tests use tests/fixtures/game.json)
+saves/
 .next-beta*

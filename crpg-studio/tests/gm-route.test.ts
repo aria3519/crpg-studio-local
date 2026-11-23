@@ -46,7 +46,11 @@ const CASES: Record<string, Record<string, unknown>> = {
   'talk fill': { ...base, action: '"뭘 찾았어?"', mode: 'talk', npc: '넬', talkTurns: 1, sceneText: '(삼실을 들어 보이며) 넬: "이거요. (은 반지를 들다) 밀수꾼 거예요."\n---\n1. "어디로 갔지?"\n2. "얼마면 알려 줄래?"\n3. "난 빠질게."' },
   'talk end': { ...base, action: '"고마워."', mode: 'talk', npc: '넬', talkTurns: 3, closeTalk: true, sceneText: '넬: "그럼 가 봐요."\n---\n[대화 끝]\n1. 이끼골로 간다\n2. 마을로 돌아간다' },
   'combat': { ...base, action: '검을 휘두른다', mode: 'combat', npc: '회색 늑대', combat: { round: 2, itemUse: '' } },
-  'reroll': { ...base, action: '수레 자국을 살핀다', reroll: true, previousChoices: ['자국을 따라간다'] },
+  'reroll': { ...base, action: '수레 자국을 살핀다', reroll: true, previousChoices: ['자국을 따라간다'], sceneText: '---\n1. 넬에게 밀수꾼을 아는지 묻는다\n[대화: 넬]\n2. 이끼골로 가서 수레를 쫓는다' },
+  // In 레븐홀트, a place inside it named after the city is somewhere to go; the city itself is where the hero stands.
+  'reroll in city': { ...base, action: '다음에 할 행동을 고른다.', reroll: true, state: { ...state, locationName: '레븐홀트', adjacentLocations: [{ id: '모험가 길드 레븐홀트 지부', name: '모험가 길드 레븐홀트 지부', kind: 'spot' }] },
+    sceneText: '---\n1. 모험가 길드 레븐홀트 지부로 가서 의뢰를 받는다\n2. 레븐홀트로 돌아간다\n3. 북문 초소의 공고를 읽는다' },
+  'reroll write': { ...base, action: '수레 자국을 살핀다', reroll: true, previousChoices: ['자국을 따라간다'], phase: 'write' },
   'debug': { ...base, action: '늑대를 소환', debug: true },
   'new voice': { ...base, action: '상인에게 다가간다', state: { ...state, npcProfiles: [...state.npcProfiles, { name: '새 얼굴', inScene: true, profile: '수상한 사내' }] } },
 };

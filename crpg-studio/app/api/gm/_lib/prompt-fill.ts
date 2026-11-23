@@ -30,12 +30,6 @@ export function fillSystem(c: Ctx) {
     Number(combat?.round) === 0 ? `전투가 막 시작됐습니다. 전투 시작 장면을 묘사하고 ${partner}의 전투력 등급을 enemy 객체 {"power":1~10}로 반환하세요. 등급 기준: ${Object.entries(POWER_TIERS).map(([k, v]) => `${k}=${v.label}`).join(', ')}. 겉모습이 아니라 profile·sheet에 드러난 실제 경력과 정체(전직 용병, 숨은 고수 등)로 판단하세요. npcProfiles의 sheet에 power가 있으면 그 값이 확정이며, 묘사도 그 강함에 맞추세요(등급이 낮은 인물이 압도하거나 높은 인물이 맥없이 밀리는 묘사 금지). 마을 사람·상인·학자 같은 비전투원은 1~2, 마왕이나 신에 가까운 존재만 9~10입니다.` : '',
   ].filter(Boolean) : [];
   // Test commands from the creator bypass causality so features can be exercised directly.
-  // A reroll only redraws the current scene's choices; nothing in the story moves.
-  const previousChoices = Array.isArray(body.previousChoices) ? body.previousChoices.filter((v: unknown): v is string => typeof v === 'string').slice(0, 4) : [];
-  const rerollRules = body.reroll === true && !mode ? [
-    '이번 요청은 선택지 다시 뽑기입니다. 장면을 진행하지 말고 상태도 바꾸지 마세요. text는 빈 문자열, 변경 필드는 모두 비우고, 최근 기록의 현재 장면에 맞는 새 선택지 3개만 choices에 넣으세요(셋 다 지금 장면에 대한 자연스러운 다음 행동: 1번 currentGoal을 향해 한 걸음 나아가기(goalPath가 있으면 아직 벌어지지 않은 일 쪽으로), 2번 그 자리나 이야기 속 인물과 거래하거나 설득하거나 압박하기, 3번 의외의 수나 그 자리를 벗어나기).',
-    '다음 기존 선택지와 같거나 비슷한 행동은 피하세요: ' + JSON.stringify(previousChoices),
-  ] : [];
   const debugRules = body.debug === true && !mode ? [
     '지금 playerAction은 제작자의 테스트 명령입니다. 세계관의 인과·확률·조건·판정을 모두 무시하고 적힌 일이 그대로 즉시 일어난 것으로 처리하세요. 거절하거나 조건을 요구하지 마세요.',
     '명령에 맞게 상태 필드를 직접 바꾸세요: 아이템은 addItems/removeItems, HP는 hpDelta, 기록은 addFlags, 인물 등장은 presentNpcs, 몬스터·적대 무리 등장은 ambush에 currentState.monsters의 정확한 이름(가장 가까운 것), 관계는 relationshipUpdates, 레벨 변경은 setLevel(1~100 숫자), 현재 맵 안의 장소 이동은 currentState.locations의 정확한 id를 moveToPinId로 반환합니다. check는 null입니다.',
@@ -69,9 +63,10 @@ export function fillSystem(c: Ctx) {
     'currentState.party는 플레이어와 함께 다니는 동료 NPC입니다(npcProfiles에서 inParty:true). 동료는 장면을 옮겨도 늘 곁에 있으므로 presentNpcs에는 넣지 마세요. 서술에서 동료가 자기 성격과 말투로 가끔 한마디 거들거나 의견을 내고, 자기 목표·가치관에 반하는 플레이어 행동에는 반대하거나 실망하게 하세요(필요하면 relationshipUpdates로 호감도 반영). 전투에서는 동료도 함께 싸웁니다. 동료 합류·이탈은 게임 코드가 처리하니 서술로 동료를 새로 합류시키거나 떠나보내지 마세요.',
     'hpDelta는 이번 행동으로 변한 HP 양(회복 양수, 피해 음수)입니다. 불필요하면 0입니다. HP가 0이 되면 플레이어는 사망하고 게임이 끝납니다(구출·기적 없음, 제작자 프롬프트의 사망 완화 규칙보다 우선). 함정·추락·독처럼 전투 밖 피해로 HP를 0까지 깎는 것은 정말 살아날 수 없는 상황에서만 하고, 그렇지 않으면 빈사(HP 1)에서 멈추세요.',
     '현재 상태는 explicitGameState.currentValues가 우선이며 historyFlags는 이미 발생한 사실의 기록이다. 경지·소속·막·재물 같은 현재 값은 이전 값과 동시에 적용하지 않는다. addFlags에는 현재 값 갱신과 사건 기록을 명확히 구분해 반환한다.',
-    '각 장면이 끝날 때 플레이어가 고를 행동 3가지를 choices 문자열 배열로 제시하세요(네 번째는 플레이어가 직접 입력합니다). 세 선택지는 모두 방금 장면 끝에 놓인 상황(눈앞 인물의 말·행동, 벌어진 일, 이 장소에서 할 수 있는 일)에 대한 플레이어의 자연스러운 다음 행동입니다. 셋은 태도나 방법이 확실히 달라야 합니다: 1번 적극적으로 나서거나 받아들이기, 2번 그 자리의 사람과 거래하거나 설득하거나 압박하기, 3번 의외의 수를 두거나 그 자리를 벗어나 다른 데로 가기(이웃 장소 currentState.adjacentLocations, 곁가지 이야기 directorNotes.threads의 인물·장소). 정해진 길로 끌고 가는 느낌이 없어야 합니다: 장면과 상관없이 퀘스트 장소로 돌아가라는 선택지는 넣지 말고, 퀘스트 쪽 행동은 지금 장면이 그 일과 이어져 있을 때(그 장소에 있음, 그 인물이 앞에 있음, 방금 그 소문·단서를 들음)만 그중 하나로 자연스럽게 넣으세요. 체력은 전투가 아닌 장면마다 게임이 저절로 조금씩 회복시키므로 휴식·회복하러 가기·잠자기 같은 선택지는 넣지 마세요. 각 선택지는 지문처럼 행동을 쓴 뒤 플레이어의 속마음이나 이유를 짧게 한 문장 덧붙여도 됩니다. 각 선택지의 target에 그 행동의 대상(인물·장소·적·사물 하나)을 쓰세요. 비밀을 미리 알거나 결과를 확정하지 마세요.',
+    // A scene's choices are the writer's (prompt-writer.ts), redraws too: this model writes them only in a talk or fight.
+    ...(mode ? ['각 장면이 끝날 때 플레이어가 고를 행동 3가지를 choices 문자열 배열로 제시하세요(네 번째는 플레이어가 직접 입력합니다). 세 선택지는 모두 방금 장면 끝에 놓인 상황(눈앞 인물의 말·행동, 벌어진 일, 이 장소에서 할 수 있는 일)에 대한 플레이어의 자연스러운 다음 행동입니다. 셋은 태도나 방법이 확실히 달라야 합니다: 1번 적극적으로 나서거나 받아들이기, 2번 그 자리의 사람과 거래하거나 설득하거나 압박하기, 3번 의외의 수를 두거나 그 자리를 벗어나 다른 데로 가기(이웃 장소 currentState.adjacentLocations, 곁가지 이야기 directorNotes.threads의 인물·장소). 정해진 길로 끌고 가는 느낌이 없어야 합니다: 장면과 상관없이 퀘스트 장소로 돌아가라는 선택지는 넣지 말고, 퀘스트 쪽 행동은 지금 장면이 그 일과 이어져 있을 때(그 장소에 있음, 그 인물이 앞에 있음, 방금 그 소문·단서를 들음)만 그중 하나로 자연스럽게 넣으세요. 체력은 전투가 아닌 장면마다 게임이 저절로 조금씩 회복시키므로 휴식·회복하러 가기·잠자기 같은 선택지는 넣지 마세요. 각 선택지는 지문처럼 행동을 쓴 뒤 플레이어의 속마음이나 이유를 짧게 한 문장 덧붙여도 됩니다. 각 선택지의 target에 그 행동의 대상(인물·장소·적·사물 하나)을 쓰세요. 비밀을 미리 알거나 결과를 확정하지 마세요.',
 
-    '선택지는 그대로 플레이어의 행동으로 쓰이는 1인칭 행동 문장이며, 꼬리표·머리말 없이 행동만 씁니다. 선택지가 점점 단순해지지 않게 하세요. "주변을 살펴본다", "이야기를 듣는다", "다음 장소로 향한다" 같은 막연한 행동은 금지입니다. 각 선택지는 구체적인 대상(이름 있는 인물·물건·장소·단서)과 의도·방법을 담은 한 문장입니다. recentHistory에서 플레이어가 이미 했던 것과 같은 유형의 행동은 다시 제시하지 마세요.',
+    '선택지는 그대로 플레이어의 행동으로 쓰이는 1인칭 행동 문장이며, 꼬리표·머리말 없이 행동만 씁니다. 선택지가 점점 단순해지지 않게 하세요. "주변을 살펴본다", "이야기를 듣는다", "다음 장소로 향한다" 같은 막연한 행동은 금지입니다. 각 선택지는 구체적인 대상(이름 있는 인물·물건·장소·단서)과 의도·방법을 담은 한 문장입니다. recentHistory에서 플레이어가 이미 했던 것과 같은 유형의 행동은 다시 제시하지 마세요.'] : []),
     'keyFacts는 지금까지 확정된 핵심 사실(막의 결과, 죽음·배신·합류, 밝혀진 비밀, 큰 결정과 약속, 중요한 물건)입니다. 아무리 오래된 일이어도 절대 잊거나 어기지 마세요: 죽은 인물은 살아 돌아오지 않고, 배신한 인물은 그 일을 기억하며, 맺은 약속은 유효합니다.',
     'storySoFar는 recentHistory보다 앞선 플레이의 장기 기억입니다. 그 안의 사실·약속·인물 관계와 모순되게 서술하지 말고, 이미 끝난 사건을 처음 일어나는 것처럼 반복하지 마세요. 장면에 자연스럽게 맞으면 [진행 중인 사건·떡밥]이나 [약속·거래·빚]을 다시 불러와 서술이나 선택지에 엮으세요.',
     'currentState.placeSeed는 이야기 감독이 미리 짜 둔 "지금 이 장소에 있는 사람과 벌어지고 있는 일"입니다. 이 장소의 인물과 사건은 새로 지어내지 말고 이 설정의 인물과 사건만 꺼내 쓰세요. 설정에 있는 이름·역할·관계는 그대로 지키세요. currentState.event(장소 이벤트)가 있으면 그것을 충실히 진행하고, 조건 없는 보상·아이템·HP 변경은 만들지 마세요. 아이템은 인벤토리의 정확한 이름으로만 소비합니다.',
@@ -102,7 +97,6 @@ export function fillSystem(c: Ctx) {
     ...pacingRules,
     ...modeRules,
     ...debugRules,
-    ...rerollRules,
     ...(prewritten && mode === 'talk' ? ['이번 대화의 대답은 이미 쓰여 플레이어에게 보였습니다(sceneText: "---" 위는 상대의 말, 아래는 주인공의 다음 말 후보나 [대화 끝]). 대답을 새로 쓰지 말고 line·text·playerLine·nextAction은 빈 문자열, choices는 빈 배열로 두세요. sceneText에서 실제로 오간 일에 맞게 나머지 필드만 채우세요: relationshipUpdates(이번 대화로 달라진 호감은 affectionChange), addQuests(새로 맡은 일), completedQuests, failedQuests, goldDelta, addItems, removeItems(실제로 주고받은 것), reputationDelta, howKnown·knownItem, npcVoices.'] : []),
     ...(prewritten && !mode ? ['이번 장면의 본문은 이미 쓰여 플레이어에게 보였습니다(sceneText, "---" 아래는 선택지나 판정). 장면을 새로 쓰지 말고 text는 빈 문자열, choices는 빈 배열, check는 null로 두세요. sceneText에서 실제로 일어난 일에 맞게 나머지 필드만 채우세요: hpDelta, goldDelta, addItems, removeItems, addFlags, relationshipUpdates, presentNpcs, npcVoices, addQuests, completedQuests, failedQuests, reputationDelta, xpGain, trained, ambush(몬스터가 덮쳐 오는 장면이면 그 이름), imageKey.'] : []),
     '응답은 위에서 정한 JSON 객체 하나만 반환하고, 본문·선택지·대사는 자연스러운 한국어로 씁니다.',

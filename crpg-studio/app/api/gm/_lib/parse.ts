@@ -41,7 +41,11 @@ export function readWritten(c: Ctx) {
     data.check = null;
     // The scene reached a conversation: the talk window takes it over with that person (only someone the game knows).
     const talkName = tail.match(/\[대화:\s*([^\]|]+)/)?.[1].trim() || '';
-    const onStage = (Array.isArray(state.npcProfiles) ? state.npcProfiles : []).filter((p: { inScene?: unknown }) => p?.inScene).map((p: { name?: unknown }) => String(p?.name || ''));
+    // Someone the hero hasn't met is written by their look (heroCalls), so the scene and the tag may carry "떠돌이 약초사" for 엘로이즈.
+    const profiles: { name?: unknown; inScene?: unknown; heroCalls?: unknown }[] = Array.isArray(state.npcProfiles) ? state.npcProfiles : [];
+    const shownLook = (p: { heroCalls?: unknown }) => { const look = String(p?.heroCalls || ''); return look && story.includes(look) ? look : ''; };
+    const onStage = profiles.filter(p => p?.inScene || shownLook(p)).map(p => String(p?.name || ''));
+    const byLook = String(profiles.find(p => shownLook(p) && talkName.includes(shownLook(p)))?.name || '');
     const talkable = [...onStage, ...[...(Array.isArray(state.knownNpcs) ? state.knownNpcs : []), ...(Array.isArray(state.cast) ? state.cast : []).map((c: unknown) => String(c || '').replace(/^\[GM\]\s*/, '').split(/[(:：]/)[0].trim())].filter((n: string) => story.includes(n))]
       .filter((n: string) => n.length >= 1 && !(Array.isArray(state.party) ? state.party : []).includes(n));
     // A one-letter name (넬) counts only when exact; partial matches need two letters so 넬 isn't read into another name.
@@ -50,7 +54,7 @@ export function readWritten(c: Ctx) {
     const foes = (Array.isArray(body.monsters) ? body.monsters : []).map((m: { name?: unknown }) => String(m?.name || ''));
     const extra = talkName.length >= 2 && talkName.length <= 12 && story.includes(talkName)
       && !(Array.isArray(state.party) ? state.party : []).includes(talkName) && !foes.some((n: string) => n && (n.includes(talkName) || talkName.includes(n))) ? talkName : '';
-    data.talkTo = !talkName ? '' : talkable.find((n: string) => n === talkName) || (talkName.length < 2 ? '' : talkable.find((n: string) => n.length >= 2 && (talkName.includes(n) || n.includes(talkName)))) || extra;
+    data.talkTo = !talkName ? '' : talkable.find((n: string) => n === talkName) || talkable.find((n: string) => n === byLook) || (talkName.length < 2 ? '' : talkable.find((n: string) => n.length >= 2 && (talkName.includes(n) || n.includes(talkName)))) || extra;
     if (data.talkTo) data.choices = [];
     const roll = body.diceResult || data.talkTo ? null : tail.match(/\[판정:\s*([^\]]+)\]/);
     if (roll) {

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { applyReply } from '../app/_lib/game/turn';
-import { alikeQuest, currentGoalOf, gmGoal, goalPath, goalsFinished, questsOf, regionQuestsOf, type Game, type Session } from '../app/_lib/game/core';
+import { alikeQuest, currentGoalOf, gmGoal, goalPeople, goalPath, goalsFinished, questsOf, regionQuestsOf, type Game, type Session } from '../app/_lib/game/core';
 import { mainChain } from '../app/_lib/prologues';
 // Beats left and not passed: the story running ahead (the next step done or gone after, goalsFinished) passes a goal with beats left.
 const passedLeft = (g: Game, q: string, s: Session) => goalPath(g, q, s).some(x => !x.startsWith('이미')) && !goalsFinished(g, s).includes(q);
@@ -38,9 +38,11 @@ test('recorded turns keep the goal rules under the current code', { skip: !exist
     // A talk this turn ended counts as ended (its end line comes when the player closes the window).
     const ended = res.talkEnded && res.talkNpc ? { ...res, log: [...res.log, `시스템: ${res.talkNpc}와의 대화가 끝났습니다.`] } : res;
     const late = goalsFinished(g, ended); if (late.length) broken.push(`${at} finished but left open: ${late.join(' / ')}`);
-    // The GM always gets a goal to steer by, with something left to do (blanked at 회색 탑 for 13 turns).
+    // The GM always gets a goal to steer by in a scene (blanked at 회색 탑 for 13 turns); a talk with someone outside the goal's
+    // story and a goal waiting behind where people live (2026-11-23) are the only times it gets none.
     const sent = gmGoal(g, res);
-    if (after.length && !sent.currentGoal) broken.push(`${at} no goal sent`);
+    const outside = res.mode === 'talk' && !!res.talkNpc && !goalPeople(g, currentGoalOf(res)).includes(res.talkNpc);
+    if (after.length && !sent.currentGoal && !outside && res.away?.goal !== currentGoalOf(res)) broken.push(`${at} no goal sent`);
     if (sent.goalPath.length && sent.goalPath.every(x => x.startsWith('이미'))) broken.push(`${at} goal sent with nothing left: ${sent.currentGoal}`);
     const added = after.filter(q => !before.includes(q));
     if (added.some(isMain) && !isMain(currentGoalOf(res))) broken.push(`${at} new main step not the current goal: ${currentGoalOf(res)}`);

@@ -1421,6 +1421,10 @@ details[open]>summary .storyPreview{display:none}
 .sceneQuestDrop{position:absolute;top:6px;right:6px;display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:rgba(255,255,255,.55);cursor:pointer}
 .sceneQuestDrop:hover{background:rgba(255,255,255,.15);color:#fff}
 .sceneQuestDrop:focus-visible{outline:2px solid #fca5a1;outline-offset:1px}
+.sceneQuestFocus{margin-top:6px;padding:3px 10px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:transparent;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer}
+.sceneQuestFocus:hover:not(:disabled){background:rgba(255,255,255,.15)}
+.sceneQuestFocus:disabled{opacity:.5;cursor:default}
+.sceneQuestFocus:focus-visible{outline:2px solid #fca5a1;outline-offset:1px}
 /* A new quest gets the same "!" dot as the info tab (.newDot), until the window is opened. */
 /* Stat points from level-ups: the player places them (spendStat). Floats over the play screen until spent or put off. */
 @keyframes threatInPlain{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
