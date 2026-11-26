@@ -46,7 +46,7 @@ export function readWritten(c: Ctx) {
     const shownLook = (p: { heroCalls?: unknown }) => { const look = String(p?.heroCalls || ''); return look && story.includes(look) ? look : ''; };
     const onStage = profiles.filter(p => p?.inScene || shownLook(p)).map(p => String(p?.name || ''));
     const byLook = String(profiles.find(p => shownLook(p) && talkName.includes(shownLook(p)))?.name || '');
-    const talkable = [...onStage, ...[...(Array.isArray(state.knownNpcs) ? state.knownNpcs : []), ...(Array.isArray(state.cast) ? state.cast : []).map((c: unknown) => String(c || '').replace(/^\[GM\]\s*/, '').split(/[(:：]/)[0].trim())].filter((n: string) => story.includes(n))]
+    const talkable = [...onStage, ...[...(Array.isArray(state.knownNpcs) ? state.knownNpcs : []), ...(Array.isArray(state.cast) ? state.cast : []).map((c: unknown) => String(c || '').replace(/^\[GM\]\s*/, '').split(/[(:：]/)[0].trim())]]
       .filter((n: string) => n.length >= 1 && !(Array.isArray(state.party) ? state.party : []).includes(n));
     // A one-letter name (넬) counts only when exact; partial matches need two letters so 넬 isn't read into another name.
     // Someone the scene itself brought on (개척민 하나, a gate guard) is talked to as they are, not dropped: the scene stopped

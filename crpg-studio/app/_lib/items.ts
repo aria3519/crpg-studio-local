@@ -100,18 +100,19 @@ export const bonusText = (info: ItemInfo, name = '') => {
 
 // An enemy carries gear that matches its strength, and drops it when beaten.
 export const gradeForTier = (tier: number): Grade => (tier >= 10 ? 5 : tier >= 9 ? 4 : tier >= 7 ? 3 : tier >= 5 ? 2 : tier >= 3 ? 1 : 0);
-export const dropChance = (tier: number) => (tier >= 9 ? 1 : tier >= 7 ? 0.8 : tier >= 5 ? 0.6 : tier >= 3 ? 0.5 : 0.4);
+// Rarely (user 2026-11-26): a beaten monster usually leaves gold or a potion; gear is the end of a story's and the shop's.
+export const dropChance = (_tier: number) => 0.1;
 // The enemy's own gear makes it that much tougher: the same weapon and armor bonus a player would get.
 export const enemyGear = (tier: number) => { const g = gradeForTier(tier); return { damage: BONUS.weapon.damage[g], hp: BONUS.armor.hp[g] * 2, dc: BONUS.armor.dodge[g] }; };
 
-// Rewards by source: main quest > event > side quest > anything else, as steps above the grade that fits the
-// player's level (base: the gear grade of foes at that level, 일반 at Lv.1 up to 신화 at Lv.100). So the first
-// errand pays 고급 or 희귀, and 전설 shows up around the level where 전설-wearing foes do.
+// Rewards by source: main quest > event > side quest > anything else, as steps around the grade that fits the
+// player's level (base: the gear grade of foes at that level, 일반 at Lv.1 up to 신화 at Lv.100). A grade above it is
+// rare (user 2026-11-26: high grades are for the shop to come); a side job pays the fitting grade or one below.
 const ODDS: Record<'main' | 'event' | 'side' | 'other', [number, number][]> = {
-  main: [[1, 0.75], [2, 0.25]],
-  event: [[0, 0.4], [1, 0.5], [2, 0.1]],
-  side: [[0, 0.6], [1, 0.4]],
-  other: [[-1, 0.5], [0, 0.5]],
+  main: [[0, 0.7], [1, 0.25], [2, 0.05]],
+  event: [[-1, 0.3], [0, 0.6], [1, 0.1]],
+  side: [[-1, 0.5], [0, 0.42], [1, 0.08]],
+  other: [[-1, 0.6], [0, 0.4]],
 };
 export const rollGrade = (source: keyof typeof ODDS, base: Grade, rand = Math.random): Grade => {
   let r = rand(), step = ODDS[source][ODDS[source].length - 1][0];

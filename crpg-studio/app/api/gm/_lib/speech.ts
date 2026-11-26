@@ -64,9 +64,6 @@ export const repeats = (a: string, b: string) => {
 export const pairShare = (a: string, b: string) => { const p = pairs(squash(a)), q = pairs(squash(b)); let both = 0; for (const k of p) if (q.has(k)) both++; return both / Math.max(1, Math.min(p.size, q.size)); };
 export const TALK_STOP = /^(그럼|그래|그건|그게|정말|혹시|지금|우리|당신|너|제가|내가|저는|나는|뭐|무슨|어떻게|왜|좀|더|이제|그냥|알려|말해|주세요|줄래|있어|있나요|있어요|없어|해요|하는|거야|건가요)$/;
 export const contentWords = (t: string) => new Set([...t.matchAll(/[가-힣]{2,}/g)].map(m => m[0].replace(/(이랑|으로|에게|한테|은|는|이|가|을|를|에|의|도|로|와|과|랑|요|죠)$/, '')).filter(w => w.length >= 2 && !TALK_STOP.test(w)));
-// An action that walks away from the conversation ("이끼골로 향해 조사하러 간다"), not something said.
-// Same pattern as the play screen: a destination or object before the verb, so "좋아, 같이 간다" stays speech.
-export const LEAVING = /(?:으로|로|에|을|를|서)\s+(?:\S+\s+){0,4}?(?:간다|향한다|나선다|떠난다|들어간다|나간다|출발한다|돌아간다|따라간다|뒤쫓는다|추적한다|조사한다|살핀다|뒤진다)\.?$/;
 export const ADDRESS = ['경', '그대', '인간', '꼬맹이', '형씨', '아가', '자네', '당신', '손님', '나리', '아가씨', '소협', '대협', '헌터님'];
 export const ADDRESS_JOSA = ['', '은', '는', '이', '가', '의', '을', '를', '에게', '도', '여', '이여', '께서', '께', '님'];
 export const addressesIn = (t: string) => { const words = t.split(/[\s,.!?…~"'“”]+/).filter(Boolean); return ADDRESS.filter(a => words.some(w => w.startsWith(a) && ADDRESS_JOSA.includes(w.slice(a.length)))); };
@@ -89,5 +86,3 @@ export const dropRepeatedQuotes = (text: string, history: string[]) => {
   return kept.replace(/【[^】]*】/, '').trim() ? kept : text;
 };
 export const oldSpeech = (t: string) => t.split(/(?<=[.!?…]["”」']?)\s+|\n+/).some(x => OLD_ENDING.test(x.trim()) || OLD_CLAUSE.test(x));
-// A question ("같이 가 볼래요?") is not a decision.
-export const plainEnd = (t: string) => { const m = t.trim().replace(/[.!]+$/, '').match(/(.)다$/); if (!m) return false; const c = m[1].charCodeAt(0) - 0xac00; return m[1] === '는' || (c >= 0 && c < 11172 && c % 28 === 4); };

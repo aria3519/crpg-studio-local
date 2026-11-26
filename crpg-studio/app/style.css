@@ -806,10 +806,6 @@
 .battleMonsterArt img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.6))}
 .battleMonsterArt.hasArt .battleMonster{display:none}
 /* Game over after a lethal defeat. */
-.deathPanel{display:flex;flex-direction:column;align-items:center;gap:8px;margin:12px 0;padding:22px 16px;border:1px solid #3f1d22;border-radius:14px;background:linear-gradient(#2a1316,#160a0c);color:#f3d4d7;text-align:center}
-.deathPanel svg{color:#ef4444}
-.deathPanel strong{font-size:24px;letter-spacing:.2em;color:#fca5a5}
-.deathPanel p{margin:0 0 6px;font-size:13px;color:#d6b3b7}
 /* Monster / hostile NPC: fight or run, with the escape odds on the button. */
 .threatPanel{border-color:#f2c4c7;background:#fff8f8}
 .threatPanel p{display:flex;align-items:center;gap:6px}.threatPanel p svg{color:#dc2626;flex:0 0 auto}
@@ -1489,7 +1485,6 @@ details[open]>summary .storyPreview{display:none}
 .statusPortrait{transition:filter .3s,border-color .3s,box-shadow .3s}
 .statusPortrait.mood-tense{border-color:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.35);filter:saturate(1.15) contrast(1.1)}
 .statusPortrait.mood-hurt{border-color:#f59e0b;filter:saturate(.7) brightness(.92)}
-.statusPortrait.mood-dead{filter:grayscale(1) brightness(.6)}
 .cutInMe img{filter:saturate(1.15) contrast(1.08)}
 .partyWhy{margin:6px 0 10px;font-size:13px;color:#7c2d12;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:7px 10px}
 .diceSkipHint{display:block;margin-top:6px;font-size:11.5px;color:#6b7280;text-align:center}

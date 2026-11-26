@@ -7,8 +7,8 @@ export type GmStateKey =
   | 'adjacentLocationIds' | 'adjacentLocations' | 'availableImages' | 'cast' | 'characterValues'
   | 'currentGoal' | 'currentInteractionEvent' | 'currentMapId' | 'directorNotes' | 'equipped' | 'event' | 'eventTrigger'
   | 'flags' | 'goalCompleted' | 'goalPath' | 'gold' | 'handledNpcs' | 'hp' | 'inventory'
-  | 'items' | 'knownNpcs' | 'level' | 'localStories' | 'locationDescription' | 'locationName' | 'locations' | 'mapName'
-  | 'mapPin' | 'maxHp' | 'maxQuests' | 'monsters' | 'npcProfiles' | 'comingBack' | 'party' | 'partyLevels' | 'placeSeed' | 'quests'
+  | 'items' | 'knownNpcs' | 'npcNames' | 'level' | 'localStories' | 'locationDescription' | 'locationName' | 'locations' | 'mapName'
+  | 'mapPin' | 'maxHp' | 'maxQuests' | 'monsters' | 'storyFoe' | 'npcProfiles' | 'comingBack' | 'party' | 'partyLevels' | 'placeSeed' | 'quests'
   | 'recentFoes' | 'relationships' | 'reputation' | 'reputationRank' | 'roll' | 'safePlace' | 'sceneNpcs'
   | 'storyCastFull' | 'storyNext' | 'storyPlan' | 'trainableStats' | 'whereabouts' | 'xp' | 'firstVoices' | 'time' | 'foundHere' | 'passedBy';
 export type GmState = { [K in GmStateKey]?: any };
@@ -16,5 +16,5 @@ export type GmBodyKey =
   | 'action' | 'closeTalk' | 'combat' | 'debug' | 'diceResult' | 'genre' | 'hero' | 'history' | 'initialEquipment'
   | 'fromTalk' | 'interfere' | 'mustHappen' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
   | 'previousChoices' | 'prologue' | 'prompt' | 'recentCheck' | 'reroll' | 'ruleEquipment' | 'sceneText' | 'talkTurns'
-  | 'talkPurpose' | 'withThisNpc';
+  | 'talkPurpose' | 'withThisNpc' | 'stepCheck' | 'leaves';
 export type GmBody = { [K in GmBodyKey]?: any } & { state?: GmState };

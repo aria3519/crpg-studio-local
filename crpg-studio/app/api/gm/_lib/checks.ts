@@ -3,7 +3,7 @@
 // the game can't honor are dropped. route.ts sends what comes back to the play screen.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { GmBody, GmState } from '../../../_lib/game/gm-contract';
-import { FOREIGN_SCRIPT, knownName, dropRepeatedQuotes, VOICE_LENGTH, sentences, repeats, addressesIn, pairShare, contentWords, LEAVING, plainEnd, type NpcSheet, type Profile } from './speech';
+import { FOREIGN_SCRIPT, knownName, dropRepeatedQuotes, VOICE_LENGTH, sentences, repeats, addressesIn, type NpcSheet, type Profile } from './speech';
 import { namesFoe } from '../../../_lib/monsters';
 import { POWER_TIERS, MAX_POWER } from '../../../_lib/progression';
 import { appendFileSync } from 'fs';
@@ -12,6 +12,17 @@ import path from 'path';
 type Ctx = {
   body: GmBody; state: GmState; data: any; history: string[]; mode: string; partner: string; profiles: Profile[]; sheets: Record<string, NpcSheet>;
   fixedVoices: { name: string; style: string }[]; itemUse: string; talkWritten: boolean; holdTalk: boolean; lastReply: boolean; playerLeaves: boolean; talkTurns: number;
+};
+// The bookkeeper's money moves, added up as the hero's gain or loss (from/to "주인공"). A move with no words from the scene is not
+// one it read there, and the words must be this turn's (said: the action and the scene above "---"), not an earlier line's money
+// read again (a paid tip charged twice, 2026-11-26). Older replies (recorded turns) carry goldDelta.
+const isHero = (who: unknown) => typeof who === 'string' && /주인공|플레이어|당신/.test(who);
+const bare = (v: string) => v.replace(/[^\p{L}\p{N}]/gu, '');
+export const goldOf = (data: Record<string, unknown>, said: string) => {
+  const here = bare(said);
+  const moves = Array.isArray(data.goldMoves) ? (data.goldMoves as Record<string, unknown>[]).filter(m => m && Number(m.amount) > 0 && typeof m.words === 'string' && bare(m.words) && here.includes(bare(m.words)) && isHero(m.from) !== isHero(m.to)) : null;
+  const moved = moves ? moves.reduce((sum, m) => sum + (isHero(m.to) ? 1 : -1) * Math.round(Number(m.amount)), 0) : Number(data.goldDelta);
+  return Number.isFinite(moved) ? Math.max(-1000, Math.min(500, Math.round(moved))) : 0;
 };
 export function checkReply(c: Ctx) {
   const { state, data, body, mode, fixedVoices, sheets, partner, profiles, itemUse, talkWritten, holdTalk, lastReply, playerLeaves, talkTurns, history } = c;
@@ -27,27 +38,26 @@ export function checkReply(c: Ctx) {
   if (Array.isArray(data.choices)) data.choices = data.choices.map((v: unknown) => { if (v && typeof v === 'object') { return String((v as { text?: unknown }).text || ''); } return v; });
   const choices = Array.isArray(data.choices) ? [...new Set(data.choices.filter((v: unknown): v is string => typeof v === 'string' && !FOREIGN_SCRIPT.test(v)).map((v: string) => v.trim().replace(/^[(\[]?\s*특이한\s*행동\s*\d?\s*[)\]]?\s*[:：\-—]?\s*/, '')).filter((v: string) => v.length >= 2 && v.length <= 140))].slice(0, 3) : [];
   // Only a foe from this genre's roster can ambush, and never mid-fight or mid-talk.
-  const monsterNames = Array.isArray(state.monsters) ? state.monsters.map((m: { name?: unknown }) => String(m?.name || '')) : [];
+  const monsterNames = [...(Array.isArray(state.monsters) ? state.monsters.map((m: { name?: unknown }) => String(m?.name || '')) : []), ...(typeof state.storyFoe?.name === 'string' ? [state.storyFoe.name] : [])];
   const toMonster = (v: unknown) => { const t = typeof v === 'string' ? v.trim() : ''; return !t ? '' : monsterNames.find((n: string) => n === t) || monsterNames.find((n: string) => n.includes(t) || t.includes(n)) || ''; };
-  const ATTACK = /(습격|덮치|덮쳐|돌진|달려들|달려든|덤벼|막아서|모습을 드러)/;
   // By full name, or a telling word standing on its own (monsters.ts namesFoe); a boss only by its full name.
   const foeInScene = (t: string) => monsterNames.find((n: string) => t.includes(n)) || monsterNames.find((n: string) => !(state.monsters || []).find((m: { name?: unknown; boss?: unknown }) => m?.name === n && m?.boss) && namesFoe(t, n));
   const sceneText = String(data.text || '');
-  // Fighting a roster monster is a battle, not a dice check: a 근력 check once "제압했다" the wolf pack a quest
-  // needed fought, and the same wolves had to be fought again later.
-  const FIGHT = /(상대하|싸우|싸운|공격|처치|물리치|쫓아내|토벌|사냥|제압|맞서)/;
-  const action = String(body.action || '');
-  const fightFoe = !mode && data.check && typeof data.check === 'object' && FIGHT.test(action) ? foeInScene(action) || foeInScene(sceneText) : '';
-  if (fightFoe) data.check = null;
-  const ambush = mode ? '' : fightFoe || toMonster(data.ambush) || (Array.isArray(data.presentNpcs) ? data.presentNpcs.map(toMonster).find(Boolean) || '' : '') || (!(data.check && typeof data.check === 'object') && ATTACK.test(sceneText) ? foeInScene(sceneText) : '');
+  // A fight in the scene is the bookkeeper's ambush (user 2026-11-26): the game no longer reads attack words or a monster's name
+  // in the text (a rumour that wolves "모습을 드러냈던" place opened a fight).
+  const ambush = mode ? '' : toMonster(data.ambush) || foeInScene(String(data.ambush || '')) || '';
   const trainableIds = Array.isArray(state.trainableStats) ? state.trainableStats.map((t: { id?: unknown }) => String(t?.id || '')) : [];
   const trained = !mode && Array.isArray(data.trained) ? data.trained.filter((id: unknown): id is string => typeof id === 'string' && trainableIds.includes(id)).slice(0, 2) : [];
   const xpGain = typeof data.xpGain === 'string' && ['minor', 'deed', 'event'].includes(data.xpGain) ? data.xpGain : '';
   const reputationDelta = typeof data.reputationDelta === 'number' && Number.isFinite(data.reputationDelta) ? Math.max(-5000, Math.min(5000, Math.round(data.reputationDelta))) : 0;
-  const goldDelta = typeof data.goldDelta === 'number' && Number.isFinite(data.goldDelta) ? Math.max(-1000, Math.min(500, Math.round(data.goldDelta))) : 0;
+  const goldDelta = goldOf(data, [body.action, String(body.sceneText || '').split(/\n\s*-{3,}/)[0], data.text, data.line].map(v => String(v || '')).join('\n'));
   const profileNames = Array.isArray(state.npcProfiles) ? state.npcProfiles.map((p: { name?: unknown }) => String(p?.name || '')) : [];
   const cast = [...new Set([...profileNames, ...(Array.isArray(state.knownNpcs) ? state.knownNpcs.map(String) : [])])].filter(Boolean);
-  const presentNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => knownName(cast, v.trim())).filter((v: string) => v.length >= 1 && v.length <= 30))].slice(0, 3) : [];
+  // Only this world's people (the ones with portraits) go on stage or into the relations; a name made up in a scene does not
+  // become a person (user 2026-11-26). A request without the list (an old recorded turn) keeps the old check.
+  const real = Array.isArray(state.npcNames) && state.npcNames.length ? new Set<string>(state.npcNames.map(String)) : null;
+  const isReal = (n: string) => !real || real.has(n);
+  const presentNpcs = Array.isArray(data.presentNpcs) ? [...new Set(data.presentNpcs.filter((v: unknown): v is string => typeof v === 'string').map((v: string) => knownName(cast, v.trim())).filter((v: string) => v.length >= 1 && v.length <= 30 && isReal(v)))].slice(0, 3) : [];
   const npcVoices = [...fixedVoices, ...(Array.isArray(data.npcVoices) ? data.npcVoices.filter((v: { name?: unknown; style?: unknown }) => v && typeof v.name === 'string' && typeof v.style === 'string' && v.style.trim() && profileNames.includes(v.name.trim()) && !fixedVoices.some(f => f.name === String(v.name).trim()) && !FOREIGN_SCRIPT.test(v.style))
     .map((v: { name: string; style: string }) => ({ name: v.name.trim(), style: v.style.trim().slice(0, VOICE_LENGTH) })) : [])].slice(0, 6);
   const check = !mode && body.reroll !== true && body.debug !== true && !body.diceResult && data.check && typeof data.check === 'object' ? {
@@ -58,14 +68,14 @@ export function checkReply(c: Ctx) {
     // What hangs on the roll, shown before the player rolls.
     success: String(data.check.success || '').slice(0, 80),
     failure: String(data.check.failure || '').slice(0, 80),
+    ...(typeof data.checkPerson === 'string' ? { person: data.checkPerson.trim().slice(0, 30) } : {}),
   } : null;
-  const relationshipUpdates0 = Array.isArray(data.relationshipUpdates) ? data.relationshipUpdates.slice(0, 12).filter((item: unknown) => !!item && typeof item === 'object' && typeof (item as {name?:unknown}).name === 'string').map((item: {name:string;met?:boolean;relation?:string;affection?:number;affectionChange?:number}) => ({because:String((item as {because?:unknown}).because??'').trim().slice(0,80),name:item.name.trim().slice(0,50),met:item.met===true,relation:typeof item.relation==='string'?item.relation.slice(0,30):'',affection:typeof item.affection==='number'&&Number.isFinite(item.affection)?Math.max(-100,Math.min(100,Math.round(item.affection))):undefined,affectionChange:typeof item.affectionChange==='number'&&Number.isFinite(item.affectionChange)?Math.max(-25,Math.min(25,Math.round(item.affectionChange))):undefined})) : [];
+  const relationshipUpdates0 = Array.isArray(data.relationshipUpdates) ? data.relationshipUpdates.slice(0, 12).filter((item: unknown) => !!item && typeof item === 'object' && typeof (item as {name?:unknown}).name === 'string' && isReal((item as {name:string}).name.trim())).map((item: {name:string;met?:boolean;relation?:string;affection?:number;affectionChange?:number}) => ({because:String((item as {because?:unknown}).because??'').trim().slice(0,80),name:item.name.trim().slice(0,50),met:item.met===true,relation:typeof item.relation==='string'?item.relation.slice(0,30):'',affection:typeof item.affection==='number'&&Number.isFinite(item.affection)?Math.max(-100,Math.min(100,Math.round(item.affection))):undefined,affectionChange:typeof item.affectionChange==='number'&&Number.isFinite(item.affectionChange)?Math.max(-25,Math.min(25,Math.round(item.affectionChange))):undefined})) : [];
   // Goodwill grows only on what this person likes (a sheet like, named in `because`): being around them or talking earns
   // none (user, 2026-11-17). No sheet, no likes, no rise. Falls are the GM's call as before.
   const relationshipUpdates = relationshipUpdates0.map((u: { name: string; because: string; affectionChange?: number }) => {
     if (!(Number(u.affectionChange) > 0)) return u;
-    const like = (sheets[u.name]?.likes || []).find(l => l === u.because || (u.because.length >= 6 && (l.includes(u.because) || u.because.includes(l))));
-    return like ? { ...u, because: like, affectionChange: Math.min(10, Number(u.affectionChange)) } : { ...u, affectionChange: undefined };
+    return { ...u, affectionChange: Math.min(10, Number(u.affectionChange)) };
   });
   const questStrings = (v: unknown) => Array.isArray(v) ? v.filter((x: unknown): x is string => typeof x === 'string' && !!x.trim() && !FOREIGN_SCRIPT.test(x)).map((x: string) => x.trim().slice(0, 80)).slice(0, 3) : [];
   const completedQuests = questStrings(data.completedQuests), failedQuests = questStrings(data.failedQuests);
@@ -124,7 +134,6 @@ export function checkReply(c: Ctx) {
     const lineParts = /[“"「『]/.test(rawLine) ? toParts(rawLine) : rawLine ? [{ type: 'speech' as const, text: strip(rawLine) }] : [];
     // Story narration sent as the partner's words ("핍이 당신에게 귀띔한 대로 … 생각이 스친다"): not speech, so it is dropped and the words asked for below.
     const narrated = (t: string) => t.includes(`${partner}이 `) || t.includes(`${partner}가 `) || t.includes(`${partner}은 `) || t.includes(`${partner}는 `) || (t.includes('당신') && /(는다|한다|간다|돈다|친다|있다|없다|였다|았다|었다).?$/.test(t.trim()));
-    for (let i = lineParts.length - 1; i >= 0; i--) if (lineParts[i].type === 'speech' && narrated(lineParts[i].text)) lineParts.splice(i, 1);
     if (holdTalk) data.endTalk = false;
     // Headings are scene formatting; in a talk they are dropped from the narration. Only the player leaving (a walk-off
     // action) takes the reply out of the talk.
@@ -169,41 +178,33 @@ export function checkReply(c: Ctx) {
     if (speech.some(inVoice)) speech = speech.filter(inVoice);
     parts = talkLeft ? [] : (speech.length ? speech : [strip(rawLine) || '…']).map(text => ({ type: 'speech' as const, text: text.slice(0, 600) })).slice(0, 4);
     line = parts.filter(p => p.type === 'speech').map(p => p.text).join(' ');
-    const FAREWELL = /(기약|다음에 (또 )?(봅시다|봐요|뵙|보자)|다시 만나(면|자|요|게)|다시 보자|또 보자|또 봐|몸 조심|조심히 가|조심해서 가|살펴 가|잘 가|여기까지(다|야|예요|입니다|군|로))/;
-    if (!talkLeft && talkTurns >= 1 && FAREWELL.test(line)) data.endTalk = true;
     // Past the turn limit the talk closes whatever the model said.
     if (lastReply) data.endTalk = true;
     // The player's line settled what they do next (the GM's call): the partner's one answer closes the talk and the game plays the
     // action as a scene. Before, the talk ran on and the partner narrated the next scene (에드리아 describing tracks at the farm).
     nextAction = !holdTalk && !talkLeft && typeof data.nextAction === 'string' && !FOREIGN_SCRIPT.test(data.nextAction) ? data.nextAction.trim().replace(/^나는\s+/, '').slice(0, 140) : '';
     if (nextAction) { const first = parts.find(p => p.type === 'speech'); if (first) { parts = [first]; line = first.text; } data.endTalk = true; }
-    const replySentences = sentences(line);
-    const echoed = replySentences.filter(x => saidBefore.some((y: string) => pairShare(x, y) >= 0.45)).length;
-    if (!talkLeft && talkTurns >= 2 && replySentences.length && echoed * 2 >= replySentences.length) data.endTalk = true;
     data.text = talkLeft ? leftText : parts.filter(p => p.type === 'scene').map(p => p.text).join(' ');
   }
-  // The scene's choices are the writer's own. The game drops only what it can't carry out: going where the player already
-  // is (a far place is fine: the move goes through the places on the way), paying with an empty purse, or only resting (health comes back by itself).
-  const here = [...contentWords(String(state.locationName || ''))].filter(w => !/^(입구|근처|안쪽|바깥|앞|가장자리)$/.test(w));
-  // A place the choice may go to (now.nearby) is not here, though its name holds here's (모험가 길드 레븐홀트 지부 in 레븐홀트).
+  // The scene's choices are the writer's own (user 2026-11-26: no word rules drop them); where each goes is read below (goes).
   const nearby: string[] = Array.isArray(state.adjacentLocations) ? state.adjacentLocations.map((l: { name?: unknown }) => String(l?.name || '')).filter(Boolean) : [];
-  const goesHere = (c: string) => { const rest = nearby.reduce((t, n) => t.split(n).join(' '), c); return /(가서|간다|향한다|이동한다|돌아간다|찾아간다)/.test(rest) && here.some(w => rest.includes(w)); };
-  const broke = Number(state.gold ?? 1) <= 0;
-  const pays = (c: string) => broke && /(골드|돈|값|요금|[가-힣]료|삯|대금|사례금)[^.]{0,15}(내고|낸다|내며|내서|건네|치르고|치른다|치러|지불|갚|꺼내)/.test(c);
-  const RESTING = /(휴식|쉬며|쉬면서|쉰다|쉬어|잠을 ?청|눈을 붙|숨을 돌리|체력을 ?회복|회복하러|회복한다|기력을 ?회복|상처를 ?돌보|치료(를|하러) ?받)/;
-  const whyBad = (c: string) => [goesHere(c) && 'goes-here', pays(c) && 'no-gold', RESTING.test(c) && 'rest'].filter(Boolean).join(',');
   const gmChoices = [...(choices as string[])];
-  if (!mode && !check && !ambush) choices.splice(0, choices.length, ...gmChoices.filter(c => !whyBad(c)));
+  const whyBad = (_c: string) => '';
   // Dev only: what the writer offered and what went out (.next/choice-debug.jsonl).
   if (process.env.NODE_ENV !== 'production' && !mode && !check && !ambush) {
     try { appendFileSync(path.join(process.cwd(), '.next', 'choice-debug.jsonl'), JSON.stringify({ ts: new Date().toISOString(), at: state.locationName || '', gm: gmChoices.map(c => ({ c, bad: whyBad(c) })), out: choices }) + '\n'); } catch {}
   }
-  // Suggested replies must be speech; narrated intents are dropped unless nothing else is left.
-  const NARRATED = /(한다|묻는다|말한다|건넨다|요청한다|부탁한다|청한다|본다|듣는다)\.?$/;
-  const thirdPerson = (v: string) => partner.length >= 2 && ['와', '과', '에게', '한테', '를', '을', '의'].some(p => v.includes(`${partner}${p} `));
-  const spoken = (v: string) => !NARRATED.test(v) && !LEAVING.test(v) && !plainEnd(v) && !/겠다.?$/.test(v) && !thirdPerson(v);
-  const spokenChoices = mode === 'talk' && talkWritten ? [...(choices as string[])] : mode === 'talk' ? (choices as string[]).map((v: string) => v.replace(/^["“”'「『]+|["“”'」』]+$/g, '').trim()).filter(spoken) : [];
-  if (mode === 'talk' && spokenChoices.length) choices.splice(0, choices.length, ...spokenChoices);
+  if (mode === 'talk' && !talkWritten) choices.splice(0, choices.length, ...(choices as string[]).map((v: string) => v.replace(/^["“”'「『]+|["“”'」』]+$/g, '').trim()).filter(Boolean));
   const playerLine = mode === 'talk' && typeof data.playerLine === 'string' && !FOREIGN_SCRIPT.test(data.playerLine) ? data.playerLine.trim().replace(/^["“”'「『]+|["“”'」』]+$/g, '').slice(0, 300) : '';
-  return { addQuests, ambush, check, choices, completedQuests, enemy, failedQuests, gesture, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain };
+  // Where each action on offer goes, as the bookkeeper read it ('' stays here); undefined when it didn't read them (a redraw).
+  const norm = (t: string) => t.replace(/[\s.,"“”'「」『』]/g, '');
+  const told = Array.isArray(data.goes) ? data.goes.filter((x: Record<string, unknown>) => x && typeof x.do === 'string') : [];
+  const readOf = (a: string) => told.find((x: { do: string }) => norm(x.do) === norm(a)) as { to?: unknown; talk?: unknown; fight?: unknown } | undefined;
+  const offered = mode === 'talk' ? [nextAction, ...(Array.isArray(data.afterChoices) ? data.afterChoices : [])] : mode ? [] : choices as string[];
+  const acts = offered.filter((a: unknown): a is string => typeof a === 'string' && !!a);
+  const goes = Array.isArray(data.goes) ? Object.fromEntries(acts.map(a => { const to = String(readOf(a)?.to || '').trim(); return [a, nearby.includes(to) ? to : '']; })) as Record<string, string> : undefined;
+  // Who each action speaks to ('' nobody); the play screen opens that talk if the person is someone it knows.
+  const talks = Array.isArray(data.goes) ? Object.fromEntries(acts.map(a => [a, String(readOf(a)?.talk || '').trim().slice(0, 30)])) as Record<string, string> : undefined;
+  const fights = Array.isArray(data.goes) ? Object.fromEntries(acts.map(a => [a, String(readOf(a)?.fight || '').trim().slice(0, 30)])) as Record<string, string> : undefined;
+  return { addQuests, ambush, check, choices, completedQuests, enemy, failedQuests, gesture, goes, talks, fights, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain };
 }

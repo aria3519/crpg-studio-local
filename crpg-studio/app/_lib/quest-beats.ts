@@ -13,9 +13,10 @@
 export type Beat =
   | { do: 'talk'; npc: string; at?: string[]; accept?: string; pay?: number; then: string }
   // lose: a duel with a person the hero may lose (a bout, HP 1): what follows then, from who they are. Either outcome moves the story.
-  | { do: 'defeat'; foe: string; at?: string[]; then: string; lose?: string }
-  | { do: 'reach'; at: string[]; then: string }
-  | { do: 'search'; at: string[]; then: string }
+  // with: the cast members the step puts at its place (카시아 in the 진흙 골목 store): they are there while it waits.
+  | { do: 'defeat'; foe: string; at?: string[]; then: string; lose?: string; with?: string[] }
+  | { do: 'reach'; at: string[]; then: string; with?: string[] }
+  | { do: 'search'; at: string[]; then: string; with?: string[] }
   | { do: 'choose'; options: string[]; then: string };
 
 // What the player has to do next, in words for the GM and the quest log.
