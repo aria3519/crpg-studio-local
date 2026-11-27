@@ -105,7 +105,6 @@ export function checkReply(c: Ctx) {
   if (mode === 'talk' && talkWritten) {
     parts = String(data.line).split('\n').filter(text => text.trim()).map(text => ({ type: 'speech' as const, text: text.slice(0, 600) })).slice(0, 4);
     line = parts.map(p => p.text).join(' ');
-    if (holdTalk) { data.endTalk = false; data.nextAction = ''; }
     if (lastReply) data.endTalk = true;
     nextAction = typeof data.nextAction === 'string' && !FOREIGN_SCRIPT.test(data.nextAction) ? data.nextAction.trim().replace(/^나는\s+/, '').slice(0, 140) : '';
   } else if (mode === 'talk') {

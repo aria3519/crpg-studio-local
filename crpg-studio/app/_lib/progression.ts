@@ -18,7 +18,7 @@ export const tierOfLevel = (level: number) => { let t = 1; while (t < MAX_POWER 
 export const foeLevelRange = (tier: number, boss = false): [number, number] => [levelForTier(tier), boss ? levelForTier(tier) : levelForTier(Math.min(MAX_POWER, Math.round(tier) + 2))];
 // The level a foe is met at (user 2026-11-23: always 1-4 under won ~100% of fights, "너무 쉽다"; 1 under to 2 over still read
 // 여유 half the time): an ordinary monster level to 3 over (simulated ~50-99% wins, 승산 있음 or 위험), one that matters (a boss,
-// the story's foe) 1-2 over (a boss ~40-75%). Losing costs turns, gold or an item, never the game (defeatCost).
+// the story's foe) 1-2 over (a boss ~40-75%). Losing goes back to the last save point, never ends the game (defeatCost).
 export const encounterLevel = (important: boolean, playerLevel: number, rand = Math.random) =>
   Math.max(1, playerLevel + (important ? 1 + Math.floor(rand() * 2) : Math.floor(rand() * 4)));
 

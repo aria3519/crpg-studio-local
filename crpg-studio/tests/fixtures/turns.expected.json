@@ -87,8 +87,7 @@
   ],
   "threat": null,
   "people": [
-   "넬 구해 준 궁수 10",
-   "아무개 지나가던 사람 0"
+   "넬 구해 준 궁수 10"
   ],
   "sceneNpcs": [
    "넬"
@@ -106,19 +105,28 @@
  "hand-written: a goal finished and a new one added": {
   "newLog": [
    "GM: 【모험가 길드 레븐홀트 지부 · 아침】\n\n은발의 기사단장이 고개를 끄덕인다. \"합격이다. 다음은 진흙 골목이다.\"",
-   "시스템: 에드리아 하르트 첫인상 +10 (중립)"
+   "시스템: 목표 완료 — 기사단장 에드리아의 입단 시험 통과하기",
+   "시스템: 에드리아 하르트 첫인상 +10 (중립)",
+   "시스템: 명성 +80 (80 · 무명)",
+   "시스템: 골드 +30 (보유 30)",
+   "시스템: 새 목표 — 견습 순찰로 진흙 골목의 장물 거래 단속하기",
+   "시스템: 경험치 +840 (퀘스트 완료)",
+   "시스템: 레벨 업! Lv.1 → Lv.5 · 최대 HP 100 → 112 · HP 모두 회복",
+   "시스템: 능력치 성장 — 근력 +10 · 민첩 +2"
   ],
-  "hp": 100,
-  "gold": 0,
-  "reputation": 0,
+  "hp": 112,
+  "gold": 30,
+  "reputation": 80,
   "quests": [
-   "기사단장 에드리아의 입단 시험 통과하기"
+   "견습 순찰로 진흙 골목의 장물 거래 단속하기"
   ],
   "inventory": [
    "낡은 롱소드",
    "하급 치유 물약",
    "잿빛 갈매기 인장 반지"
   ],
+  "level": 5,
+  "xp": 168,
   "threat": null,
   "people": [
    "에드리아 하르트 기사단장 10"
@@ -130,9 +138,24 @@
   "talkPurpose": null,
   "notice": "에드리아 하르트 첫인상 +10 (중립)",
   "repBurst": null,
-  "questClear": null,
+  "questClear": {
+   "quests": [
+    {
+     "name": "기사단장 에드리아의 입단 시험 통과하기",
+     "giver": ""
+    }
+   ],
+   "xp": 840,
+   "reputation": 80,
+   "total": 80,
+   "gold": 30,
+   "items": [],
+   "levelFrom": 1,
+   "levelTo": 5,
+   "next": "견습 순찰로 진흙 골목의 장물 거래 단속하기"
+  },
   "levelBurst": null,
-  "major": false
+  "major": true
  },
  "hand-written: paying more than the purse holds": {
   "newLog": [

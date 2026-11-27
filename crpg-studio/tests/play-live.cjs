@@ -29,11 +29,17 @@ if (!CHROME) { console.error('Chrome/Edge를 찾지 못했습니다.'); process.
 fs.mkdirSync(out, { recursive: true });
 const backup = fs.existsSync(saveFile) ? fs.readFileSync(saveFile) : null;
 if (SEED) fs.writeFileSync(saveFile, fs.readFileSync(SEED));
-const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${prof}`, '--window-size=1400,1000', 'about:blank'], { stdio: 'ignore' });
+// A window left open for testing (chrome --remote-debugging-port=9222 http://localhost:3000) is used as it is: no new browser,
+// and the game already on screen is not opened again. Otherwise a headless one is started for this run.
+const LIVE = 9222;
+let chrome, live = false;
 
 (async () => {
+  live = await fetch(`http://127.0.0.1:${LIVE}/json/version`).then(r => r.ok, () => false);
+  const port = live ? LIVE : PORT;
+  if (!live) chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${prof}`, '--window-size=1400,1000', 'about:blank'], { stdio: 'ignore' });
   let target;
-  for (let i = 0; i < 40 && !target; i++) { await wait(500); try { target = (await (await fetch(`http://127.0.0.1:${PORT}/json`)).json()).find(t => t.type === 'page'); } catch {} }
+  for (let i = 0; i < 40 && !target; i++) { if (!live) await wait(500); try { const pages = (await (await fetch(`http://127.0.0.1:${port}/json`)).json()).filter(t => t.type === 'page'); target = pages.find(t => t.url.startsWith(URL)) || pages[0]; } catch {} }
   if (!target) throw new Error('Chrome 디버그 포트에 연결하지 못했습니다.');
   const ws = new WebSocket(target.webSocketDebuggerUrl); await new Promise(r => ws.onopen = r);
   let id = 0; const pending = {};
@@ -53,14 +59,22 @@ const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}
   const readPages = async () => { for (let k = 0; k < 8 && await js(`!!document.querySelector('.vnSkip')`); k++) { await js(`document.querySelector('.vnSkip').click()`); await wait(1200); } await wait(1500); };
 
   await send('Page.enable'); await send('Network.enable');
+  // The open window keeps its game unless a seed was written under it (the page holds the session in memory).
+  const onGame = live && !SEED && await js(`location.href.startsWith(${JSON.stringify(URL)}) && !!document.querySelector('.storyLog')`);
+  if (!onGame) {
   await send('Page.navigate', { url: URL });
   if (!await until(`[...document.querySelectorAll('button')].some(b => b.textContent.trim() === '플레이')`, 90000)) throw new Error('게임 목록이 뜨지 않았습니다. 개발 서버(:3000)가 켜져 있나요?');
   const name = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'saves', 'games.json'), 'utf8')).find(g => g.id === GAME)?.name || '';
   await js(`(() => { const bs = [...document.querySelectorAll('button')].filter(b => b.textContent.trim() === '플레이'); const b = bs.find(x => { let p = x; for (let i = 0; i < 6 && p; i++, p = p.parentElement) if ((p.textContent || '').includes(${JSON.stringify(name)})) return true; return false; }); (b || bs[0]).click(); })()`);
   await wait(4000);
+  }
   let s = save();
   // --press: a button by its text (싸운다 on a fight), then the log it adds and the screen are shown.
   if (PRESS) { const n = save().log.length; if (!await until(`[...document.querySelectorAll('button')].some(b => b.textContent.trim() === ${JSON.stringify(PRESS)})`, 30000)) throw new Error(PRESS + ' 버튼이 없습니다.'); await shot('0-before'); await click(PRESS); console.log('누름:', PRESS); s = await settle(n); await readPages(); show(s.log.slice(n)); }
+  // --clicks "정보창>>파티 권유": screen-only buttons clicked in turn (no AI), then a screenshot (3-clicks.png).
+  const CLICKS = arg('clicks', '');
+  // Confirm dialogs (새로하기) are accepted.
+  if (CLICKS) { await wait(9000); await js('window.confirm = () => true'); for (const b of CLICKS.split('>>')) { await until(`[...document.querySelectorAll('button')].some(x => x.textContent.trim() === ${JSON.stringify(b.trim())})`, 180000); await click(b.trim()); await wait(1500); } await shot('3-clicks'); console.log('누름:', CLICKS); }
   // --say: a line typed into the open talk window (not one of its suggested lines).
   const SAY = arg('say', '');
   if (SAY) {
@@ -107,8 +121,10 @@ const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${PORT}
   await shot('2-end');
   console.log(calls()); console.log('끝: mode =', s.mode || '(장면)', '| 대화 상대 =', s.talkNpc || '-', '| 만난 사람 =', JSON.stringify(s.metNpcs || []));
   console.log('스크린샷:', out);
+  // The open window would save its in-memory session over the restored file: put the save back and reload it there.
+  if (live && !KEEP) { if (backup) fs.writeFileSync(saveFile, backup); await send('Page.reload'); console.log('로컬 세이브를 원래대로 되돌리고 창을 새로 불렀습니다.'); }
   ws.close();
 })().catch(e => { console.error('실패:', e.message); process.exitCode = 1; }).finally(() => {
-  chrome.kill();
-  if (!KEEP) { if (backup) fs.writeFileSync(saveFile, backup); else fs.rmSync(saveFile, { force: true }); console.log('로컬 세이브를 원래대로 되돌렸습니다.'); }
+  chrome?.kill();
+  if (!KEEP && !live) { if (backup) fs.writeFileSync(saveFile, backup); else fs.rmSync(saveFile, { force: true }); console.log('로컬 세이브를 원래대로 되돌렸습니다.'); }
 });

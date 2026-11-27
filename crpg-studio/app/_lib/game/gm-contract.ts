@@ -10,11 +10,11 @@ export type GmStateKey =
   | 'items' | 'knownNpcs' | 'npcNames' | 'level' | 'localStories' | 'locationDescription' | 'locationName' | 'locations' | 'mapName'
   | 'mapPin' | 'maxHp' | 'maxQuests' | 'monsters' | 'storyFoe' | 'npcProfiles' | 'comingBack' | 'party' | 'partyLevels' | 'placeSeed' | 'quests'
   | 'recentFoes' | 'relationships' | 'reputation' | 'reputationRank' | 'roll' | 'safePlace' | 'sceneNpcs'
-  | 'storyCastFull' | 'storyNext' | 'storyPlan' | 'trainableStats' | 'whereabouts' | 'xp' | 'firstVoices' | 'time' | 'foundHere' | 'passedBy';
+  | 'storyCastFull' | 'storyNext' | 'storyPlan' | 'trainableStats' | 'whereabouts' | 'xp' | 'firstVoices' | 'time' | 'foundHere' | 'passedBy' | 'settled';
 export type GmState = { [K in GmStateKey]?: any };
 export type GmBodyKey =
   | 'action' | 'closeTalk' | 'combat' | 'debug' | 'diceResult' | 'genre' | 'hero' | 'history' | 'initialEquipment'
-  | 'fromTalk' | 'interfere' | 'mustHappen' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
+  | 'fromTalk' | 'typedAction' | 'interfere' | 'mustHappen' | 'keyFacts' | 'memory' | 'mode' | 'monsters' | 'movementAllowed' | 'npc' | 'phase'
   | 'previousChoices' | 'prologue' | 'prompt' | 'recentCheck' | 'reroll' | 'ruleEquipment' | 'sceneText' | 'talkTurns'
   | 'talkPurpose' | 'withThisNpc' | 'stepCheck' | 'leaves';
 export type GmBody = { [K in GmBodyKey]?: any } & { state?: GmState };

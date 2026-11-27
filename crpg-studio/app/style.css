@@ -729,6 +729,7 @@
 .partyButton{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:4px 10px;border:1px solid #c7d7f0;border-radius:7px;background:#f3f7fd;color:#2f5aa0;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
 .partyButton:hover:not(:disabled){background:#2f5aa0;border-color:#2f5aa0;color:#fff}
 .partyButton:disabled{opacity:.5;cursor:not-allowed}
+.partyButton.blocked{opacity:.55}
 .partyButton.partyLeave{border-color:#e5e7eb;background:#fff;color:#6b7280}
 .partyButton.partyLeave:hover{background:#6b7280;border-color:#6b7280;color:#fff}
 .partyBadge{margin-left:6px;padding:0 6px;border-radius:5px;background:#2f5aa0;color:#fff;font-size:10.5px;font-style:normal;font-weight:700}
@@ -812,6 +813,7 @@
 .encounterFlee svg{color:#16a34a}
 .encounterFlee:hover:not(:disabled){background:#f0fdf4;border-color:#86efac;color:#15803d}
 .encounterAction small{font-size:11.5px;font-weight:700;color:#6b7280}
+.playPage .encounterPanel .encounterAction small{color:#f5a3a3}
 .characterExp{margin-top:2px}
 .characterExp .characterVitalTrack{background:#e9e4fb}
 .characterExp .characterVitalTrack i{background:linear-gradient(90deg,#a78bfa,#6d4fd6);transition:width .4s}
@@ -1630,3 +1632,58 @@ details[open]>summary .storyPreview{display:none}
 .phoneTabs{display:none}
 .phoneTabs button{position:relative;flex:1;padding:9px 4px;border:1px solid #ececf0;border-radius:9px;background:#fff;color:#596579;font-size:13px;font-weight:700}
 .phoneTabs button.active{background:#ffe8e7;border-color:#ffe8e7;color:#cf4c55}
+
+/* Shop (2026-11-27): a city's store window, game-shop style. Cards take the grade colours (.grade0-5). */
+.sceneShopButton:not(:disabled)>b{background:linear-gradient(180deg,rgba(180,120,20,.85),rgba(120,70,10,.85));border-color:#fcd34d}
+.shopBackdrop{position:fixed;inset:0;z-index:45;display:grid;place-items:center;padding:16px;background:rgba(10,12,20,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:shopFade .18s ease-out}
+.shopModal{width:min(860px,100%);max-height:min(88vh,900px);display:flex;flex-direction:column;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,#2a2238 0%,#1b1726 100%);border:2px solid #c9a24a;box-shadow:0 0 0 4px rgba(201,162,74,.18),0 20px 50px rgba(0,0,0,.55);color:#f5efe1;animation:shopRise .24s cubic-bezier(.2,1.3,.4,1)}
+.shopHead{flex:none;display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(180deg,#4a3418,#2e2010);border-bottom:2px solid #c9a24a}
+.shopHead>div{flex:1;min-width:0}
+.shopHead h2{margin:0;font-size:19px;font-weight:900;letter-spacing:.02em;color:#ffe7a8;text-shadow:0 2px 0 #6b4310}
+.shopHead small{display:block;font-size:11.5px;color:#d8c49a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shopSign{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:12px;background:radial-gradient(circle at 30% 30%,#ffd76a,#b7791f);color:#4a2a05;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.shopGold{display:flex;align-items:center;gap:6px;flex:none;padding:6px 12px;border-radius:999px;background:#1a120a;border:1px solid #c9a24a;font-weight:900;font-size:15px;color:#ffd76a}
+.shopClose{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.3);color:#fff;cursor:pointer}
+.shopClose:hover{background:#f26861}
+.shopTabs{flex:none;display:flex;gap:6px;padding:10px 14px;overflow-x:auto;background:rgba(0,0,0,.2)}
+.shopTabs button{flex:none;font:inherit;font-size:13px;font-weight:800;padding:7px 15px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#d6cfe4;cursor:pointer;transition:transform .1s}
+.shopTabs button.active{background:linear-gradient(180deg,#ffd76a,#e0a526);color:#3b2405;border-color:#ffe7a8;box-shadow:0 2px 8px rgba(224,165,38,.4)}
+.shopTabs button:active{transform:scale(.95)}
+.shopGrid{flex:1 1 auto;min-height:0;grid-auto-rows:max-content;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;padding:14px;overflow-y:auto}
+.shopCard{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 12px 10px;border-radius:14px;text-align:center;background:linear-gradient(180deg,color-mix(in srgb,var(--grade) 30%,#2a2238),#211b2e 70%);border:2px solid color-mix(in srgb,var(--grade) 80%,#fff 0%);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 4px 12px rgba(0,0,0,.3);overflow:hidden}
+.shopCard.grade0{--grade:#9ca3af}
+.shopCardTop{display:flex;justify-content:space-between;align-items:center;width:100%;gap:6px}
+.shopBadge{font-size:11px;font-weight:900;padding:2px 9px;border-radius:999px;background:var(--grade);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.3)}
+.shopKind,.shopOwned{font-size:11px;font-weight:700;color:#cfc6de}
+.shopIcon{display:grid;place-items:center;width:56px;height:56px;margin:2px 0;border-radius:16px;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--grade) 70%,#fff),var(--grade));color:#fff;box-shadow:0 0 16px color-mix(in srgb,var(--grade) 55%,transparent),inset 0 -3px 0 rgba(0,0,0,.25)}
+.shopCard strong{font-size:14.5px;font-weight:900;color:#fff;line-height:1.25}
+.shopCard p{margin:0;font-size:12px;color:#cfc6de}
+.shopStats{display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+.shopStats span{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.1);color:#ece6f6}
+.shopSkill{display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#ffd76a;line-height:1.3}
+.shopPower{display:flex;flex-direction:column;font-size:12.5px;font-weight:900;color:#a8a0b8}
+.shopPower.up{color:#4ade80}.shopPower.down{color:#f87171}
+.shopPower small{font-size:10.5px;font-weight:600;color:#9a91ab}
+.shopBuy{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;font:inherit;font-size:14px;font-weight:900;padding:9px 10px;border-radius:10px;border:0;background:linear-gradient(180deg,#5ee08a,#22a352);color:#06361a;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2),0 3px 0 #146b34;cursor:pointer;transition:transform .08s}
+.shopBuy:active:not(:disabled){transform:translateY(2px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),0 1px 0 #146b34}
+.shopBuy:disabled{background:#4b4458;color:#9a91ab;box-shadow:none;cursor:not-allowed}
+.shopLocked{filter:saturate(.25) brightness(.7)}
+.shopLock{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;border-radius:10px;background:rgba(0,0,0,.35);font-weight:900;font-size:13px;color:#e5dcc4}
+.shopShine::after{content:"";position:absolute;inset:-40% auto -40% -60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-20deg);animation:shopShine 3.2s ease-in-out infinite;pointer-events:none}
+.shopLocked.shopShine::after{display:none}
+.shopPop{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);padding:6px 14px;border-radius:999px;background:#ffd76a;color:#3b2405;font-weight:900;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.4);animation:shopPop 1.4s ease-out forwards;pointer-events:none}
+.shopEmpty{grid-column:1/-1;margin:20px 0;text-align:center;color:#cfc6de}
+@keyframes shopFade{from{opacity:0}}
+@keyframes shopRise{from{opacity:0;transform:translateY(24px) scale(.96)}}
+@keyframes shopShine{0%,60%{left:-60%}100%{left:130%}}
+@keyframes shopPop{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}30%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-90%)}}
+@media (prefers-reduced-motion:reduce){.shopModal,.shopBackdrop,.shopShine::after,.shopPop{animation:none}}
+@media (max-width:600px){
+  .shopBackdrop{padding:0;place-items:end stretch}
+  .shopModal{width:100%;max-height:92vh;border-radius:18px 18px 0 0;border-bottom:0}
+  .shopHead{padding:12px}
+  .shopHead h2{font-size:17px}
+  .shopGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}
+  .shopCard{padding:10px 8px 8px}
+  .shopIcon{width:46px;height:46px}
+}

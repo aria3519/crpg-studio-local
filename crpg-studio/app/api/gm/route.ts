@@ -5,8 +5,9 @@ import path from 'path';
 import type { GmBody, GmState } from '../../_lib/game/gm-contract';
 import { fillSystem } from './_lib/prompt-fill';
 import { sceneWriter, talkWriter } from './_lib/prompt-writer';
-import { readWritten } from './_lib/parse';
+import { readWritten, takeSettled } from './_lib/parse';
 import { checkReply } from './_lib/checks';
+import { NPC_LOOKS, withoutUnmetNames } from '../../_lib/game/core';
 import { VOICE_LENGTH, type NpcSheet, type Profile, npcSheets, assignVoices, voiceFor, oldSpeech } from './_lib/speech';
 
 export const runtime = 'nodejs';
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
     // of a dice request in 6~7s; Terra wrote 400~600자 of story, first words after 1.7~3s).
     // Talk replies too (step 3, 2026-11-10): the partner's words and the player's next lines come from the writer in one call;
     // the six fix-up calls that patched Luna's talk replies (refill, redo, retry, rewrite, speech fixes) are gone.
-    const prewritten = (!mode || mode === 'talk') && typeof body.sceneText === 'string' ? body.sceneText.slice(0, 6000) : '';
+    const { text: prewritten, settled } = takeSettled((!mode || mode === 'talk') && typeof body.sceneText === 'string' ? body.sceneText.slice(0, 6000) : '');
     // A redraw is the writer's choices alone; the bookkeeper still reads where each goes (the play screen keeps only that).
     const redrawn = body.reroll === true && !mode && !!prewritten;
     const early = !!String(body.prologue || '').trim() || !!String(body.initialEquipment || '').trim();
@@ -143,13 +144,19 @@ export async function POST(request: Request) {
         },
       }), { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
     };
+    // Someone the hero hasn't met reaches the writers only by their look, the link the screen already uses (NPC_LOOKS,
+    // heroCalls): the real name still sat in the step, the place notes and the cast, and the writer wrote it (4차: "기록관 견습인
+    // 미라벨"). The talk partner is met by talking. parse.ts turns the looks in the writer's tags back into names.
+    const unmet = profiles.filter(p => typeof (p as { heroCalls?: unknown }).heroCalls === 'string' && (p as { heroCalls: string }).heroCalls && p.name !== partner).map(p => String(p.name));
+    const asLooks = (t: string) => unmet.length ? withoutUnmetNames(t, Object.keys(NPC_LOOKS).filter(n => !unmet.includes(n))) : t;
+    const streamAsLooks = (writer: string, input: unknown, tag: string) => streamWrite(asLooks(writer), JSON.parse(asLooks(JSON.stringify(input))), tag);
     if (body.phase === 'write' && mode === 'talk' && body.reroll !== true) {
       const { writer, input } = talkWriter({ profiles, partner, talkTurns, body, state, recent, storySoFar, playerVoice, lastReply, withThisNpc, keyFacts });
-      return streamWrite(writer, input, 'talk-write');
+      return streamAsLooks(writer, input, 'talk-write');
     }
     if (body.phase === 'write' && !mode) {
       const { writer, input } = sceneWriter({ userContent, state, body, recent, wild, early, keyFacts, storySoFar });
-      return streamWrite(writer, input, 'scene-write');
+      return streamAsLooks(writer, input, 'scene-write');
     }
     // Luna accepts low reasoning effort (tested 2026-11-10); the player waits on these calls, so they think briefly.
     const payload = { reasoning_effort: 'low', model: process.env.OPENAI_GM_MODEL || 'gpt-4.1-mini',
@@ -164,7 +171,9 @@ export async function POST(request: Request) {
       ],
     };
     let data: ReturnType<typeof JSON.parse> = {};
-    {
+    // The writer answered with a tag alone (a typed action turned down, sent somewhere, or a fight): nothing to record.
+    const tagOnly = !!prewritten && (!mode || mode === 'talk') && !prewritten.split(/(?:^|\n)\s*-{3,}\s*(?:\n|$)/)[0].trim() && /^\s*\[(안\s*됨|이동|전투)\s*[:：]/m.test(prewritten);
+    if (!tagOnly) {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'x-usage-tag': mode || 'scene' },
       body: JSON.stringify(payload), cache: 'no-store', signal: AbortSignal.timeout(55000),
@@ -178,11 +187,14 @@ export async function POST(request: Request) {
     if (!mode && !prewritten) data.choices = [];
     }
     // Only the numbered lines of a redraw count: a stray tag ([대화:], [판정:]) must not turn it into a scene.
+    // A fight's narration is the bookkeeper's words only: what the fight pays is the game's (finishBattle) and the writer's after it.
+    if (mode === 'combat') Object.assign(data, { goldMoves: null, goldDelta: 0, addItems: [], removeItems: itemUse ? data.removeItems : [], reputationDelta: 0, xpGain: '', trained: [], addQuests: [], completedQuests: [], failedQuests: [], relationshipUpdates: [], presentNpcs: null });
     const talkWritten = readWritten({ prewritten: redrawn ? '---\n' + prewritten.split('\n').filter(l => /^\s*\d\s*[.)]/.test(l)).join('\n') : prewritten, mode, partner, data, state, body });
     const { addQuests, ambush, check, choices, completedQuests, enemy, failedQuests, gesture, goes, talks, fights, goldDelta, howKnown, imageKey, line, moveToPinId, nextAction, npcPowers, npcVoices, parts, playerLine, presentNpcs, relationshipUpdates, reputationDelta, talkLeft, trained, xpGain } = checkReply({ state, data, body, mode, fixedVoices, sheets, partner, profiles, itemUse, talkWritten, holdTalk, lastReply, playerLeaves, talkTurns, history });
     // A redraw only swaps the choices: the reading of each (goes, talks, fights) is all the play screen takes from it.
     if (redrawn) return NextResponse.json({ choices, ...(goes ? { goes } : {}), ...(talks ? { talks } : {}), ...(fights ? { fights } : {}) });
-    return NextResponse.json({ majorScene, ...(goes ? { goes } : {}), ...(talks ? { talks } : {}), ...(fights ? { fights } : {}), ...(typeof data.facing === 'string' && !mode ? { facing: data.facing.slice(0, 30) } : {}), ...(prewritten && data.stepDone === true ? { stepDone: true } : {}), nextAction, joins: mode === 'talk' && !!nextAction && data.joins === true, task: mode === 'talk' && !!nextAction && typeof data.task === 'string' ? data.task : '', afterChoices: Array.isArray(data.afterChoices) ? data.afterChoices : [], talkTo: !mode && !check && typeof data.talkTo === 'string' ? data.talkTo : '', setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, howKnown, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta, goldDelta: check ? 0 : goldDelta, addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
+    if (tagOnly) return NextResponse.json({ ...(data.refused ? { refused: data.refused } : {}), ...(data.moveTo ? { moveTo: data.moveTo, meet: data.meet || '' } : {}), ...(data.fightNow ? { fightNow: data.fightNow } : {}), choices: [] });
+    return NextResponse.json({ majorScene, ...(settled.length ? { settled } : {}), ...(goes ? { goes } : {}), ...(talks ? { talks } : {}), ...(fights ? { fights } : {}), ...(prewritten && data.stepDone === true ? { stepDone: true } : {}), nextAction, joins: mode === 'talk' && !!nextAction && data.joins === true, task: mode === 'talk' && !!nextAction && typeof data.task === 'string' ? data.task : '', afterChoices: Array.isArray(data.afterChoices) ? data.afterChoices : [], talkTo: !mode && !check && typeof data.talkTo === 'string' ? data.talkTo : '', setLevel: body.debug === true && Number.isInteger(data.setLevel) ? Math.max(1, Math.min(100, data.setLevel)) : 0, enemy, npcPowers, trained: check ? [] : trained, ambush: check ? '' : ambush, xpGain: check ? '' : xpGain, gesture, howKnown, line, parts, playerLine, npcVoices, endTalk: mode === 'talk' && (data.endTalk === true || talkLeft || decided), talkLeft, reputationDelta: check ? 0 : reputationDelta, goldDelta: check ? 0 : goldDelta, addQuests:check?[]:addQuests,completedQuests:check?[]:completedQuests,failedQuests:check?[]:failedQuests,relationshipUpdates: check ? [] : relationshipUpdates, choices: check ? [] : choices, presentNpcs: check ? null : presentNpcs, check, moveToPinId: check ? '' : moveToPinId, imageKey, text: String(data.text || '').slice(0, 6000), hpDelta: check ? 0 : Number.isFinite(data.hpDelta) ? Math.trunc(data.hpDelta) : 0,
       addItems: !check && Array.isArray(data.addItems) ? data.addItems.slice(0, 5) : [], removeItems: !check && Array.isArray(data.removeItems) ? data.removeItems.slice(0, 5) : [],
       addFlags: !check && Array.isArray(data.addFlags) ? data.addFlags.slice(0, 5) : [] });
   } catch (error) {
